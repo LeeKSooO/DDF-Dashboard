@@ -1,0 +1,145 @@
+# ===============================================
+# 운영 환경 Docker Compose
+# ETL 제외한 모든 운영 서비스
+# ===============================================
+
+services:
+  # PostgreSQL + TimescaleDB + PostGIS
+  postgres:
+    build:
+      context: ./database
+      dockerfile: Dockerfile
+    container_name: ddf-postgres
+    environment:
+      POSTGRES_USER: ddf_user
+      POSTGRES_PASSWORD: ddf_password
+      POSTGRES_DB: ddf_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    networks:
+      - ddf-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ddf_user -d ddf_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI Backend Server
+  backend:
+    build: ../backend
+    container_name: ddf-backend
+    environment:
+      DATABASE_URL: postgresql://ddf_user:ddf_password@postgres:5432/ddf_db
+      TORCHSERVE_URL: http://torchserve:8080
+      MODEL_BASE_PATH: /app/ddf_model
+      TZ: Asia/Seoul
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../backend:/app
+      - ../ai/ddf_model:/app/ddf_model
+    depends_on:
+      postgres:
+        condition: service_healthy
+      torchserve:
+        condition: service_healthy
+    networks:
+      - ddf-network
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # 모델 등록 서비스 (일회성)
+  model-registration:
+    build: ../ai/torchserve
+    container_name: ddf-model-registration
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ddf_db
+      DB_USER: ddf_user
+      DB_PASSWORD: ddf_password
+      TORCHSERVE_HOST: torchserve
+      TORCHSERVE_MANAGEMENT_PORT: 8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+      torchserve:
+        condition: service_healthy
+    networks:
+      - ddf-network
+    volumes:
+      - ../ai/torchserve/model-store:/home/model-server/model-store
+    profiles:
+      - registration
+    command: python3 /home/model-server/model_registration.py
+
+  # TorchServe Inference Server
+  torchserve:
+    build: ../ai/torchserve
+    container_name: ddf-torchserve
+    environment:
+      TZ: Asia/Seoul
+    ports:
+      - "8080:8080"  # Inference API
+      - "8081:8081"  # Management API
+      - "8082:8082"  # Metrics API
+    volumes:
+      # .mar 파일이 있는 model-store와 config 파일만 마운트.
+      - ../ai/torchserve/model-store:/home/model-server/model-store
+      - ../ai/torchserve/config:/home/model-server/config
+      #- ./ddf_model:/home/model-server/models
+    networks:
+      - ddf-network
+    #deploy: # 🚨 [추가] GPU 사용을 위한 설정
+    #  resources:
+    #    reservations:
+    #      devices:
+    #        - driver: nvidia
+    #          count: 1
+    #          capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    command: torchserve --start --model-store /home/model-server/model-store --models mstgcn=mstgcn.mar --ts-config /home/model-server/config/config.properties
+
+  # React Frontend
+  frontend:
+    build: ../frontend
+    container_name: ddf-frontend
+    environment:
+      REACT_APP_API_URL: http://localhost:8000
+      TZ: Asia/Seoul
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - ddf-network
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+
+  # Redis for caching (optional but recommended)
+  redis:
+    image: redis:7-alpine
+    container_name: ddf-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - ddf-network
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
+
+networks:
+  ddf-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

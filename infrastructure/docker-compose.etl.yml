@@ -1,0 +1,45 @@
+# ===============================================
+# ETL 전용 Docker Compose - Multi-step
+# 1단계: 기본 데이터 적재 → 2단계: Feature 생성
+# 주의: PostgreSQL은 docker-compose.yml에서 미리 실행되어야 함
+# ===============================================
+
+services:
+  # ETL Step 1: 기본 데이터 적재
+  etl-data:
+    build:
+      context: ../data/etl
+      dockerfile: Dockerfile
+    container_name: ddf-etl-data
+    environment:
+      DB_HOST: host.docker.internal
+      DB_PORT: 5432
+      DB_NAME: ddf_db
+      DB_USER: ddf_user
+      DB_PASSWORD: ddf_password
+    volumes:
+      - ../data:/data
+      - ../data/etl:/app
+    command: python /app/etl_pipeline.py /data
+    restart: "no"
+
+  # ETL Step 2: Feature 생성
+  etl-features:
+    build:
+      context: ../data/etl
+      dockerfile: Dockerfile
+    container_name: ddf-etl-features
+    environment:
+      DB_HOST: host.docker.internal
+      DB_PORT: 5432
+      DB_NAME: ddf_db
+      DB_USER: ddf_user
+      DB_PASSWORD: ddf_password
+    volumes:
+      - ../data:/data
+      - ../data/etl:/app
+    depends_on:
+      etl-data:
+        condition: service_completed_successfully
+    command: python /app/feature_generator.py
+    restart: "no"
