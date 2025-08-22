@@ -120,3 +120,33 @@ tmp/
 # ===========================================
 .cache/
 .eslintcache
+
+# ===========================================
+# Project-specific exclusions
+# ===========================================
+# Legacy files and temporary data
+regacy/
+reports/
+shared_files/
+
+# Additional virtual environments
+test_env/
+venv_*/
+
+# Large data files and sensitive data
+data/processed/*.csv
+data/processed/*.json
+data/processed/*.npz
+data/processed/monthly/
+data/colab_dataset/
+data/raw/sample_data_*.csv
+
+# TorchServe model archives and logs
+ai/torchserve/model-store/*.mar
+ai/torchserve/logs/
+
+# Application specific logs
+backend/logs/*.log
+
+# Config files that might contain sensitive info
+*.properties
