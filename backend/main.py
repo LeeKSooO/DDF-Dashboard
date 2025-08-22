@@ -81,6 +81,29 @@ app.include_router(
     tags=["drt-analytics"]
 )
 
+# Seoul Traffic API
+from app.api.v1.endpoints import seoul_traffic_api, seoul_traffic_api_v2, dashboard_api, seoul_traffic_extended_api
+app.include_router(
+    seoul_traffic_api.router,
+    prefix="/api/v1/seoul-traffic",
+    tags=["seoul-traffic-raw"]
+)
+app.include_router(
+    seoul_traffic_api_v2.router,
+    prefix="/api/v1/seoul-traffic-analysis",
+    tags=["seoul-traffic-analysis"]
+)
+app.include_router(
+    seoul_traffic_extended_api.router,
+    prefix="/api/v1/seoul-traffic-extended",
+    tags=["seoul-traffic-extended"]
+)
+app.include_router(
+    dashboard_api.router,
+    prefix="/api/v1/dashboard",
+    tags=["realtime-dashboard"]
+)
+
 @app.get("/")
 async def root():
     """Root endpoint"""

@@ -193,8 +193,13 @@ class ModelRegistration:
         
         registered_count = 0
         for model_info in torchserve_models:
-            model_name = model_info.get('modelName', 'unknown')
-            model_version = model_info.get('modelVersion', '1.0')
+            # TorchServe API는 문자열 리스트를 반환하므로 처리
+            if isinstance(model_info, str):
+                model_name = model_info
+                model_version = '1.0'  # 기본 버전
+            else:
+                model_name = model_info.get('modelName', 'unknown')
+                model_version = model_info.get('modelVersion', '1.0')
             
             logger.info(f"🔍 Processing model: {model_name} (version: {model_version})")
             
