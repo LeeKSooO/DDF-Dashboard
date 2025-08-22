@@ -17,10 +17,10 @@ RUN pip install --no-cache-dir \
     numpy==1.24.3
 
 # ETL 스크립트 복사
-COPY etl_pipeline.py /app/
+COPY etl_trafficInfra.py /app/
 COPY feature_generator.py /app/
 
 # 실행 권한 부여
-RUN chmod +x /app/etl_pipeline.py /app/feature_generator.py
+RUN chmod +x /app/etl_trafficInfra.py /app/feature_generator.py
 
-CMD ["python", "/app/etl_pipeline.py"]
+CMD ["python", "/app/etl_trafficInfra.py"]

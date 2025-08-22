@@ -8,7 +8,7 @@ services:
   # ETL Step 1: 기본 데이터 적재
   etl-data:
     build:
-      context: ../data/etl
+      context: ../data/etl/traffic_infra
       dockerfile: Dockerfile
     container_name: ddf-etl-data
     environment:
@@ -19,27 +19,48 @@ services:
       DB_PASSWORD: ddf_password
     volumes:
       - ../data:/data
-      - ../data/etl:/app
-    command: python /app/etl_pipeline.py /data
+      - ../data/etl/traffic_infra:/app
+    command: python /app/etl_trafficInfra.py /data
     restart: "no"
 
-  # ETL Step 2: Feature 생성
-  etl-features:
+  # ETL Step 2: API 기반 교통 데이터 적재
+  etl-traffic:
     build:
-      context: ../data/etl
+      context: ../data/etl/traffic_data
       dockerfile: Dockerfile
-    container_name: ddf-etl-features
+    container_name: ddf-etl-traffic
     environment:
       DB_HOST: host.docker.internal
       DB_PORT: 5432
       DB_NAME: ddf_db
       DB_USER: ddf_user
       DB_PASSWORD: ddf_password
+      SEOUL_TRAFFIC_API_KEY: 323e9809-04df-4dd8-a6fb-74f666b68967
     volumes:
       - ../data:/data
-      - ../data/etl:/app
-    depends_on:
-      etl-data:
-        condition: service_completed_successfully
-    command: python /app/feature_generator.py
+      - ../data/etl/traffic_data:/app
+    env_file:
+      - ../.env
+    command: python /app/etl_trafficData.py
     restart: "no"
+
+  # ETL Step 3: Feature 생성 (피처 엔지니어링 재작업으로 임시 비활성화)
+  # etl-features:
+  #   build:
+  #     context: ../data/etl
+  #     dockerfile: Dockerfile
+  #   container_name: ddf-etl-features
+  #   environment:
+  #     DB_HOST: host.docker.internal
+  #     DB_PORT: 5432
+  #     DB_NAME: ddf_db
+  #     DB_USER: ddf_user
+  #     DB_PASSWORD: ddf_password
+  #   volumes:
+  #     - ../data:/data
+  #     - ../data/etl:/app
+  #   depends_on:
+  #     etl-data:
+  #       condition: service_completed_successfully
+  #   command: python /app/feature_generator.py
+  #   restart: "no"
