@@ -403,13 +403,13 @@ class SeoulTrafficETL:
                 for hour in range(24):
                     hour_str = f"{hour:02d}"
                     
-                    speed = float(item.get(f'speed{hour_str}h', 0) or 0)
+                    # speed = float(item.get(f'speed{hour_str}h', 0) or 0)  # API 응답에서 모든 값이 0이므로 완전 제거
                     trip_time = int(item.get(f'tripTime{hour_str}h', 0) or 0)
                     
                     batch_data.append((
                         date_str, route_id, from_node_id, to_node_id, hour,
                         from_station_sequence, to_station_sequence, usage_count,
-                        speed, trip_time
+                        trip_time
                     ))
             
             # 청크별 즉시 삽입
@@ -759,13 +759,13 @@ class SeoulTrafficETL:
             for hour in range(24):
                 hour_str = f"{hour:02d}"
                 
-                speed = float(item.get(f'speed{hour_str}h', 0) or 0)
+                # speed = float(item.get(f'speed{hour_str}h', 0) or 0)  # API 응답에서 모든 값이 0이므로 완전 제거
                 trip_time = int(item.get(f'tripTime{hour_str}h', 0) or 0)
                 
                 batch_data.append((
                     date_str, route_id, from_node_id, to_node_id, hour,
                     from_station_sequence, to_station_sequence, usage_count,
-                    speed, trip_time
+                    trip_time
                 ))
         
         return batch_data
@@ -779,14 +779,13 @@ class SeoulTrafficETL:
             INSERT INTO section_speed_history (
                 record_date, route_id, from_node_id, to_node_id, hour,
                 from_station_sequence, to_station_sequence, usage_count,
-                speed, trip_time
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                trip_time
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (record_date, route_id, from_node_id, to_node_id, hour)
             DO UPDATE SET
                 from_station_sequence = EXCLUDED.from_station_sequence,
                 to_station_sequence = EXCLUDED.to_station_sequence,
                 usage_count = EXCLUDED.usage_count,
-                speed = EXCLUDED.speed,
                 trip_time = EXCLUDED.trip_time
         """
         
@@ -942,82 +941,110 @@ class SeoulTrafficETL:
         return len(batch_data)
     
     def run_full_etl(self, start_date: str = '20250715', end_date: str = '20250815'):
-        """전체 ETL 프로세스 실행 (feature_generator 방식의 진행도 로깅 포함)"""
-        logger.info(f"=== Starting Seoul Traffic ETL Process ===")
+        """전체 ETL 프로세스 실행 (날짜별 루프 방식)"""
+        logger.info(f"=== Starting Seoul Traffic ETL Process (Daily Loop Mode) ===")
         logger.info(f"Date Range: {start_date} to {end_date}")
+        logger.info(f"📅 Processing Pattern: Each date will process API1→API2→API3→API4 sequentially")
         self._monitor_memory("ETL process start")
         
         try:
             self.connect_db()
             
-            # 전체 진행도 추적을 위한 변수 (API5 제외로 4개)
-            total_apis = 4
-            current_api = 0
+            # 날짜 범위 계산
+            current_date = datetime.strptime(start_date, '%Y%m%d')
+            end_dt = datetime.strptime(end_date, '%Y%m%d')
+            total_days = (end_dt - current_date).days + 1
             
-            # API1: 정류장별 승하차 데이터 (이미 완료됨 - 주석 처리)
-            # current_api += 1
-            # logger.info(f"📊 Processing API {current_api}/{total_apis}: Station Passenger Data")
-            # self._monitor_memory(f"API{current_api} start")
-            # api1_count = self.process_api1_station_passenger(start_date, end_date)
-            # logger.info(f"✅ API{current_api} completed: {api1_count:,} records inserted")
-            api1_count = 0  # API1 건너뛰기
+            # 누적 통계
+            total_api1_count = 0
+            total_api2_count = 0
+            total_api3_count = 0
+            total_api4_count = 0
+            day_counter = 0
             
-            # API2: 구간별 승객수 데이터
-            current_api += 1
-            logger.info(f"📊 Processing API {current_api}/{total_apis}: Section Passenger Data")
-            self._monitor_memory(f"API{current_api} start")
-            api2_count = self.process_api2_section_passenger(start_date, end_date)
-            logger.info(f"✅ API{current_api} completed: {api2_count:,} records inserted")
-            
-            # API3: 행정동별 OD 통행량 데이터
-            current_api += 1
-            logger.info(f"📊 Processing API {current_api}/{total_apis}: EMD OD Traffic Data")
-            self._monitor_memory(f"API{current_api} start")
-            api3_count = self.process_api3_emd_od(start_date, end_date)
-            logger.info(f"✅ API{current_api} completed: {api3_count:,} records inserted")
-            
-            # API4: 구간별 운행시간 데이터
-            current_api += 1
-            logger.info(f"📊 Processing API {current_api}/{total_apis}: Section Speed Data")
-            self._monitor_memory(f"API{current_api} start")
-            api4_count = self.process_api4_section_speed(start_date, end_date)
-            logger.info(f"✅ API{current_api} completed: {api4_count:,} records inserted")
-            
-            # API5: 도로 교통 패턴 데이터 (주석 처리 - DRT 분석에 부적합)
-            # current_api += 1
-            # logger.info(f"📊 Processing API {current_api}/{total_apis}: Road Traffic Data (limited to 20250808)")
-            # self._monitor_memory(f"API{current_api} start")
-            # api5_count = self.process_api5_road_traffic(start_date, end_date)  # 날짜 제한은 함수 내부에서 처리
-            # logger.info(f"✅ API{current_api} completed: {api5_count:,} records inserted (data available until 20250808)")
-            api5_count = 0  # 주석 처리로 인한 기본값
-            
-            total_records = api1_count + api2_count + api3_count + api4_count + api5_count
-            
-            # API 호출 통계 로깅
-            total_api_calls = sum(self.api_call_counts.values())
+            logger.info(f"🗓️ Total days to process: {total_days}")
             logger.info("="*80)
-            logger.info("🎉 ETL Process Completed Successfully!")
+            
+            # 날짜별 루프 (각 날짜마다 API1-4 순차 처리)
+            while current_date <= end_dt:
+                day_counter += 1
+                date_str = current_date.strftime('%Y%m%d')
+                date_display = current_date.strftime('%Y-%m-%d (%a)')
+                
+                logger.info(f"📅 Day {day_counter}/{total_days}: Processing {date_display}")
+                logger.info("-" * 60)
+                
+                daily_start_time = datetime.now()
+                
+                try:
+                    # API1: 정류장별 승하차 데이터 (단일 날짜)
+                    logger.info(f"  📊 API1: Station Passenger Data for {date_str}")
+                    self._monitor_memory(f"Day{day_counter} API1 start")
+                    api1_count = self.process_api1_station_passenger(date_str, date_str)
+                    total_api1_count += api1_count
+                    logger.info(f"  ✅ API1 completed: {api1_count:,} records")
+                    
+                    # API2: 구간별 승객수 데이터 (단일 날짜)
+                    logger.info(f"  📊 API2: Section Passenger Data for {date_str}")
+                    self._monitor_memory(f"Day{day_counter} API2 start")
+                    api2_count = self.process_api2_section_passenger(date_str, date_str)
+                    total_api2_count += api2_count
+                    logger.info(f"  ✅ API2 completed: {api2_count:,} records")
+                    
+                    # API3: 행정동별 OD 통행량 데이터 (단일 날짜)
+                    logger.info(f"  📊 API3: EMD OD Traffic Data for {date_str}")
+                    self._monitor_memory(f"Day{day_counter} API3 start")
+                    api3_count = self.process_api3_emd_od(date_str, date_str)
+                    total_api3_count += api3_count
+                    logger.info(f"  ✅ API3 completed: {api3_count:,} records")
+                    
+                    # API4: 구간별 운행시간 데이터 (단일 날짜)
+                    logger.info(f"  📊 API4: Section Speed Data for {date_str}")
+                    self._monitor_memory(f"Day{day_counter} API4 start")
+                    api4_count = self.process_api4_section_speed(date_str, date_str)
+                    total_api4_count += api4_count
+                    logger.info(f"  ✅ API4 completed: {api4_count:,} records")
+                    
+                    # 일별 요약
+                    daily_total = api1_count + api2_count + api3_count + api4_count
+                    daily_duration = datetime.now() - daily_start_time
+                    logger.info(f"🎯 Day {day_counter} Summary: {daily_total:,} records in {daily_duration}")
+                    logger.info(f"   API1: {api1_count:,} | API2: {api2_count:,} | API3: {api3_count:,} | API4: {api4_count:,}")
+                    
+                except Exception as e:
+                    logger.error(f"❌ Day {day_counter} ({date_str}) failed: {e}")
+                    # 개별 날짜 실패 시에도 다음 날짜 계속 진행
+                    continue
+                
+                logger.info("=" * 60)
+                current_date += timedelta(days=1)
+            
+            # 전체 요약
+            total_records = total_api1_count + total_api2_count + total_api3_count + total_api4_count
+            total_api_calls = sum(self.api_call_counts.values())
+            
+            logger.info("="*80)
+            logger.info("🎉 Daily Loop ETL Process Completed Successfully!")
             logger.info(f"📈 Total Records Processed: {total_records:,}")
-            logger.info(f"   - API1 (Station Passenger): {api1_count:,}")
-            logger.info(f"   - API2 (Section Passenger): {api2_count:,}")
-            logger.info(f"   - API3 (EMD OD Traffic): {api3_count:,}")
-            logger.info(f"   - API4 (Section Speed): {api4_count:,}")
-            # logger.info(f"   - API5 (Road Traffic): {api5_count:,}")  # 주석 처리됨
+            logger.info(f"   - API1 (Station Passenger): {total_api1_count:,}")
+            logger.info(f"   - API2 (Section Passenger): {total_api2_count:,}")
+            logger.info(f"   - API3 (EMD OD Traffic): {total_api3_count:,}")
+            logger.info(f"   - API4 (Section Speed): {total_api4_count:,}")
             logger.info(f"📞 Total API Calls Made: {total_api_calls:,} (Rate Limit: 1000/day)")
             logger.info(f"   - API1 Calls: {self.api_call_counts['API1']:,}")
             logger.info(f"   - API2 Calls: {self.api_call_counts['API2']:,}")
             logger.info(f"   - API3 Calls: {self.api_call_counts['API3']:,}")
             logger.info(f"   - API4 Calls: {self.api_call_counts['API4']:,}")
-            logger.info(f"📅 Date Range Processed: {start_date} to {end_date}")
+            logger.info(f"📅 Date Range Processed: {start_date} to {end_date} ({total_days} days)")
             
             # API 호출 통계를 DB에도 기록
-            self.log_etl_message('ETL_SUMMARY', 'INFO', f'Total API calls: {total_api_calls} for {start_date}-{end_date}', 'API_STATISTICS', 
-                               {'api_call_counts': self.api_call_counts, 'total_records': total_records, 'date_range': f'{start_date}-{end_date}'})
+            self.log_etl_message('ETL_SUMMARY', 'INFO', f'Daily loop ETL: {total_api_calls} API calls for {start_date}-{end_date}', 'API_STATISTICS', 
+                               {'api_call_counts': self.api_call_counts, 'total_records': total_records, 'total_days': total_days, 'date_range': f'{start_date}-{end_date}'})
             logger.info("="*80)
             self._monitor_memory("ETL process completed")
             
         except Exception as e:
-            logger.error(f"❌ ETL process failed: {e}")
+            logger.error(f"❌ Daily Loop ETL process failed: {e}")
             self._monitor_memory("ETL process failed")
             raise
         finally:
@@ -1034,28 +1061,15 @@ def main():
         'password': os.getenv('DB_PASSWORD', 'ddf_password')
     }
     
-    # ETL 실행 (메모리 효율성 테스트를 위해 1일만 먼저 테스트)
+    # 전체 ETL 프로세스 실행 (API1, API2, API3, API4 모두 활성화)
     etl = SeoulTrafficETL(db_config)
     
-    # ===== 임시 재적재 코드 (7/27, 8/13~8/15) =====
-    logger.info("🔧 Starting API2 missing data recovery...")
-    logger.info("📅 Missing dates: 2025-07-27, 2025-08-13 to 2025-08-15")
+    logger.info("🚀 Starting Complete Seoul Traffic ETL Process")
+    logger.info("📊 APIs to process: API1, API2, API3, API4")
+    logger.info("📅 All APIs will process the full date range continuously")
     
-    # 누락 구간별 재적재
-    missing_dates = [
-        ('20250727', '20250727'),  # 7/27 단일 날짜
-        ('20250813', '20250815')   # 8/13~8/15 연속 구간
-    ]
-    
-    for start_date, end_date in missing_dates:
-        logger.info(f"🔄 Reloading API2 data: {start_date} to {end_date}")
-        try:
-            api2_count = etl.process_api2_section_passenger(start_date, end_date)
-            logger.info(f"✅ Reloaded {start_date} to {end_date}: {api2_count:,} records")
-        except Exception as e:
-            logger.error(f"❌ Failed to reload {start_date} to {end_date}: {e}")
-    
-    logger.info("🎉 API2 Missing Data Recovery Completed!")
+    # 전체 ETL 실행 (기본 날짜 범위: 2025-07-15 ~ 2025-08-15)
+    etl.run_full_etl()
 
 if __name__ == "__main__":
     main()
