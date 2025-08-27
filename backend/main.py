@@ -1,126 +1,95 @@
-from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from loguru import logger
-import sys
-from pathlib import Path
 
-# Import routers
-from app.api.v1.endpoints import prediction, model, analysis, drt_analytics, bus_stops
 from app.core.config import settings
-from app.db.session import init_db
+from app.api.v1.api import api_router
+from app.db.session import close_db
 
-# Configure logging
-logger.remove()
-logger.add(sys.stdout, format="{time} - {level} - {message}", level="INFO")
-logger.add("logs/app.log", rotation="1 day", retention="7 days", level="DEBUG")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    Manage application lifecycle
-    """
+    """Lifespan context manager for startup and shutdown events"""
     # Startup
-    logger.info("Starting DRT Prediction API Server...")
-    
-    # Initialize database
-    await init_db()
-    
-    # Create necessary directories
-    Path(settings.MODEL_BASE_PATH).mkdir(parents=True, exist_ok=True)
-    Path("logs").mkdir(exist_ok=True)
-    
-    logger.info("Server started successfully!")
-    
+    logger.info("Starting DRT Dashboard API...")
     yield
-    
     # Shutdown
-    logger.info("Shutting down server...")
+    logger.info("Shutting down DRT Dashboard API...")
+    await close_db()
 
-# Create FastAPI app
-app = FastAPI(
-    title="DRT Demand Prediction API",
-    description="API for predicting DRT demand using ASTGCN model",
-    version="1.0.0",
-    lifespan=lifespan
-)
 
-# Configure CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+def create_app() -> FastAPI:
+    """Create and configure FastAPI application"""
+    
+    app = FastAPI(
+        title=settings.PROJECT_NAME,
+        description="""
+        DRT Dashboard API
+        
+        이 API는 서울시 교통 데이터를 활용하여 실시간 교통 현황 대시보드를 제공합니다.
+        
+        ## 주요 기능
+        
+        * **Overview**: 서울시 교통 현황 개요 (실시간 수요 패턴, 지연 분석, 효율성 지표)
+        * **Comparison**: 평일/주말 교통 패턴 비교 분석
+        * **District-level**: 지역구별 교통 현황 분석
+        
+        ## 데이터 소스
+        
+        * 구간별 승객수 데이터 (API 2)
+        * 구간별 운행시간 데이터 (API 4)
+        """,
+        version="1.0.0",
+        docs_url="/docs",
+        redoc_url="/redoc",
+        lifespan=lifespan
+    )
+    
+    # Add CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.ALLOWED_HOSTS,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    
+    # Include API router
+    app.include_router(api_router, prefix="/api/v1")
+    
+    @app.get("/")
+    async def root():
+        """Root endpoint"""
+        return {
+            "message": "DRT Dashboard API",
+            "version": "1.0.0",
+            "docs": "/docs",
+            "status": "active"
+        }
+    
+    @app.get("/health")
+    async def health_check():
+        """Health check endpoint"""
+        return {
+            "status": "healthy",
+            "service": "DRT Dashboard API",
+            "version": "1.0.0"
+        }
+    
+    return app
 
-# Include routers
-app.include_router(
-    prediction.router,
-    prefix="/api/v1/predictions",
-    tags=["predictions"]
-)
-app.include_router(
-    model.router,
-    prefix="/api/v1/models",
-    tags=["models"]
-)
-app.include_router(
-    analysis.router,
-    prefix="/api/v1/analysis",
-    tags=["analysis"]
-)
-app.include_router(
-    bus_stops.router,
-    prefix="/api/v1/bus-stops",
-    tags=["bus-stops"]
-)
-app.include_router(
-    drt_analytics.router,
-    prefix="/api/v1/drt-analytics",
-    tags=["drt-analytics"]
-)
 
-# Seoul Traffic API
-from app.api.v1.endpoints import seoul_traffic_api, seoul_traffic_api_v2, dashboard_api, seoul_traffic_extended_api
-app.include_router(
-    seoul_traffic_api.router,
-    prefix="/api/v1/seoul-traffic",
-    tags=["seoul-traffic-raw"]
-)
-app.include_router(
-    seoul_traffic_api_v2.router,
-    prefix="/api/v1/seoul-traffic-analysis",
-    tags=["seoul-traffic-analysis"]
-)
-app.include_router(
-    seoul_traffic_extended_api.router,
-    prefix="/api/v1/seoul-traffic-extended",
-    tags=["seoul-traffic-extended"]
-)
-app.include_router(
-    dashboard_api.router,
-    prefix="/api/v1/dashboard",
-    tags=["realtime-dashboard"]
-)
+# Create app instance
+app = create_app()
 
-@app.get("/")
-async def root():
-    """Root endpoint"""
-    return {
-        "message": "DRT Demand Prediction API",
-        "version": "1.0.0",
-        "status": "running"
-    }
-
-@app.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    return {
-        "status": "healthy",
-        "service": "backend"
-    }
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+        log_level="info"
+    )

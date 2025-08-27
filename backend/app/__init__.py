@@ -1,1 +1,1 @@
-# Application package
+# Empty file - ready for implementation

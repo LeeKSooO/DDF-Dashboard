@@ -1,1 +1,1 @@
-# API v1 package
+# Empty file - ready for implementation

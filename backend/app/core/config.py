@@ -2,9 +2,9 @@ from pydantic_settings import BaseSettings
 from typing import List
 import os
 
-class Settings(BaseSettings):
+class DRTDashboardSettings(BaseSettings):
     # API Settings
-    PROJECT_NAME: str = "DRT Demand Prediction API"
+    PROJECT_NAME: str = "DRT Dashboard API"
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
     
@@ -14,49 +14,59 @@ class Settings(BaseSettings):
         "postgresql://ddf_user:ddf_password@localhost:5432/ddf_db"
     )
     
-    # TorchServe
-    TORCHSERVE_URL: str = os.getenv("TORCHSERVE_URL", "http://localhost:8080")
-    TORCHSERVE_MODEL_NAME: str = "mstgcn"
-    TORCHSERVE_TIMEOUT: int = 60  # seconds
+    # Cache Settings
+    #REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/1")  # Use DB 1 for dashboard cache
     
-    # Model Configuration
-    MODEL_BASE_PATH: str = os.getenv("MODEL_BASE_PATH", "/app/ddf_model")
-    ACTIVE_MODEL_VERSION: str = "ddf_v1"
+    # Cache TTL Settings (seconds)
+    #CACHE_TTL_KPI: int = 300        # 5 minutes - real-time metrics
+    #CACHE_TTL_MAP: int = 600        # 10 minutes - map data  
+    #CACHE_TTL_ANALYSIS: int = 1800  # 30 minutes - analysis results
+    #CACHE_TTL_TRENDS: int = 3600    # 1 hour - trend data
+    #CACHE_TTL_PREDICTION: int = 1800 # 30 minutes - prediction results
+    #CACHE_TTL_SIMULATION: int = 0   # No cache for simulation results
     
-    # Model Architecture Parameters (hardcoded for now)
-    NUM_OF_VERTICES: int = 957  # Actual number of bus stops (confirmed by adjacency matrix)
-    IN_CHANNELS: int = 4  # 4 input features: normalized_log_boarding_count, service_availability, is_rest_day, normalized_interval
-    LEN_INPUT_HOUR: int = 6   # Recent 6 hours
-    LEN_INPUT_DAY: int = 24   # Recent 24 hours
-    LEN_INPUT_WEEK: int = 24  # Same 24 hours from 1 week ago
-    NUM_FOR_PREDICT: int = 24  # 24 hours prediction
-    K_ORDER: int = 3
-    
-    # Data Normalization (hardcoded temporarily)
-    DATA_MEAN: float = 0.1110
-    DATA_STD: float = 1.1544
-    
-    # Redis Cache
-    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379")
-    CACHE_TTL: int = 300  # 5 minutes
+    # Performance Settings
+    DEFAULT_PAGE_SIZE: int = 50
+    MAX_PAGE_SIZE: int = 500
+    MAX_MAP_STATIONS: int = 1000    # Maximum stations to show on map
     
     # CORS
-    ALLOWED_ORIGINS: List[str] = [
+    ALLOWED_HOSTS: List[str] = [
         "http://localhost:3000",
-        "http://localhost:8000",
+        "http://localhost:8000", 
         "http://frontend:3000",
     ]
     
-    # Logging
-    LOG_LEVEL: str = "INFO"
-    
-    # Performance
-    MAX_BATCH_SIZE: int = 100  # Maximum stops per prediction request
+    # Database Performance
     DB_POOL_SIZE: int = 20
     DB_MAX_OVERFLOW: int = 10
+    
+    # DRT Analysis Parameters
+    DRT_SCORE_WEIGHTS: dict = {
+        "demand_variability": 0.3,
+        "efficiency_ratio": 0.3, 
+        "connectivity_gap": 0.2,
+        "service_distance_deviation": 0.2
+    }
+    
+    # Efficiency Thresholds
+    EFFICIENCY_THRESHOLDS: dict = {
+        "very_low": 5,      # < 5 passengers per dispatch
+        "low": 10,          # 5-10 passengers per dispatch
+        "normal": 20,       # 10-20 passengers per dispatch
+        "high": float('inf') # > 20 passengers per dispatch
+    }
+    
+    # Variability Thresholds (Coefficient of Variation)
+    VARIABILITY_THRESHOLDS: dict = {
+        "low": 0.4,
+        "medium": 0.7,
+        "high": 1.0,
+        "very_high": float('inf')
+    }
     
     class Config:
         env_file = ".env"
         case_sensitive = True
 
-settings = Settings()
+settings = DRTDashboardSettings()

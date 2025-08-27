@@ -1,1 +1,1 @@
-# Core package
+# Empty file - ready for implementation

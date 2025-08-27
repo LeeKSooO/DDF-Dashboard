@@ -6,6 +6,7 @@ import psycopg2
 from psycopg2.extras import execute_batch
 import os
 import logging
+import json
 
 # 로깅 설정
 logging.basicConfig(
@@ -43,6 +44,11 @@ class SeoulBusETL:
         logger.info(f"Processing bus stops from {file_path}")
         
         try:
+            # 기존 데이터 삭제 (CASCADE로 연관 데이터도 삭제됨)
+            self.cur.execute("TRUNCATE bus_stops CASCADE;")
+            logger.info("Existing bus_stops data deleted (with CASCADE)")
+            self.conn.commit()
+            
             # CSV 읽기
             df = pd.read_csv(file_path, encoding='utf-8-sig')
             
@@ -158,6 +164,11 @@ class SeoulBusETL:
         logger.info(f"Processing route info from {file_path}")
         
         try:
+            # 기존 데이터 삭제 (CASCADE로 연관 데이터도 삭제됨)
+            self.cur.execute("TRUNCATE bus_routes CASCADE;")
+            logger.info("Existing bus_routes data deleted (with CASCADE)")
+            self.conn.commit()
+            
             # CSV 읽기
             df = pd.read_csv(file_path, encoding='utf-8-sig')
             
@@ -491,6 +502,195 @@ class SeoulBusETL:
             self.conn.rollback()
             raise
 
+    def process_admin_boundaries(self, file_path):
+        """행정동 경계 데이터 처리 (HangJeongDong_ver20250401.geojson)"""
+        logger.info(f"Processing administrative boundaries from {file_path}")
+        
+        try:
+            # GeoJSON 파일 읽기
+            with open(file_path, 'r', encoding='utf-8') as f:
+                geojson_data = json.load(f)
+            
+            logger.info(f"Loaded GeoJSON with {len(geojson_data['features'])} features")
+            
+            # 서울시 데이터만 필터링
+            seoul_features = []
+            for feature in geojson_data['features']:
+                props = feature['properties']
+                
+                # 서울특별시 데이터만 선택
+                if props.get('sidonm') == '서울특별시':
+                    seoul_features.append({
+                        'adm_cd': props.get('adm_cd'),        # 행정동 코드
+                        'adm_cd2': props.get('adm_cd2'),      # 행정동 코드2
+                        'adm_nm': props.get('adm_nm'),        # 행정동 전체명
+                        'sgg': props.get('sgg'),              # 시군구 코드
+                        'sido': props.get('sido'),            # 시도 코드
+                        'sidonm': props.get('sidonm'),        # 시도명
+                        'sggnm': props.get('sggnm'),          # 시군구명
+                        'admin_dong_name': self._extract_dong_name(props.get('adm_nm', '')),  # 행정동명 추출
+                        'geometry': json.dumps(feature['geometry'])  # geometry를 JSON 문자열로
+                    })
+            
+            logger.info(f"Filtered {len(seoul_features)} Seoul administrative boundaries")
+            
+            # 기존 데이터 삭제 (서울시 데이터만)
+            self.cur.execute("DELETE FROM admin_boundaries WHERE sidonm = '서울특별시';")
+            logger.info("Existing Seoul administrative boundary data deleted")
+            
+            # 배치 삽입
+            insert_query = """
+                INSERT INTO admin_boundaries (
+                    adm_cd, adm_cd2, adm_nm, sgg, sido, sidonm, sggnm, admin_dong_name, geometry
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, ST_GeomFromGeoJSON(%s))
+            """
+            
+            records = []
+            for item in seoul_features:
+                records.append((
+                    item['adm_cd'],
+                    item['adm_cd2'], 
+                    item['adm_nm'],
+                    item['sgg'],
+                    item['sido'],
+                    item['sidonm'],
+                    item['sggnm'],
+                    item['admin_dong_name'],
+                    item['geometry']
+                ))
+            
+            execute_batch(self.cur, insert_query, records)
+            self.conn.commit()
+            
+            logger.info(f"Inserted {len(records)} administrative boundary records")
+            
+        except Exception as e:
+            logger.error(f"Error processing administrative boundaries: {e}")
+            self.conn.rollback()
+            raise
+    
+    def _extract_dong_name(self, full_name):
+        """행정동 전체명에서 동명만 추출"""
+        if not full_name:
+            return ''
+        
+        try:
+            # "서울특별시 마포구 합정동" -> "합정동"
+            parts = full_name.split(' ')
+            if len(parts) >= 3:
+                return parts[2]  # 동명 부분
+            return full_name
+        except:
+            return full_name
+
+    def build_spatial_mapping(self):
+        """공간 매핑 테이블 구축 (성능 최적화용)"""
+        logger.info("Building spatial mapping table for performance optimization...")
+        
+        try:
+            # 기존 매핑 데이터 삭제
+            self.cur.execute("DELETE FROM spatial_mapping;")
+            logger.info("Existing spatial mapping data deleted")
+            self.conn.commit()
+            
+            # 배치 처리를 위해 구별로 나누어 처리
+            district_query = """
+                SELECT DISTINCT sggnm, sgg 
+                FROM admin_boundaries 
+                WHERE sidonm = '서울특별시'
+                ORDER BY sggnm;
+            """
+            self.cur.execute(district_query)
+            districts = self.cur.fetchall()
+            
+            logger.info(f"Processing {len(districts)} districts...")
+            total_count = 0
+            
+            for district_name, district_code in districts:
+                # 각 구별로 공간 조인 수행
+                mapping_query = """
+                    INSERT INTO spatial_mapping (
+                        node_id, 
+                        sido_code, sido_name,
+                        sgg_code, sgg_name,
+                        adm_code, adm_name,
+                        stop_type,
+                        is_seoul,
+                        is_major_stop
+                    )
+                    SELECT DISTINCT ON (bs.node_id)
+                        bs.node_id,
+                        ab.sido as sido_code,
+                        ab.sidonm as sido_name,
+                        ab.sgg as sgg_code,
+                        ab.sggnm as sgg_name,
+                        ab.adm_cd as adm_code,
+                        ab.admin_dong_name as adm_name,
+                        bs.node_type as stop_type,
+                        TRUE as is_seoul,
+                        CASE 
+                            WHEN bs.node_type IN (1, 3, 4) THEN TRUE 
+                            ELSE FALSE 
+                        END as is_major_stop
+                    FROM bus_stops bs
+                    JOIN admin_boundaries ab ON ST_Within(bs.coordinates, ab.geometry)
+                    WHERE bs.is_active = true 
+                      AND ab.sidonm = '서울특별시'
+                      AND ab.sggnm = %s
+                      AND bs.coordinates IS NOT NULL
+                    ORDER BY bs.node_id, ab.adm_cd;
+                """
+                
+                self.cur.execute(mapping_query, (district_name,))
+                district_count = self.cur.rowcount
+                total_count += district_count
+                self.conn.commit()
+                
+                logger.info(f"  - {district_name}: {district_count:,} stops mapped")
+            
+            logger.info(f"Created total {total_count:,} spatial mappings")
+            
+            # 매핑 결과 검증
+            verification_query = """
+                SELECT 
+                    sgg_name,
+                    COUNT(*) as stop_count
+                FROM spatial_mapping
+                GROUP BY sgg_name
+                ORDER BY sgg_name;
+            """
+            
+            self.cur.execute(verification_query)
+            results = self.cur.fetchall()
+            
+            logger.info("District-stop mapping verification:")
+            total_stops = 0
+            for district, count in results:
+                logger.info(f"  {district}: {count} stops")
+                total_stops += count
+            logger.info(f"  Total mapped stops: {total_stops}")
+            
+            # 중복 확인
+            duplicate_check_query = """
+                SELECT 
+                    COUNT(*) as total_mappings,
+                    COUNT(DISTINCT node_id) as unique_nodes
+                FROM spatial_mapping;
+            """
+            
+            self.cur.execute(duplicate_check_query)
+            total, unique = self.cur.fetchone()
+            
+            if total != unique:
+                logger.warning(f"Found {total - unique} duplicate mappings")
+            else:
+                logger.info("No duplicate mappings found")
+                
+        except Exception as e:
+            logger.error(f"Error building district-stop mapping: {e}")
+            self.conn.rollback()
+            raise
+
     def verify_data(self):
         """데이터 검증 및 통계 출력"""
         logger.info("Verifying loaded data...")
@@ -501,6 +701,16 @@ class SeoulBusETL:
             ("Total route-stop mappings", "SELECT COUNT(*) FROM route_stops"),
             ("Total operation schedules", "SELECT COUNT(*) FROM operation_schedules"),
             ("Total route details", "SELECT COUNT(*) FROM route_details"),
+            ("Total admin boundaries", "SELECT COUNT(*) FROM admin_boundaries"),
+            ("Total spatial mappings", "SELECT COUNT(*) FROM spatial_mapping"),
+            ("Admin boundaries by district", """
+                SELECT sggnm, COUNT(*) 
+                FROM admin_boundaries 
+                WHERE sidonm = '서울특별시'
+                GROUP BY sggnm 
+                ORDER BY COUNT(*) DESC
+                LIMIT 10
+            """),
             ("Top 5 routes by distance", """
                 SELECT route_name, total_distance
                 FROM bus_routes 
@@ -529,30 +739,40 @@ class SeoulBusETL:
             self.connect_db()
 
             # 1. 정류장(노드) 정보 처리
-            bus_stops_path = os.path.join(data_dir, 'raw/busInfra/seoul_node_info.csv')
+            bus_stops_path = os.path.join(data_dir, 'processed/busInfra/seoul_node_info_filtered.csv')
             if os.path.exists(bus_stops_path):
                 self.process_bus_stops(bus_stops_path)
             else:
                 logger.warning(f"Bus stops file not found: {bus_stops_path}")
             
             # 2. 노선 정보 처리
-            route_info_path = os.path.join(data_dir, 'raw/busInfra/seoul_route_info.csv')
+            route_info_path = os.path.join(data_dir, 'processed/busInfra/seoul_route_info_filtered.csv')
             if os.path.exists(route_info_path):
                 self.process_route_info(route_info_path)
             else:
                 logger.warning(f"Route info file not found: {route_info_path}")
             
             # 3. 노선-정류장 매핑 처리
-            route_stops_path = os.path.join(data_dir, 'raw/busInfra/seoul_route_node.csv')
+            route_stops_path = os.path.join(data_dir, 'processed/busInfra/seoul_route_node_filtered.csv')
             if os.path.exists(route_stops_path):
                 self.process_route_stops(route_stops_path)
             else:
                 logger.warning(f"Route-stops mapping file not found: {route_stops_path}")
             
-            # 4. PostGIS geometry 필드 업데이트
+            # 4. 행정동 경계 데이터 처리
+            admin_boundaries_path = os.path.join(data_dir, 'processed/busInfra/HangJeongDong_ver20250401.geojson')
+            if os.path.exists(admin_boundaries_path):
+                self.process_admin_boundaries(admin_boundaries_path)
+            else:
+                logger.warning(f"Administrative boundaries file not found: {admin_boundaries_path}")
+            
+            # 5. PostGIS geometry 필드 업데이트
             self.update_geometry_fields()
 
-            # 5. 데이터 검증
+            # 6. 공간 매핑 테이블 구축 (성능 최적화)
+            self.build_spatial_mapping()
+
+            # 7. 데이터 검증
             self.verify_data()
 
             logger.info("Seoul Bus ETL process completed successfully!")

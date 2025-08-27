@@ -53,16 +53,13 @@ CREATE TABLE section_passenger_history (
     station_sequence INTEGER,                      -- 정류장순번
     
     -- ===========================================
-    -- API 2 실제 필드들 (시간당 데이터)
+    -- API 2 실제 유효 필드들 (Tall Table 구조)
     -- ===========================================
-    operation_count INTEGER DEFAULT 0,             -- 운행횟수 (시간당)
-    max_passengers INTEGER DEFAULT 0,              -- 최대_재차인원_수 (시간당)
-    total_passengers INTEGER DEFAULT 0,            -- 재차인원합 (시간당)
-    avg_passengers DECIMAL(5,1) DEFAULT 0,         -- 평균재차인원 (시간당)
+    -- 시간당 승객수 (API2 검증 완료: a18SumLoadPsngNum{hour}h 필드)
+    passenger_count INTEGER DEFAULT NULL,          -- 해당 시간대 승객수
     
-    -- DRT 필요성 핵심 지표
-    overcapacity_operations INTEGER DEFAULT 0,     -- 용량초과_운행횟수 (버스 정원 초과 발생 횟수)
-    overcapacity_distance DECIMAL(6,2) DEFAULT 0,  -- 용량초과_운행거리 (정원 초과 상태 지속 거리/시간)
+    -- 일일 총합 참조용 (중복 저장하지 않고 집계로 계산)
+    daily_total_passengers INTEGER DEFAULT NULL,   -- a18SumLoadPsng: 일일 구간별 총 승객수 (참조용)
     
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
@@ -121,14 +118,12 @@ CREATE TABLE section_speed_history (
     to_node_id VARCHAR(50) NOT NULL,               -- 도착정류장ID (bus_stops.node_id 참조)
     hour INTEGER NOT NULL,                         -- 시간 (0-23)
     
-    -- API 4 실제 필드들 (추가된 필드)
+    -- API 4 메타데이터 (구간 식별용)
     from_station_sequence INTEGER,                 -- 출발정류장순번
     to_station_sequence INTEGER,                   -- 도착정류장순번
-    usage_count INTEGER DEFAULT 0,                 -- 이용횟수
     
-    -- 운행 데이터 (시간당)
-    speed DECIMAL(5,2) DEFAULT 0,                  -- 속도 (시간당)
-    trip_time INTEGER DEFAULT 0,                   -- 운행시간 (시간당, 분)
+    -- 유효한 운행 데이터 (73.9% 유효율 확인)
+    trip_time INTEGER DEFAULT 0,                   -- 운행시간 (시간당, 분) - 유일한 유효 데이터
     
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
@@ -183,13 +178,13 @@ CREATE TABLE road_traffic_history (
 -- TimescaleDB 하이퍼테이블 생성
 SELECT create_hypertable('road_traffic_history', 'record_date', chunk_time_interval => INTERVAL '7 days');
 
--- 압축 정책
-ALTER TABLE road_traffic_history SET (
-    timescaledb.compress,
-    timescaledb.compress_segmentby = 'link_id, peak_time_type, weekday_group_code'
-);
+-- 압축 정책 (임시 주석처리 - link_sequence 키 충돌 문제)
+-- ALTER TABLE road_traffic_history SET (
+--     timescaledb.compress,
+--     timescaledb.compress_segmentby = 'link_id, link_sequence, peak_time_type, weekday_group_code'
+-- );
 
-SELECT add_compression_policy('road_traffic_history', INTERVAL '7 days');
+-- SELECT add_compression_policy('road_traffic_history', INTERVAL '7 days');
 
 -- ===============================================
 -- 6. 실시간 인구 캐시 테이블 (API 6)
@@ -327,13 +322,16 @@ CREATE TABLE etl_job_status (
 
 -- ETL 작업 상세 로그 테이블
 CREATE TABLE etl_job_logs (
-    id SERIAL PRIMARY KEY,
+    id SERIAL,
     job_name VARCHAR(50) NOT NULL,                    -- etl_job_status.job_name 참조
     log_level VARCHAR(10) NOT NULL,                   -- INFO, WARN, ERROR, DEBUG
     log_message TEXT NOT NULL,                        -- 로그 메시지
     execution_step VARCHAR(100),                      -- 실행 단계 (API_CALL, DATA_TRANSFORM, DB_INSERT 등)
     additional_data JSONB,                            -- 추가 데이터 (오류 상세, API 응답 등)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    -- 하이퍼테이블용 복합 기본키 (partitioning column 포함)
+    PRIMARY KEY (id, created_at),
     
     -- 외래키 제약조건
     FOREIGN KEY (job_name) REFERENCES etl_job_status(job_name) ON DELETE CASCADE
@@ -440,7 +438,7 @@ CREATE INDEX idx_section_passenger_route_date ON section_passenger_history (rout
 CREATE INDEX idx_section_passenger_section_date ON section_passenger_history (from_node_id, to_node_id, record_date);
 CREATE INDEX idx_section_passenger_hour ON section_passenger_history (hour);
 CREATE INDEX idx_section_passenger_route_hour ON section_passenger_history (route_id, hour);
-CREATE INDEX idx_section_passenger_overcapacity ON section_passenger_history (overcapacity_operations DESC) WHERE overcapacity_operations > 0;
+CREATE INDEX idx_section_passenger_count ON section_passenger_history (passenger_count DESC) WHERE passenger_count > 0;
 
 -- OD 통행량 이력
 CREATE INDEX idx_od_traffic_start_date ON od_traffic_history (start_district, start_admin_dong, record_date);
@@ -451,7 +449,7 @@ CREATE INDEX idx_section_speed_route_date ON section_speed_history (route_id, re
 CREATE INDEX idx_section_speed_section_date ON section_speed_history (from_node_id, to_node_id, record_date);
 CREATE INDEX idx_section_speed_hour ON section_speed_history (hour);
 CREATE INDEX idx_section_speed_route_hour ON section_speed_history (route_id, hour);
-CREATE INDEX idx_section_speed_usage ON section_speed_history (usage_count DESC) WHERE usage_count > 0;
+CREATE INDEX idx_section_speed_trip_time ON section_speed_history (trip_time DESC) WHERE trip_time > 0;
 
 -- 도로 교통 패턴 이력 (DRT 분석 최적화)
 CREATE INDEX idx_road_traffic_link_date ON road_traffic_history (link_id, record_date);

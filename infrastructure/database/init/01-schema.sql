@@ -223,7 +223,82 @@ $$ LANGUAGE plpgsql;
 -- 초기 데이터 검증 뷰
 -- ===============================================
 
--- 데이터 품질 확인용 뷰
+-- VIEW는 모든 테이블 생성 후에 생성됩니다
+
+-- ===============================================
+-- 6. 행정동 경계 테이블
+-- ===============================================
+
+CREATE TABLE admin_boundaries (
+    id SERIAL PRIMARY KEY,
+    adm_cd VARCHAR(20) UNIQUE NOT NULL,        -- 행정동 코드 (11140680)
+    adm_cd2 VARCHAR(20),                       -- 행정동 코드2 (1144068000)
+    adm_nm VARCHAR(200) NOT NULL,              -- 행정동 전체명 (서울특별시 마포구 합정동)
+    sgg VARCHAR(10),                           -- 시군구 코드 (11440)
+    sido VARCHAR(10),                          -- 시도 코드 (11)
+    sidonm VARCHAR(50) NOT NULL,               -- 시도명 (서울특별시)
+    sggnm VARCHAR(50) NOT NULL,                -- 시군구명 (마포구)
+    admin_dong_name VARCHAR(100) NOT NULL,     -- 행정동명 (합정동)
+    geometry GEOMETRY(MULTIPOLYGON, 4326),     -- 행정동 경계 폴리곤
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 행정동 경계 테이블 인덱스
+CREATE INDEX idx_admin_boundaries_geom ON admin_boundaries USING GIST (geometry);
+CREATE INDEX idx_admin_boundaries_sgg ON admin_boundaries (sggnm);
+CREATE INDEX idx_admin_boundaries_adm_cd ON admin_boundaries (adm_cd);
+CREATE INDEX idx_admin_boundaries_dong_name ON admin_boundaries (admin_dong_name);
+CREATE INDEX idx_admin_boundaries_sido ON admin_boundaries (sidonm);
+
+-- ===============================================
+-- 7. 공간 매핑 테이블 (성능 최적화용)
+-- ===============================================
+
+CREATE TABLE spatial_mapping (
+    node_id VARCHAR(50) PRIMARY KEY,              -- 정류장ID (PK & FK)
+    
+    -- 계층 정보
+    sido_code VARCHAR(10) DEFAULT '11',           -- 시도 코드 (서울: 11)
+    sido_name VARCHAR(50) DEFAULT '서울특별시',    -- 시도명
+    sgg_code VARCHAR(10) NOT NULL,                -- 시군구 코드
+    sgg_name VARCHAR(50) NOT NULL,                -- 시군구명 (강남구, 서초구 등)
+    adm_code VARCHAR(20),                         -- 행정동 코드
+    adm_name VARCHAR(100),                        -- 행정동명
+    
+    -- 추가 메타데이터
+    is_seoul BOOLEAN DEFAULT TRUE,                -- 서울시 소속 여부
+    is_major_stop BOOLEAN DEFAULT FALSE,          -- 주요 정류장 여부
+    stop_type INTEGER,                            -- 정류장 유형 (bus_stops.node_type 복사)
+    
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    -- 외래키 제약조건
+    FOREIGN KEY (node_id) REFERENCES bus_stops(node_id) ON DELETE CASCADE
+);
+
+-- 공간 매핑 테이블 인덱스 (쿼리 성능 최적화)
+CREATE INDEX idx_spatial_sgg_name ON spatial_mapping (sgg_name);
+CREATE INDEX idx_spatial_sgg_code ON spatial_mapping (sgg_code);
+CREATE INDEX idx_spatial_adm_code ON spatial_mapping (adm_code);
+CREATE INDEX idx_spatial_hierarchy ON spatial_mapping (sido_code, sgg_code, adm_code);
+CREATE INDEX idx_spatial_sgg_composite ON spatial_mapping (sgg_name, node_id);
+-- Covering index for better performance
+CREATE INDEX idx_spatial_covering ON spatial_mapping (sgg_name) INCLUDE (node_id, adm_name);
+
+-- 테이블 생성 후 트리거 생성
+CREATE TRIGGER update_admin_boundaries_updated_at 
+    BEFORE UPDATE ON admin_boundaries
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_spatial_mapping_updated_at 
+    BEFORE UPDATE ON spatial_mapping
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ===============================================
+-- 데이터 품질 확인용 뷰 (모든 테이블 생성 후)
+-- ===============================================
 CREATE VIEW data_quality_summary AS
 SELECT 
     'bus_stops' as table_name,
@@ -244,7 +319,21 @@ SELECT
     COUNT(*) as total_records,
     COUNT(DISTINCT route_id) as unique_routes,
     COUNT(CASE WHEN is_active = TRUE THEN 1 END) as active_mappings
-FROM route_stops;
+FROM route_stops
+UNION ALL
+SELECT 
+    'admin_boundaries' as table_name,
+    COUNT(*) as total_records,
+    COUNT(DISTINCT sggnm) as unique_districts,
+    COUNT(CASE WHEN geometry IS NOT NULL THEN 1 END) as records_with_geometry
+FROM admin_boundaries
+UNION ALL
+SELECT 
+    'spatial_mapping' as table_name,
+    COUNT(*) as total_records,
+    COUNT(DISTINCT sgg_name) as unique_districts,
+    COUNT(CASE WHEN is_seoul = TRUE THEN 1 END) as seoul_stops
+FROM spatial_mapping;
 
 -- ===============================================
 -- 완료 메시지
@@ -261,6 +350,8 @@ BEGIN
     RAISE NOTICE '  - operation_schedules (운행스케줄)';
     RAISE NOTICE '  - route_details (노선상세)';
     RAISE NOTICE '  - route_stops (노선-정류장 매핑)';
+    RAISE NOTICE '  - admin_boundaries (행정동 경계)';
+    RAISE NOTICE '  - spatial_mapping (공간 매핑 - 정류장/구/동 관계)';
     RAISE NOTICE '===========================================';
     RAISE NOTICE '데이터 로드 후 다음 함수를 실행하세요:';
     RAISE NOTICE '  SELECT update_geometry_fields();';
