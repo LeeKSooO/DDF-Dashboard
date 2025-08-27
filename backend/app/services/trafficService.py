@@ -8,6 +8,7 @@ from datetime import datetime, date
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 import logging
+import calendar
 
 from app.schemas.traffic import (
     HourlyTrafficSchema,
@@ -20,6 +21,7 @@ from app.utils.response import (
     validate_district_name,
     handle_database_error
 )
+from app.core.redis_client import cache_result
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +35,7 @@ class HourlyTrafficService:
     def __init__(self):
         pass
     
+    @cache_result(key_prefix="traffic:hourly", use_month_ttl=True)
     async def get_hourly_traffic(
         self,
         db: AsyncSession,
@@ -109,6 +112,28 @@ class HourlyTrafficService:
                 raise bad_request_response("district_name is required when region_type is 'district'")
             validate_district_name(district_name)
     
+    def _calculate_month_range(self, analysis_month: str) -> tuple[date, date]:
+        """월 범위 계산 (정확한 마지막 날짜 포함) - date 객체 반환"""
+        try:
+            year, month = map(int, analysis_month.split('-'))
+            
+            # 해당 월의 마지막 날짜 계산
+            last_day = calendar.monthrange(year, month)[1]
+            
+            month_start = date(year, month, 1)
+            month_end = date(year, month, last_day)
+            
+            logger.info(f"Month range: {month_start} to {month_end}")
+            return month_start, month_end
+            
+        except Exception as e:
+            logger.error(f"Error calculating month range: {e}")
+            # 기본값으로 31일 사용
+            year, month = map(int, analysis_month.split('-'))
+            month_start = date(year, month, 1)
+            month_end = date(year, month, 31)
+            return month_start, month_end
+    
     async def _get_hourly_patterns(
         self,
         db: AsyncSession,
@@ -125,28 +150,12 @@ class HourlyTrafficService:
             elif day_type == "weekend":
                 weekday_filter = "AND EXTRACT(DOW FROM sph.record_date) IN (0, 6)"
             
-            # 최적화된 쿼리 생성 (매핑 테이블 활용)
+            # 날짜 범위 계산 (정확한 마지막 날짜)
+            month_start, month_end = self._calculate_month_range(analysis_month)
+            
+            # 최적화된 쿼리 생성 (범위 기반 날짜 필터)
             if district_name:
-                # 구별 쿼리: spatial_mapping을 서브쿼리로 활용 (최적화)
-                query = text(f"""
-                    SELECT 
-                        sph.hour,
-                        AVG(sph.ride_passenger) as avg_ride_passengers,
-                        AVG(sph.alight_passenger) as avg_alight_passengers,
-                        AVG(sph.ride_passenger + sph.alight_passenger) as avg_total_passengers
-                    FROM station_passenger_history sph
-                    WHERE DATE_TRUNC('month', sph.record_date) = '{analysis_month}-01'::date
-                        {weekday_filter}
-                        AND sph.node_id IN (
-                            SELECT node_id 
-                            FROM spatial_mapping
-                            WHERE sgg_name = :district_name
-                        )
-                    GROUP BY sph.hour
-                    ORDER BY sph.hour
-                """)
-            else:
-                # 서울시 전체 쿼리 (spatial_mapping JOIN으로 최적화)
+                # 구별 쿼리: JOIN으로 변경 (서브쿼리보다 효율적)
                 query = text(f"""
                     SELECT 
                         sph.hour,
@@ -155,17 +164,42 @@ class HourlyTrafficService:
                         AVG(sph.ride_passenger + sph.alight_passenger) as avg_total_passengers
                     FROM station_passenger_history sph
                     INNER JOIN spatial_mapping sm ON sph.node_id = sm.node_id
-                    WHERE DATE_TRUNC('month', sph.record_date) = '{analysis_month}-01'::date
+                    WHERE sph.record_date >= CAST(:month_start AS date)
+                        AND sph.record_date <= CAST(:month_end AS date)
+                        {weekday_filter}
+                        AND sm.sgg_name = :district_name
+                        AND sm.is_seoul = TRUE
+                    GROUP BY sph.hour
+                    ORDER BY sph.hour
+                """)
+                params = {
+                    "month_start": month_start,
+                    "month_end": month_end,
+                    "district_name": district_name
+                }
+            else:
+                # 서울시 전체 쿼리 (범위 기반 날짜 필터)
+                query = text(f"""
+                    SELECT 
+                        sph.hour,
+                        AVG(sph.ride_passenger) as avg_ride_passengers,
+                        AVG(sph.alight_passenger) as avg_alight_passengers,
+                        AVG(sph.ride_passenger + sph.alight_passenger) as avg_total_passengers
+                    FROM station_passenger_history sph
+                    INNER JOIN spatial_mapping sm ON sph.node_id = sm.node_id
+                    WHERE sph.record_date >= CAST(:month_start AS date)
+                        AND sph.record_date <= CAST(:month_end AS date)
                         {weekday_filter}
                         AND sm.is_seoul = TRUE
                     GROUP BY sph.hour
                     ORDER BY sph.hour
                 """)
+                params = {
+                    "month_start": month_start,
+                    "month_end": month_end
+                }
             
-            # 파라미터 설정
-            params = {}
-            if district_name:
-                params["district_name"] = district_name
+            # 파라미터는 위에서 설정됨
             
             # 쿼리 실행
             result = await db.execute(query, params)

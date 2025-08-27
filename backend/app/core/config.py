@@ -15,7 +15,7 @@ class DRTDashboardSettings(BaseSettings):
     )
     
     # Cache Settings
-    #REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/1")  # Use DB 1 for dashboard cache
+    REDIS_URL: str = os.getenv("REDIS_URL", "redis://redis:6379")  # Redis cache for dashboard
     
     # Cache TTL Settings (seconds)
     #CACHE_TTL_KPI: int = 300        # 5 minutes - real-time metrics
