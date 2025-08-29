@@ -79,6 +79,9 @@ package-lock.json
 *.sqlite
 *.sqlite3
 
+# PostgreSQL data volume (contains database files)
+postgres/
+
 # ===========================================
 # Logs
 # ===========================================
