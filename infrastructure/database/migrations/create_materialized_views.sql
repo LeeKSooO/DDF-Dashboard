@@ -2,11 +2,24 @@
 -- DRT Dashboard Materialized Views
 -- 작성일: 2025-08-29
 -- 목적: API 성능 최적화를 위한 집계 테이블
+-- 
+-- ## 집계하고 있는 주요 지표들:
+-- 1. 시간대별 교통 패턴 (승차/하차 인원수, 시간별 분포)
+-- 2. 구별 월간 교통량 총계 (일평균, 히트맵용 분위수)
+-- 3. 정류장별 월간 교통량 (운행정보, 노선수)
+-- 4. 서울시 전체 시간대별 패턴 (전체 집계)
+-- 5. 성능 통계 (디스크 사용량, 갱신 상태)
 -- =====================================================
 
 -- 1. 시간대별 교통량 패턴 (Traffic API용)
 -- 용도: /api/v1/traffic/hourly
 -- 집계 수준: 구별 + 시간대별 + 요일구분별
+-- 
+-- ## 집계 지표:
+-- - 평균 승차/하차 인원 (시간대별)
+-- - 최대/최소 승차/하차 인원 (피크 시간 분석용)
+-- - 총 승객 수 (승차 + 하차)
+-- - 정류장 수, 운영일수 (샘플 메타데이터)
 DROP MATERIALIZED VIEW IF EXISTS mv_hourly_traffic_patterns CASCADE;
 
 CREATE MATERIALIZED VIEW mv_hourly_traffic_patterns AS
@@ -70,6 +83,12 @@ WHERE sgg_name IS NOT NULL;
 -- 2. 구별 교통량 총계 (Heatmap API용)
 -- 용도: /api/v1/heatmap/seoul, /districts/{name}
 -- 집계 수준: 구별 월간 총계
+-- 
+-- ## 집계 지표:
+-- - 총 교통량 (월간 합계: 승차 + 하차 + 전체)
+-- - 일평균 교통량 (월간 평균)
+-- - 분위수 (Q1, Q2, Q3, 최대/최소) → 히트맵 색상 계산용
+-- - 정류장 수, 운영일수 (인프라 현황)
 DROP MATERIALIZED VIEW IF EXISTS mv_district_monthly_traffic CASCADE;
 
 CREATE MATERIALIZED VIEW mv_district_monthly_traffic AS
@@ -119,6 +138,12 @@ ON mv_district_monthly_traffic(month_date, total_traffic DESC);
 -- 3. 정류장별 교통량 (Heatmap 상세용)
 -- 용도: /api/v1/heatmap/districts/{name} stations 배열
 -- 집계 수준: 정류장별 월간 총계
+-- 
+-- ## 집계 지표:
+-- - 정류장별 월간 교통량 (승차/하차/전체)
+-- - 일평균 교통량 (월간 평균)
+-- - 위치 정보 (위도, 경도)
+-- - 운영 메타데이터 (운영일수, 노선수, 운행시간수)
 DROP MATERIALIZED VIEW IF EXISTS mv_station_monthly_traffic CASCADE;
 
 CREATE MATERIALIZED VIEW mv_station_monthly_traffic AS
@@ -170,6 +195,12 @@ ON mv_station_monthly_traffic(month_date, district_name, total_traffic DESC);
 
 -- 4. 서울시 전체 시간대별 패턴 (Traffic API 서울시 전체용)
 -- 용도: region_type='seoul'일 때 빠른 조회
+-- 
+-- ## 집계 지표:
+-- - 서울시 전체 시간별 평균 승하차 인원
+-- - 시간별 최대 승하차 인원 (피크 분석용)
+-- - 전체 샘플 수, 정류장 수 (데이터 품질 확인용)
+-- - 가중평균 계산 (구별 데이터를 서울시 전체로 집계)
 DROP MATERIALIZED VIEW IF EXISTS mv_seoul_hourly_patterns CASCADE;
 
 CREATE MATERIALIZED VIEW mv_seoul_hourly_patterns AS
@@ -194,6 +225,12 @@ ON mv_seoul_hourly_patterns(month_date, day_type, hour);
 -- =====================================================
 
 -- 5. 갱신 함수 (ETL 완료 후 실행)
+-- 
+-- ## Materialized View 갱신 순서:
+-- 1) mv_hourly_traffic_patterns (기본 시간별 패턴)
+-- 2) mv_district_monthly_traffic (구별 월간 집계)
+-- 3) mv_station_monthly_traffic (정류장별 월간 집계)
+-- 4) mv_seoul_hourly_patterns (서울시 전체 집계 - 의존성 있음)
 CREATE OR REPLACE FUNCTION refresh_all_traffic_views()
 RETURNS void AS $$
 BEGIN
@@ -217,6 +254,10 @@ $$ LANGUAGE plpgsql;
 -- =====================================================
 
 -- 6. 뷰 통계 확인 함수 (단순화)
+-- 
+-- ## 모니터링 지표:
+-- - 각 Materialized View의 디스크 사용량
+-- - 갱신 상태 및 성능 확인용
 CREATE OR REPLACE FUNCTION check_mv_statistics()
 RETURNS TABLE(
     view_name text,
