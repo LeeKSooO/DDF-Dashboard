@@ -8,7 +8,6 @@ from datetime import datetime, date
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 import logging
-import calendar
 
 from app.schemas.traffic import (
     HourlyTrafficSchema,
@@ -39,7 +38,7 @@ class HourlyTrafficService:
     async def get_hourly_traffic(
         self,
         db: AsyncSession,
-        analysis_month: str,
+        analysis_month: date,
         region_type: str,
         district_name: Optional[str] = None
     ) -> HourlyTrafficSchema:
@@ -78,7 +77,7 @@ class HourlyTrafficService:
             region_name = district_name if district_name else "서울시 전체"
             
             return HourlyTrafficSchema(
-                analysis_month=analysis_month,
+                analysis_month=analysis_month.strftime("%Y-%m"),
                 region_type=region_type,
                 region_name=region_name,
                 district_name=district_name,
@@ -94,13 +93,10 @@ class HourlyTrafficService:
             logger.error(f"Error in get_hourly_traffic: {e}")
             raise handle_database_error(e)
     
-    def _validate_inputs(self, analysis_month: str, region_type: str, district_name: Optional[str]):
+    def _validate_inputs(self, analysis_month: date, region_type: str, district_name: Optional[str]):
         """입력 파라미터 유효성 검사"""
-        # 월 형식 검증
-        try:
-            datetime.strptime(f"{analysis_month}-01", "%Y-%m-%d")
-        except ValueError:
-            raise bad_request_response("Invalid month format. Use YYYY-MM (e.g., 2025-07)")
+        # 날짜 형식은 FastAPI가 자동 검증
+        pass
         
         # 지역 타입 검증
         if region_type not in ["seoul", "district"]:
@@ -112,27 +108,6 @@ class HourlyTrafficService:
                 raise bad_request_response("district_name is required when region_type is 'district'")
             validate_district_name(district_name)
     
-    def _calculate_month_range(self, analysis_month: str) -> tuple[date, date]:
-        """월 범위 계산 (정확한 마지막 날짜 포함) - date 객체 반환"""
-        try:
-            year, month = map(int, analysis_month.split('-'))
-            
-            # 해당 월의 마지막 날짜 계산
-            last_day = calendar.monthrange(year, month)[1]
-            
-            month_start = date(year, month, 1)
-            month_end = date(year, month, last_day)
-            
-            logger.info(f"Month range: {month_start} to {month_end}")
-            return month_start, month_end
-            
-        except Exception as e:
-            logger.error(f"Error calculating month range: {e}")
-            # 기본값으로 31일 사용
-            year, month = map(int, analysis_month.split('-'))
-            month_start = date(year, month, 1)
-            month_end = date(year, month, 31)
-            return month_start, month_end
     
     async def _get_hourly_patterns(
         self,
@@ -141,67 +116,48 @@ class HourlyTrafficService:
         day_type: str,
         district_name: Optional[str] = None
     ) -> List[HourlyPatternSchema]:
-        """시간대별 승하차 패턴 조회 (station_passenger_history 기반)"""
+        """시간대별 승하차 패턴 조회 (mv_hourly_traffic_patterns 기반)"""
         try:
-            # 요일 필터 생성
-            weekday_filter = ""
-            if day_type == "weekday":
-                weekday_filter = "AND EXTRACT(DOW FROM sph.record_date) BETWEEN 1 AND 5"
-            elif day_type == "weekend":
-                weekday_filter = "AND EXTRACT(DOW FROM sph.record_date) IN (0, 6)"
             
-            # 날짜 범위 계산 (정확한 마지막 날짜)
-            month_start, month_end = self._calculate_month_range(analysis_month)
-            
-            # 최적화된 쿼리 생성 (범위 기반 날짜 필터)
+            # 최적화된 Materialized View 쿼리
             if district_name:
-                # 구별 쿼리: JOIN으로 변경 (서브쿼리보다 효율적)
-                query = text(f"""
+                # 구별 쿼리: mv_hourly_traffic_patterns 사용
+                query = text("""
                     SELECT 
-                        sph.hour,
-                        AVG(sph.ride_passenger) as avg_ride_passengers,
-                        AVG(sph.alight_passenger) as avg_alight_passengers,
-                        AVG(sph.ride_passenger + sph.alight_passenger) as avg_total_passengers
-                    FROM station_passenger_history sph
-                    INNER JOIN spatial_mapping sm ON sph.node_id = sm.node_id
-                    WHERE sph.record_date >= CAST(:month_start AS date)
-                        AND sph.record_date <= CAST(:month_end AS date)
-                        {weekday_filter}
-                        AND sm.sgg_name = :district_name
-                        AND sm.is_seoul = TRUE
-                    GROUP BY sph.hour
-                    ORDER BY sph.hour
+                        hour,
+                        avg_ride_passengers,
+                        avg_alight_passengers,
+                        avg_total_passengers
+                    FROM mv_hourly_traffic_patterns
+                    WHERE month_date = :analysis_month
+                        AND day_type = :day_type
+                        AND sgg_name = :district_name
+                    ORDER BY hour
                 """)
                 params = {
-                    "month_start": month_start,
-                    "month_end": month_end,
+                    "analysis_month": analysis_month,
+                    "day_type": day_type,
                     "district_name": district_name
                 }
             else:
-                # 서울시 전체 쿼리 (범위 기반 날짜 필터)
-                query = text(f"""
+                # 서울시 전체 쿼리: mv_seoul_hourly_patterns 사용
+                query = text("""
                     SELECT 
-                        sph.hour,
-                        AVG(sph.ride_passenger) as avg_ride_passengers,
-                        AVG(sph.alight_passenger) as avg_alight_passengers,
-                        AVG(sph.ride_passenger + sph.alight_passenger) as avg_total_passengers
-                    FROM station_passenger_history sph
-                    INNER JOIN spatial_mapping sm ON sph.node_id = sm.node_id
-                    WHERE sph.record_date >= CAST(:month_start AS date)
-                        AND sph.record_date <= CAST(:month_end AS date)
-                        {weekday_filter}
-                        AND sm.is_seoul = TRUE
-                    GROUP BY sph.hour
-                    ORDER BY sph.hour
+                        hour,
+                        avg_ride_passengers,
+                        avg_alight_passengers,
+                        avg_total_passengers
+                    FROM mv_seoul_hourly_patterns
+                    WHERE month_date = :analysis_month
+                        AND day_type = :day_type
+                    ORDER BY hour
                 """)
                 params = {
-                    "month_start": month_start,
-                    "month_end": month_end
+                    "analysis_month": analysis_month,
+                    "day_type": day_type
                 }
             
-            # 파라미터는 위에서 설정됨
-            
-            # 쿼리 실행
+            # 쿼리 실행 (Materialized View에서 조회)
             result = await db.execute(query, params)
             rows = result.fetchall()
             

@@ -1042,6 +1042,46 @@ class SeoulTrafficETL:
         self.conn.commit()
         return len(batch_data)
     
+    def refresh_materialized_views(self):
+        """ETL 완료 후 Materialized Views 갱신 (API 성능 최적화)"""
+        try:
+            logger.info("🔄 Starting materialized view refresh for API optimization...")
+            
+            # PostgreSQL 함수 호출로 모든 materialized view 갱신
+            refresh_sql = "SELECT refresh_all_traffic_views();"
+            
+            self.cur.execute(refresh_sql)
+            self.conn.commit()
+            
+            # 갱신 후 통계 확인
+            stats_sql = "SELECT * FROM check_mv_statistics();"
+            self.cur.execute(stats_sql)
+            stats = self.cur.fetchall()
+            
+            logger.info("📊 Materialized View Statistics:")
+            for stat in stats:
+                view_name = stat['view_name'] if isinstance(stat, dict) else stat[0]
+                row_count = stat['row_count'] if isinstance(stat, dict) else stat[1]
+                disk_size = stat['disk_size'] if isinstance(stat, dict) else stat[2]
+                logger.info(f"   - {view_name}: {row_count:,} rows, {disk_size}")
+            
+            # ETL 로그에 기록
+            self.log_etl_message('ETL_MATERIALIZED_VIEWS', 'INFO', 
+                               f'Successfully refreshed {len(stats)} materialized views', 
+                               'AGGREGATION',
+                               {'refreshed_views': len(stats)})
+            
+        except Exception as e:
+            logger.error(f"Failed to refresh materialized views: {e}")
+            # 구체적인 에러 로깅
+            error_details = {
+                'error_type': type(e).__name__,
+                'error_message': str(e),
+                'stage': 'materialized_view_refresh'
+            }
+            self.log_etl_message('ETL_MATERIALIZED_VIEWS', 'ERROR', f'Materialized view refresh failed: {e}', 'AGGREGATION', error_details)
+            raise
+    
     def run_full_etl(self, start_date: str = '20250719', end_date: str = '20250731'):
         """전체 ETL 프로세스 실행 (날짜별 루프 방식)"""
         logger.info(f"=== Starting Seoul Traffic ETL Process (Daily Loop Mode) ===")
@@ -1150,6 +1190,17 @@ class SeoulTrafficETL:
                 if stats['total_fetched'] > 0:
                     filter_rate = (stats['seoul_filtered'] / stats['total_fetched']) * 100
                     logger.info(f"   - {api_name}: {stats['seoul_filtered']:,}/{stats['total_fetched']:,} records ({filter_rate:.1f}% Seoul routes)")
+            
+            # ✅ ETL 완료 후 Materialized Views 갱신 (API 성능 최적화)
+            logger.info("="*80)
+            logger.info("📊 Refreshing Materialized Views for API Optimization...")
+            try:
+                self.refresh_materialized_views()
+                logger.info("✅ All materialized views refreshed successfully!")
+            except Exception as e:
+                logger.error(f"❌ Failed to refresh materialized views: {e}")
+                # 집계 테이블 갱신 실패해도 전체 ETL은 성공으로 처리
+                self.log_etl_message('ETL_MATERIALIZED_VIEWS', 'ERROR', f'Materialized view refresh failed: {e}', 'AGGREGATION')
             
             # API 호출 통계를 DB에도 기록
             self.log_etl_message('ETL_SUMMARY', 'INFO', f'Daily loop ETL: {total_api_calls} API calls for {start_date}-{end_date}', 'API_STATISTICS', 
@@ -1260,6 +1311,17 @@ class SeoulTrafficETL:
             logger.info(f"📞 Total API Calls Made: {total_api_calls:,}")
             logger.info(f"📅 Date Range Processed: {start_date} to {end_date} ({total_days} days)")
             logger.info(f"⚡ Parallel Processing: {self.max_workers} workers")
+            
+            # ✅ ETL 완료 후 Materialized Views 갱신 (API 성능 최적화)
+            logger.info("="*80)
+            logger.info("📊 Refreshing Materialized Views for API Optimization...")
+            try:
+                self.refresh_materialized_views()
+                logger.info("✅ All materialized views refreshed successfully!")
+            except Exception as e:
+                logger.error(f"❌ Failed to refresh materialized views: {e}")
+                # 집계 테이블 갱신 실패해도 전체 ETL은 성공으로 처리
+            
             logger.info("="*80)
             self._monitor_memory("Parallel ETL process completed")
             

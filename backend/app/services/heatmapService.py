@@ -38,7 +38,7 @@ class HeatmapService:
     async def get_seoul_heatmap(
         self,
         db: AsyncSession,
-        analysis_month: str,
+        analysis_month: date,
         include_station_details: bool = True,
         min_traffic_threshold: Optional[int] = None
     ) -> SeoulHeatmapSchema:
@@ -62,11 +62,11 @@ class HeatmapService:
             
             # 4. 응답 구성
             return SeoulHeatmapSchema(
-                analysis_month=analysis_month,
+                analysis_month=analysis_month.strftime("%Y-%m"),
                 seoul_boundary=seoul_boundary,
                 districts=districts_data,
                 statistics=statistics_data,
-                data_period=f"{analysis_month}-16 ~ {analysis_month}-31",
+                data_period=f"{analysis_month.strftime('%Y-%m')}-16 ~ {analysis_month.strftime('%Y-%m')}-31",
                 last_updated=datetime.now().isoformat()
             )
             
@@ -74,19 +74,17 @@ class HeatmapService:
             logger.error(f"Error in get_seoul_heatmap: {e}")
             raise handle_database_error(e)
     
-    def _validate_inputs(self, analysis_month: str):
+    def _validate_inputs(self, analysis_month: date):
         """입력 파라미터 유효성 검사"""
-        try:
-            datetime.strptime(f"{analysis_month}-01", "%Y-%m-%d")
-        except ValueError:
-            raise bad_request_response("Invalid month format. Use YYYY-MM (e.g., 2025-07)")
+        # 날짜 형식은 FastAPI가 자동 검증
+        pass
     
     async def _get_seoul_boundary_optimized(self, db: AsyncSession) -> BoundarySchema:
         """서울시 경계 좌표 조회 (최적화: 정확한 조건 사용)"""
         try:
-            # 최적화: LIKE 대신 정확한 매칭 사용
+            # PostGIS 쿼리 단순화
             boundary_query = text("""
-                SELECT ST_AsGeoJSON(ST_ExteriorRing((ST_Dump(ST_Union(geometry))).geom)) as boundary
+                SELECT ST_AsGeoJSON(ST_ExteriorRing(ST_Union(geometry))) as boundary
                 FROM admin_boundaries 
                 WHERE sidonm = '서울특별시'
                 LIMIT 1
@@ -128,32 +126,30 @@ class HeatmapService:
     async def _get_districts_traffic_data(
         self,
         db: AsyncSession,
-        analysis_month: str,
+        analysis_month: date,
         include_station_details: bool,
         min_traffic_threshold: Optional[int]
     ) -> List[DistrictTrafficSchema]:
-        """구별 교통량 데이터 조회"""
+        """구별 교통량 데이터 조회 (mv_district_monthly_traffic 기반)"""
         try:
-            # 구별 교통량 집계 쿼리
-            district_query = text(f"""
+            # 최적화된 Materialized View 쿼리
+            district_query = text("""
                 SELECT 
-                    sm.sgg_code as district_code,
-                    sm.sgg_name as district_name,
-                    SUM(sph.ride_passenger + sph.alight_passenger) as total_traffic,
-                    SUM(sph.ride_passenger) as total_ride,
-                    SUM(sph.alight_passenger) as total_alight,
-                    COUNT(DISTINCT sm.node_id) as station_count,
-                    AVG(sph.ride_passenger + sph.alight_passenger) as avg_daily_traffic
-                FROM station_passenger_history sph
-                INNER JOIN spatial_mapping sm ON sph.node_id = sm.node_id
-                WHERE DATE_TRUNC('month', sph.record_date) = CAST('{analysis_month}-01' AS date)
-                    AND sm.is_seoul = TRUE
-                GROUP BY sm.sgg_code, sm.sgg_name
-                HAVING SUM(sph.ride_passenger + sph.alight_passenger) > COALESCE(:min_threshold, 0)
+                    district_code,
+                    district_name,
+                    total_traffic,
+                    total_ride,
+                    total_alight,
+                    station_count,
+                    avg_daily_traffic
+                FROM mv_district_monthly_traffic
+                WHERE month_date = :month_date
+                    AND total_traffic > COALESCE(:min_threshold, 0)
                 ORDER BY total_traffic DESC
             """)
             
             params = {
+                "month_date": analysis_month,
                 "min_threshold": min_traffic_threshold or 0
             }
             
@@ -177,7 +173,9 @@ class HeatmapService:
                 logger.info(f"District {district_name}: traffic={total_traffic}, stations={station_count}")
                 
                 # 구 경계 데이터
+                logger.info(f"About to call _get_district_boundary for {district_name}")
                 boundary = await self._get_district_boundary(db, district_name)
+                logger.info(f"Got boundary for {district_name}: {len(boundary.coordinates[0]) if boundary.coordinates else 0} coordinates")
                 
                 # 정류장별 데이터
                 stations = []
@@ -213,17 +211,20 @@ class HeatmapService:
     
     async def _get_district_boundary(self, db: AsyncSession, district_name: str) -> BoundarySchema:
         """구별 경계 좌표 조회"""
+        logger.info(f"Getting boundary for district: {district_name}")
         try:
-            # 구별 경계 조회 (첫 번째 polygon 사용)
+            # PostGIS 쿼리 단순화
             boundary_query = text("""
                 SELECT ST_AsGeoJSON(ST_ExteriorRing((ST_Dump(geometry)).geom)) as boundary
                 FROM admin_boundaries 
-                WHERE sggnm = :district_name AND sidonm LIKE '%서울%'
+                WHERE sggnm = :district_name AND sidonm = '서울특별시'
                 LIMIT 1
             """)
             
             result = await db.execute(boundary_query, {"district_name": district_name})
             boundary_row = result.fetchone()
+            
+            logger.info(f"Boundary query result for {district_name}: {boundary_row}")
             
             if boundary_row and boundary_row[0]:
                 import json
@@ -242,7 +243,9 @@ class HeatmapService:
                 return BoundarySchema(coordinates=[coordinates])
             
         except Exception as e:
-            logger.warning(f"Failed to get district boundary for {district_name}: {e}")
+            logger.error(f"Failed to get district boundary for {district_name}: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
         
         # 실패 시 더미 경계 데이터 반환
         return BoundarySchema(
@@ -258,34 +261,31 @@ class HeatmapService:
     async def _get_stations_in_district(
         self,
         db: AsyncSession,
-        analysis_month: str,
+        analysis_month: date,
         district_name: str,
         min_traffic_threshold: Optional[int]
     ) -> List[StationTrafficSchema]:
         """구 내 정류장별 교통량 데이터 조회"""
         try:
-            station_query = text(f"""
+            station_query = text("""
                 SELECT 
-                    sm.node_id,
-                    bs.node_name,
-                    bs.coordinates_y as latitude,
-                    bs.coordinates_x as longitude,
-                    SUM(sph.ride_passenger + sph.alight_passenger) as total_traffic,
-                    SUM(sph.ride_passenger) as total_ride,
-                    SUM(sph.alight_passenger) as total_alight,
-                    AVG(sph.ride_passenger + sph.alight_passenger) as daily_average
-                FROM station_passenger_history sph
-                INNER JOIN spatial_mapping sm ON sph.node_id = sm.node_id
-                INNER JOIN bus_stops bs ON sm.node_id = bs.node_id
-                WHERE DATE_TRUNC('month', sph.record_date) = CAST('{analysis_month}-01' AS date)
-                    AND sm.sgg_name = :district_name
-                    AND sm.is_seoul = TRUE
-                GROUP BY sm.node_id, bs.node_name, bs.coordinates_y, bs.coordinates_x
-                HAVING SUM(sph.ride_passenger + sph.alight_passenger) > COALESCE(:min_threshold, 0)
+                    station_id,
+                    station_name,
+                    latitude,
+                    longitude,
+                    total_traffic,
+                    total_ride,
+                    total_alight,
+                    daily_average
+                FROM mv_station_monthly_traffic
+                WHERE month_date = :month_date
+                    AND district_name = :district_name
+                    AND total_traffic > COALESCE(:min_threshold, 0)
                 ORDER BY total_traffic DESC
             """)
             
             params = {
+                "month_date": analysis_month,
                 "district_name": district_name,
                 "min_threshold": min_traffic_threshold or 0
             }
@@ -384,43 +384,30 @@ class HeatmapService:
     async def _get_districts_traffic_data_optimized(
         self,
         db: AsyncSession,
-        analysis_month: str,
+        analysis_month: date,
         include_station_details: bool,
         min_traffic_threshold: Optional[int]
     ) -> List[DistrictTrafficSchema]:
         """구별 교통량 데이터 조회 (N+1 문제 해결)"""
         try:
-            # 날짜 범위 계산 (DATE_TRUNC 대신 범위 조건 사용) - date 객체 사용
-            year, month = map(int, analysis_month.split('-'))
-            month_start = date(year, month, 1)
-            # 월의 마지막 날을 정확히 계산 (31일로 고정하지 않음)
-            import calendar
-            last_day = calendar.monthrange(year, month)[1]
-            month_end = date(year, month, last_day)
-            
-            # 1. 구별 교통량 집계 쿼리 (최적화된 날짜 필터)
+            # 최적화된 Materialized View 쿼리 (N+1 문제 해결)
             district_query = text("""
                 SELECT 
-                    sm.sgg_code as district_code,
-                    sm.sgg_name as district_name,
-                    SUM(sph.ride_passenger + sph.alight_passenger) as total_traffic,
-                    SUM(sph.ride_passenger) as total_ride,
-                    SUM(sph.alight_passenger) as total_alight,
-                    COUNT(DISTINCT sm.node_id) as station_count,
-                    AVG(sph.ride_passenger + sph.alight_passenger) as avg_daily_traffic
-                FROM station_passenger_history sph
-                INNER JOIN spatial_mapping sm ON sph.node_id = sm.node_id
-                WHERE sph.record_date >= CAST(:month_start AS date)
-                    AND sph.record_date <= CAST(:month_end AS date)
-                    AND sm.is_seoul = TRUE
-                GROUP BY sm.sgg_code, sm.sgg_name
-                HAVING SUM(sph.ride_passenger + sph.alight_passenger) > COALESCE(:min_threshold, 0)
+                    district_code,
+                    district_name,
+                    total_traffic,
+                    total_ride,
+                    total_alight,
+                    station_count,
+                    avg_daily_traffic
+                FROM mv_district_monthly_traffic
+                WHERE month_date = :month_date
+                    AND total_traffic > COALESCE(:min_threshold, 0)
                 ORDER BY total_traffic DESC
             """)
             
             params = {
-                "month_start": month_start,
-                "month_end": month_end,
+                "month_date": analysis_month,
                 "min_threshold": min_traffic_threshold or 0
             }
             
@@ -438,7 +425,7 @@ class HeatmapService:
             stations_map = {}
             if include_station_details:
                 stations_map = await self._get_all_stations_by_districts(
-                    db, month_start, month_end, district_names, min_traffic_threshold
+                    db, analysis_month, district_names, min_traffic_threshold
                 )
             
             # 4. 결과 조합
@@ -487,6 +474,7 @@ class HeatmapService:
             if not district_names:
                 return {}
             
+            # PostGIS 쿼리 - MultiPolygon 처리를 위해 ST_Dump 사용
             boundary_query = text("""
                 SELECT 
                     sggnm as district_name,
@@ -527,53 +515,59 @@ class HeatmapService:
             
         except Exception as e:
             logger.error(f"Error in _get_all_district_boundaries: {e}")
+            # 트랜잭션 롤백
+            try:
+                await db.rollback()
+            except:
+                pass
             return {name: self._get_default_boundary() for name in district_names}
     
     async def _get_all_stations_by_districts(
         self,
         db: AsyncSession,
-        month_start: date,
-        month_end: date,
+        analysis_month: date,
         district_names: List[str],
         min_traffic_threshold: Optional[int]
     ) -> Dict[str, List[StationTrafficSchema]]:
-        """모든 구의 정류장 데이터를 한 번에 조회 (N+1 해결)"""
+        """모든 구의 정류장 데이터를 한 번에 조회 (mv_station_monthly_traffic 기반, N+1 해결)"""
         try:
             if not district_names:
                 return {}
             
-            # 모든 구의 정류장을 한 번에 조회 (최적화된 날짜 필터)
+            # 최적화된 Materialized View 쿼리
             station_query = text("""
                 SELECT 
-                    sm.sgg_name as district_name,
-                    sm.node_id,
-                    bs.node_name,
-                    bs.coordinates_y as latitude,
-                    bs.coordinates_x as longitude,
-                    SUM(sph.ride_passenger + sph.alight_passenger) as total_traffic,
-                    SUM(sph.ride_passenger) as total_ride,
-                    SUM(sph.alight_passenger) as total_alight,
-                    AVG(sph.ride_passenger + sph.alight_passenger) as daily_average
-                FROM station_passenger_history sph
-                INNER JOIN spatial_mapping sm ON sph.node_id = sm.node_id
-                INNER JOIN bus_stops bs ON sm.node_id = bs.node_id
-                WHERE sph.record_date >= CAST(:month_start AS date)
-                    AND sph.record_date <= CAST(:month_end AS date)
-                    AND sm.sgg_name = ANY(:district_names)
-                    AND sm.is_seoul = TRUE
-                GROUP BY sm.sgg_name, sm.node_id, bs.node_name, bs.coordinates_y, bs.coordinates_x
-                HAVING SUM(sph.ride_passenger + sph.alight_passenger) > COALESCE(:min_threshold, 0)
-                ORDER BY sm.sgg_name, total_traffic DESC
+                    district_name,
+                    station_id,
+                    station_name,
+                    latitude,
+                    longitude,
+                    total_traffic,
+                    total_ride,
+                    total_alight,
+                    daily_average
+                FROM mv_station_monthly_traffic
+                WHERE month_date = :month_date
+                    AND district_name = ANY(:district_names)
+                    AND total_traffic > COALESCE(:min_threshold, 0)
+                ORDER BY district_name, total_traffic DESC
             """)
             
             params = {
-                "month_start": month_start,
-                "month_end": month_end,
+                "month_date": analysis_month,
                 "district_names": district_names,
                 "min_threshold": min_traffic_threshold or 0
             }
             
-            result = await db.execute(station_query, params)
+            # 트랜잭션 상태 확인 및 필요시 롤백
+            try:
+                result = await db.execute(station_query, params)
+            except Exception as query_error:
+                logger.error(f"Query execution failed, retrying: {query_error}")
+                await db.rollback()
+                # 재시도
+                result = await db.execute(station_query, params)
+
             station_rows = result.fetchall()
             
             # 구별로 정류장 그룹화

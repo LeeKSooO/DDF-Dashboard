@@ -8,7 +8,7 @@ from typing import Optional, Any, Dict, Union
 import json
 import logging
 import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from functools import wraps
 import inspect
 from app.core.config import settings
@@ -136,12 +136,15 @@ class RedisClient:
             logger.error(f"Cache invalidate error for pattern {pattern}: {e}")
             return 0
     
-    def calculate_ttl(self, analysis_month: str) -> int:
+    def calculate_ttl(self, analysis_month) -> int:
         """월별 데이터 특성에 따른 TTL 계산"""
         try:
-            # 분석 월 파싱
-            year, month = map(int, analysis_month.split('-'))
-            analysis_date = datetime(year, month, 1)
+            # date 객체 또는 문자열 처리
+            if isinstance(analysis_month, date):
+                analysis_date = datetime(analysis_month.year, analysis_month.month, 1)
+            else:
+                year, month = map(int, analysis_month.split('-'))
+                analysis_date = datetime(year, month, 1)
             current_date = datetime.now()
             
             # 현재 월이면 24시간, 과거 월이면 30일

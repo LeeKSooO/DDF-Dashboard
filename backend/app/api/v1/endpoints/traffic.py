@@ -4,6 +4,7 @@
 """
 
 from typing import Optional, Literal
+from datetime import date
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 import time
@@ -22,7 +23,7 @@ router = APIRouter()
 
 @router.get("/hourly", response_model=HourlyTrafficSchema)
 async def get_hourly_traffic(
-    analysis_month: str = Query(..., description="분석 월 (YYYY-MM 형식, 예: 2025-07)"),
+    analysis_month: date = Query(..., description="분석 월 (YYYY-MM-DD 형식, 예: 2025-07-01, 프론트에서 -01 추가)"),
     region_type: Literal["seoul", "district"] = Query(..., description="지역 구분 ('seoul': 서울시 전체, 'district': 특정 구)"),
     district_name: Optional[str] = Query(None, description="구명 (region_type이 'district'일 때 필수)"),
     db: AsyncSession = Depends(get_db)
@@ -34,8 +35,8 @@ async def get_hourly_traffic(
     서울시 전체 또는 특정 구 단위로 조회 가능합니다.
     
     **사용 예시**:
-    - 서울시 전체: `?analysis_month=2025-07&region_type=seoul`
-    - 강남구: `?analysis_month=2025-07&region_type=district&district_name=강남구`
+    - 서울시 전체: `?analysis_month=2025-07-01&region_type=seoul`
+    - 강남구: `?analysis_month=2025-07-01&region_type=district&district_name=강남구`
     
     **응답 데이터**:
     - `weekday_patterns`: 평일 0-23시 시간별 승하차 패턴

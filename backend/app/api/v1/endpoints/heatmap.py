@@ -4,6 +4,7 @@
 """
 
 from typing import Optional
+from datetime import date
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 import time
@@ -21,7 +22,7 @@ router = APIRouter()
 
 @router.get("/seoul", response_model=SeoulHeatmapSchema)
 async def get_seoul_heatmap(
-    analysis_month: str = Query(..., description="분석 월 (YYYY-MM 형식, 예: 2025-07)"),
+    analysis_month: date = Query(..., description="분석 월 (YYYY-MM-DD 형식, 예: 2025-07-01, 프론트에서 -01 추가)"),
     include_station_details: bool = Query(
         True, 
         description="정류장별 상세 데이터 포함 여부 (false시 구별 집계만 반환)"
@@ -43,9 +44,9 @@ async def get_seoul_heatmap(
     - 히트맵 색상 구간을 위한 통계 (사분위수, 최대/최소값)
     
     **사용 예시**:
-    - 구별 집계만: `?analysis_month=2025-07&include_station_details=false`
-    - 상세 데이터: `?analysis_month=2025-07&include_station_details=true`
-    - 필터링: `?analysis_month=2025-07&min_traffic_threshold=5000`
+    - 구별 집계만: `?analysis_month=2025-07-01&include_station_details=false`
+    - 상세 데이터: `?analysis_month=2025-07-01&include_station_details=true`
+    - 필터링: `?analysis_month=2025-07-01&min_traffic_threshold=5000`
     
     **응답 구조**:
     ```json
@@ -118,7 +119,7 @@ async def get_seoul_heatmap(
 @router.get("/districts/{district_name}")
 async def get_district_heatmap(
     district_name: str,
-    analysis_month: str = Query(..., description="분석 월 (YYYY-MM 형식, 예: 2025-07)"),
+    analysis_month: date = Query(..., description="분석 월 (YYYY-MM-DD 형식, 예: 2025-07-01, 프론트에서 -01 추가)"),
     min_traffic_threshold: Optional[int] = Query(
         None, 
         ge=0, 
@@ -190,7 +191,7 @@ async def get_district_heatmap(
 
 @router.get("/statistics")
 async def get_heatmap_statistics(
-    analysis_month: str = Query(..., description="분석 월 (YYYY-MM 형식, 예: 2025-07)"),
+    analysis_month: date = Query(..., description="분석 월 (YYYY-MM-DD 형식, 예: 2025-07-01, 프론트에서 -01 추가)"),
     db: AsyncSession = Depends(get_db)
 ):
     """
