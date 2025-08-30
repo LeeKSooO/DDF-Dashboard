@@ -1,2 +1,2 @@
 # API v1 endpoints package
-from . import traffic, heatmap
+from . import traffic, heatmap, anomaly_pattern

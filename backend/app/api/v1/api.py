@@ -4,7 +4,7 @@ API v1 라우터 통합
 """
 
 from fastapi import APIRouter
-from app.api.v1.endpoints import traffic, heatmap
+from app.api.v1.endpoints import traffic, heatmap, anomaly_pattern
 
 api_router = APIRouter()
 
@@ -20,4 +20,11 @@ api_router.include_router(
     heatmap.router,
     prefix="/heatmap",
     tags=["heatmap"]
+)
+
+# Anomaly Pattern API 라우트 등록
+api_router.include_router(
+    anomaly_pattern.router,
+    prefix="/anomaly-pattern",
+    tags=["anomaly-pattern"]
 )
