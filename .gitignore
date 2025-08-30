@@ -81,6 +81,7 @@ package-lock.json
 
 # PostgreSQL data volume (contains database files)
 postgres/
+postgres_backup/
 
 # ===========================================
 # Logs
