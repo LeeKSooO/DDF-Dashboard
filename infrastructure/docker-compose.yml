@@ -14,6 +14,7 @@ services:
       POSTGRES_USER: ddf_user
       POSTGRES_PASSWORD: ddf_password
       POSTGRES_DB: ddf_db
+      #PGDATA: /home/postgres/pgdata/data
     volumes:
       - ../postgres:/home/postgres/pgdata
       - ./database/init:/docker-entrypoint-initdb.d

@@ -248,6 +248,9 @@ BEGIN
     REFRESH MATERIALIZED VIEW mv_seoul_hourly_patterns;
     
     RAISE NOTICE 'All views refreshed successfully!';
+    
+    -- NOTE: mv_station_hourly_patterns는 별도 관리
+    -- 필요시: SELECT refresh_station_hourly_patterns();
 END;
 $$ LANGUAGE plpgsql;
 
