@@ -72,11 +72,29 @@ async def get_night_demand_stations(
     top_n: int = Query(5, ge=1, le=10, description="상위 N개 정류장"),
     db: AsyncSession = Depends(get_db)
 ):
-    """2. 야간 수요 정류장 분석 (구현 필요)"""
-    return success_response(
-        data=[],
-        message="Night demand analysis - coming soon"
-    )
+    """2. 심야시간 고수요 정류장 분석 (23-03시)"""
+    try:
+        service = AnomalyPatternService()
+        logger.info(f"Getting night demand stations for {district_name}")
+        
+        result = await service.get_night_demand_stations(
+            db=db,
+            district_name=district_name,
+            analysis_month=analysis_month,
+            top_n=top_n
+        )
+        
+        return success_response(
+            data=result,
+            message=f"Night demand stations for {district_name}"
+        )
+        
+    except ValueError as e:
+        logger.error(f"Invalid request parameters: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error getting night demand stations: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/rush-hour")

@@ -178,38 +178,53 @@ class AnomalyPatternService:
     ) -> List[WeekendDominantStationSchema]:
         """1. 주말 고수요 정류장 분석
         
-        비즈니스 로직:
-        1단계: 주말 총 교통량이 높은 정류장 TOP N 선별
-        2단계: 선별된 정류장별 주말 피크 시간대 TOP 3 분석
+        MV 활용한 최적화된 비즈니스 로직:
+        1단계: mv_station_hourly_patterns에서 주말 교통량 TOP N + 피크 시간대
+        2단계: 구 전체 주말 통계
+        3단계: vs_district_avg 계산
         """
         
-        # 1단계: 주말 교통량이 높은 정류장 TOP N 선별
+        # 1단계: MV에서 주말 교통량 TOP N 정류장 조회
         stations_query = text("""
+            WITH weekend_traffic AS (
+                SELECT 
+                    station_id,
+                    station_name,
+                    longitude,
+                    latitude,
+                    district_name,
+                    administrative_dong,
+                    hour,
+                    SUM(total_traffic) as hour_traffic
+                FROM mv_station_hourly_patterns
+                WHERE month_date = :analysis_month
+                  AND district_name = :district_name
+                  AND day_type = 'weekend'
+                GROUP BY station_id, station_name, longitude, latitude, district_name, administrative_dong, hour
+            ),
+            station_totals AS (
+                SELECT 
+                    station_id,
+                    station_name,
+                    longitude,
+                    latitude,
+                    district_name,
+                    administrative_dong,
+                    SUM(hour_traffic) as weekend_total
+                FROM weekend_traffic
+                GROUP BY station_id, station_name, longitude, latitude, district_name, administrative_dong
+                ORDER BY weekend_total DESC
+                LIMIT :top_n
+            )
             SELECT 
-                sph.node_id,
-                bs.node_name,
-                bs.coordinates_x as longitude,
-                bs.coordinates_y as latitude,
-                sm.sgg_name as district_name,
-                COALESCE(sm.adm_name, '정보없음') as administrative_dong,
-                
-                -- 주말 총 교통량
-                SUM(CASE WHEN EXTRACT(DOW FROM sph.record_date) IN (0, 6) 
-                    THEN sph.ride_passenger + sph.alight_passenger ELSE 0 END) as weekend_total
-                        
-            FROM station_passenger_history sph
-            JOIN spatial_mapping sm ON sph.node_id = sm.node_id  
-            JOIN bus_stops bs ON sm.node_id = bs.node_id
-            WHERE DATE_TRUNC('month', sph.record_date)::date = :analysis_month
-              AND sm.sgg_name = :district_name
-              AND sm.is_seoul = TRUE
-              AND (sph.ride_passenger + sph.alight_passenger) > 0
-            GROUP BY sph.node_id, bs.node_name, bs.coordinates_x, bs.coordinates_y, sm.sgg_name, sm.adm_name
-            HAVING SUM(CASE WHEN EXTRACT(DOW FROM sph.record_date) IN (0, 6) 
-                           THEN sph.ride_passenger + sph.alight_passenger ELSE 0 END) > 0
-            ORDER BY SUM(CASE WHEN EXTRACT(DOW FROM sph.record_date) IN (0, 6) 
-                             THEN sph.ride_passenger + sph.alight_passenger ELSE 0 END) DESC
-            LIMIT :top_n
+                st.station_id as node_id,
+                st.station_name as node_name,
+                st.longitude,
+                st.latitude,
+                st.district_name,
+                st.administrative_dong,
+                st.weekend_total
+            FROM station_totals st
         """)
         
         result = await db.execute(stations_query, {
@@ -217,6 +232,27 @@ class AnomalyPatternService:
             "analysis_month": analysis_month,
             "top_n": top_n
         })
+        
+        # 2단계: 구 전체 주말 통계 조회 (vs_district_avg용)
+        district_stats_query = text("""
+            SELECT 
+                SUM(total_traffic) as district_weekend_total,
+                COUNT(DISTINCT station_id) as total_stations
+            FROM mv_station_hourly_patterns
+            WHERE month_date = :analysis_month
+              AND district_name = :district_name
+              AND day_type = 'weekend'
+        """)
+        
+        district_stats_result = await db.execute(district_stats_query, {
+            "district_name": district_name,
+            "analysis_month": analysis_month
+        })
+        
+        district_stats = district_stats_result.fetchone()
+        district_weekend_total = district_stats.district_weekend_total or 1
+        total_stations = district_stats.total_stations or 1
+        district_avg_per_station = district_weekend_total / total_stations
         
         stations = []
         top_station_ids = []
@@ -238,21 +274,20 @@ class AnomalyPatternService:
             })
             top_station_ids.append(row.node_id)
         
-        # 2단계: 선별된 정류장들의 주말 시간대별 교통량으로 피크 시간대 TOP 3 추출
+        # 3단계: 선별된 정류장들의 주말 시간대별 피크 TOP 3 (MV 활용)
         if top_station_ids:
-            # IN 절을 위한 동적 쿼리 생성
             placeholders = ','.join([f':station_id_{i}' for i in range(len(top_station_ids))])
             peak_query = text(f"""
                 WITH hourly_traffic AS (
                     SELECT 
-                        sph.node_id,
-                        sph.hour,
-                        SUM(sph.ride_passenger + sph.alight_passenger) as hour_total
-                    FROM station_passenger_history sph
-                    WHERE DATE_TRUNC('month', sph.record_date)::date = :analysis_month
-                      AND sph.node_id IN ({placeholders})
-                      AND EXTRACT(DOW FROM sph.record_date) IN (0, 6)  -- 주말만
-                    GROUP BY sph.node_id, sph.hour
+                        station_id as node_id,
+                        hour,
+                        SUM(total_traffic) as hour_total
+                    FROM mv_station_hourly_patterns
+                    WHERE month_date = :analysis_month
+                      AND station_id IN ({placeholders})
+                      AND day_type = 'weekend'
+                    GROUP BY station_id, hour
                 ),
                 ranked_hours AS (
                     SELECT 
@@ -296,18 +331,16 @@ class AnomalyPatternService:
             weekend_peak_traffic = [int(t) for t in peak_data['traffic'][:3]]  # 피크 시간대 교통량
             weekend_total = station_data['weekend_total']
             
-            # 주말 일평균 계산 (분석 기간 내 주말 일수 계산)
-            # 7월의 경우: 15-31일 중 주말은 토,일 약 4-5일
-            weekend_days = 4  # 분석 기간 내 주말 일수 (대략값)
-            weekend_daily_avg = weekend_total / weekend_days if weekend_days > 0 else 0
+            # vs_district_avg 계산 (구 평균 정류장 대비 배수)
+            vs_district_avg = weekend_total / district_avg_per_station if district_avg_per_station > 0 else 0.0
             
             final_stations.append(WeekendDominantStationSchema(
                 station=station_data['station_info'],
                 weekend_total_traffic=weekend_total,
-                weekend_daily_avg=round(weekend_daily_avg, 1),
                 weekend_peak_hours=weekend_peak_hours,
                 weekend_peak_traffic=weekend_peak_traffic,
-                rank=idx
+                rank=idx,
+                vs_district_avg=round(vs_district_avg, 1)
             ))
             
         return final_stations
@@ -319,48 +352,118 @@ class AnomalyPatternService:
         analysis_month: date,
         top_n: int = 5
     ) -> List[NightDemandStationSchema]:
-        """2. 심야시간 고수요 정류장 분석 (23-03시)"""
+        """2. 심야시간 고수요 정류장 분석 (23-03시)
         
-        query = text("""
+        MV 활용한 최적화된 비즈니스 로직:
+        1단계: mv_station_hourly_patterns에서 심야시간 TOP N 선별 + 시간대별 분석
+        2단계: 구 전체 심야시간 통계 (동일 MV 활용)
+        3단계: vs_district_avg 계산
+        """
+        
+        # 1단계: MV에서 심야시간 TOP N 정류장 + 시간대별 데이터 한번에 조회
+        stations_query = text("""
+            WITH night_stations AS (
+                SELECT 
+                    station_id,
+                    station_name,
+                    longitude,
+                    latitude,
+                    district_name,
+                    administrative_dong,
+                    -- 심야시간 총 승차인원
+                    SUM(CASE WHEN hour IN (23, 0, 1, 2, 3) THEN total_ride ELSE 0 END) as total_night_ride,
+                    -- 시간대별 승차량 (피벗)
+                    SUM(CASE WHEN hour = 23 THEN total_ride ELSE 0 END) as hour_23,
+                    SUM(CASE WHEN hour = 0 THEN total_ride ELSE 0 END) as hour_0,
+                    SUM(CASE WHEN hour = 1 THEN total_ride ELSE 0 END) as hour_1,
+                    SUM(CASE WHEN hour = 2 THEN total_ride ELSE 0 END) as hour_2,
+                    SUM(CASE WHEN hour = 3 THEN total_ride ELSE 0 END) as hour_3
+                FROM mv_station_hourly_patterns
+                WHERE month_date = :analysis_month
+                  AND district_name = :district_name
+                  AND hour IN (23, 0, 1, 2, 3)
+                GROUP BY station_id, station_name, longitude, latitude, district_name, administrative_dong
+                HAVING SUM(CASE WHEN hour IN (23, 0, 1, 2, 3) THEN total_ride ELSE 0 END) > 0
+                ORDER BY total_night_ride DESC
+                LIMIT :top_n
+            )
             SELECT 
-                sph.node_id,
-                bs.node_name,
-                bs.coordinates_x as longitude,
-                bs.coordinates_y as latitude,
-                SUM(CASE WHEN sph.hour IN (23, 0, 1, 2, 3) THEN sph.ride_passenger ELSE 0 END) as total_night_rides
-            FROM station_passenger_history sph
-            JOIN spatial_mapping sm ON sph.node_id = sm.node_id
-            JOIN bus_stops bs ON sm.node_id = bs.node_id
-            WHERE DATE_TRUNC('month', sph.record_date)::date = :analysis_month
-              AND sm.sgg_name = :district_name
-              AND sph.hour IN (23, 0, 1, 2, 3)
-              AND sph.ride_passenger > 0
-            GROUP BY sph.node_id, bs.node_name, bs.coordinates_x, bs.coordinates_y
-            ORDER BY total_night_rides DESC
-            LIMIT :top_n
+                station_id as node_id,
+                station_name as node_name,
+                longitude,
+                latitude,
+                district_name,
+                administrative_dong,
+                total_night_ride,
+                hour_23, hour_0, hour_1, hour_2, hour_3
+            FROM night_stations
         """)
         
-        result = await db.execute(query, {
+        stations_result = await db.execute(stations_query, {
             "district_name": district_name,
             "analysis_month": analysis_month,
             "top_n": top_n
         })
         
-        stations = []
-        for row in result:
+        # 2단계: MV에서 구 전체 심야시간 통계 조회 (훨씬 빠름)
+        district_stats_query = text("""
+            SELECT 
+                SUM(total_ride) as district_night_total,
+                COUNT(DISTINCT station_id) as total_stations
+            FROM mv_station_hourly_patterns
+            WHERE month_date = :analysis_month
+              AND district_name = :district_name
+              AND hour IN (23, 0, 1, 2, 3)
+        """)
+        
+        district_stats_result = await db.execute(district_stats_query, {
+            "district_name": district_name,
+            "analysis_month": analysis_month
+        })
+        
+        district_stats = district_stats_result.fetchone()
+        district_night_total = district_stats.district_night_total or 1
+        total_stations = district_stats.total_stations or 1
+        
+        # 구 평균 정류장당 심야 교통량
+        district_avg_per_station = district_night_total / total_stations
+        
+        # 시간대별 데이터는 이미 1단계에서 조회 완료 (3개 쿼리 → 2개로 최적화!)
+        
+        # 3단계: 최종 결과 조합
+        final_stations = []
+        for row in stations_result:
             station_info = StationInfoSchema(
                 station_id=row.node_id,
                 station_name=row.node_name,
                 latitude=float(row.latitude),
-                longitude=float(row.longitude)
+                longitude=float(row.longitude),
+                district_name=row.district_name,
+                administrative_dong=row.administrative_dong
             )
             
-            stations.append(NightDemandStationSchema(
-                station_info=station_info,
-                total_night_rides=int(row.total_night_rides)
+            total_night_ride = int(row.total_night_ride or 0)
+            
+            # vs_district_avg 계산 (구 평균 정류장 대비 배수)
+            vs_district_avg = total_night_ride / district_avg_per_station if district_avg_per_station > 0 else 0.0
+            
+            # 시간대별 승차량 (이미 1단계에서 조회됨)
+            night_hours_traffic = [
+                int(row.hour_23 or 0),  # 23시
+                int(row.hour_0 or 0),    # 0시  
+                int(row.hour_1 or 0),    # 1시
+                int(row.hour_2 or 0),    # 2시
+                int(row.hour_3 or 0)     # 3시
+            ]
+            
+            final_stations.append(NightDemandStationSchema(
+                station=station_info,
+                total_night_ride=total_night_ride,
+                night_hours_traffic=night_hours_traffic,
+                vs_district_avg=round(vs_district_avg, 1)
             ))
             
-        return stations
+        return final_stations
 
     async def get_rush_hour_stations(
         self,

@@ -1047,11 +1047,36 @@ class SeoulTrafficETL:
         try:
             logger.info("🔄 Starting materialized view refresh for API optimization...")
             
-            # PostgreSQL 함수 호출로 모든 materialized view 갱신
+            # 1. 기본 MV 갱신
             refresh_sql = "SELECT refresh_all_traffic_views();"
-            
             self.cur.execute(refresh_sql)
             self.conn.commit()
+            
+            # 2. Anomaly Pattern 전용 MV 갱신
+            logger.info("🎯 Refreshing Anomaly Pattern MV (station_hourly_patterns)...")
+            try:
+                # MV가 존재하는지 확인
+                check_sql = """
+                    SELECT EXISTS (
+                        SELECT 1 FROM pg_matviews 
+                        WHERE matviewname = 'mv_station_hourly_patterns'
+                    );
+                """
+                self.cur.execute(check_sql)
+                exists = self.cur.fetchone()[0]
+                
+                if exists:
+                    # MV가 있으면 갱신 함수 호출
+                    refresh_anomaly_sql = "SELECT refresh_station_hourly_patterns();"
+                    self.cur.execute(refresh_anomaly_sql)
+                    self.conn.commit()
+                    logger.info("✅ Anomaly Pattern MV refreshed successfully!")
+                else:
+                    logger.warning("⚠️ mv_station_hourly_patterns not found. Please run create_station_hourly_patterns.sql first.")
+                
+            except Exception as e:
+                logger.warning(f"⚠️ Could not refresh Anomaly Pattern MV: {e}")
+                # 실패해도 전체 ETL은 계속 진행
             
             # 갱신 후 통계 확인
             stats_sql = "SELECT * FROM check_mv_statistics();"

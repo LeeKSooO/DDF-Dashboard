@@ -36,11 +36,13 @@ class StationInfoSchema(BaseModel):
 
 class DistrictAverageSchema(BaseModel):
     """구 전체 평균 지표 (비교 기준)"""
-    avg_weekend_increase_pct: float = Field(..., description="구 평균 주말 증가율 (%)")
-    avg_night_traffic_ratio: float = Field(..., description="구 평균 심야교통 비율 (%)")
-    avg_rush_hour_traffic: float = Field(..., description="구 평균 러시아워 교통량")
-    avg_lunch_spike_pct: float = Field(..., description="구 평균 점심 증가율 (%)")
+    avg_weekend_traffic: float = Field(..., description="구 평균 주말 교통량 (%)")
+    avg_night_ride_traffic: float = Field(..., description="구 평균 심야 승차인원수 (%)")
+    avg_rush_hour_ride_traffic: float = Field(..., description="구 평균 러시아워 승차인원수")
+    avg_rush_hour_alight_traffic: float = Field(..., description="구 평균 러시아워 하차인원수")
+    avg_lunch_spike_pct: float = Field(..., description="구 평균 점심 하차인원수 (%)")
     avg_cv_coefficient: float = Field(..., description="구 평균 변동계수")
+    
     total_stations: int = Field(..., description="구 전체 정류장 수")
     analysis_period_days: int = Field(..., description="분석 기간 (일)")
     
@@ -74,7 +76,6 @@ class WeekendDominantStationSchema(BaseModel):
     """
     station: StationInfoSchema
     weekend_total_traffic: int = Field(..., description="주말 총 교통량")
-    weekend_daily_avg: float = Field(..., description="주말 일평균 교통량")
     weekend_peak_hours: List[int] = Field(
         ..., 
         max_items=3,
@@ -86,6 +87,7 @@ class WeekendDominantStationSchema(BaseModel):
         description="피크 시간대별 교통량"
     )
     rank: int = Field(..., description="주말 교통량 순위")
+    vs_district_avg: float = Field(..., description="구평균 대비 주말 수요 배수")
     
     class Config:
         schema_extra = {
@@ -109,11 +111,21 @@ class WeekendDominantStationSchema(BaseModel):
 
 # 2. 심야시간 고수요 정류장
 class NightDemandStationSchema(BaseModel):
-    """심야시간 고수요 정류장 (23-03시)"""
+    """심야시간 고수요 정류장 (23-03시)
+    
+    비즈니스 로직:
+    1. 심야시간 총 승차인원 기준 상위 정류장 선별
+    2. 시간대별 세부 승차량 분석 (23,0,1,2,3시)
+    3. 구평균 대비 수요 배수 계산
+    """
     station: StationInfoSchema
     total_night_ride: int = Field(..., description="심야시간 총 승차인원 (23-03시)")
-    avg_night_ride_per_hour: float = Field(..., description="심야시간당 평균 승차인원")
-    night_traffic_ratio: float = Field(..., description="전체 대비 심야교통 비율 (%)")
+    night_hours_traffic: List[int] = Field(
+        ...,
+        min_items=5,
+        max_items=5,
+        description="시간대별 승차량 [23시, 0시, 1시, 2시, 3시]"
+    )
     vs_district_avg: float = Field(..., description="구 평균 대비 심야수요 배수")
     
     class Config:
@@ -127,10 +139,11 @@ class NightDemandStationSchema(BaseModel):
                     "district_name": "마포구",
                     "administrative_dong": "서교동"
                 },
-                "total_night_ride": 10286,
-                "avg_night_ride_per_hour": 14.4,
-                "night_traffic_ratio": 7.4,
-                "vs_district_avg": 4.2
+                "total_night_ride": 18494,
+                "avg_night_ride": 3698.8,
+                "night_hours_traffic": [10087, 4823, 1961, 1004, 619],
+                "peak_night_hour": 23,
+                "vs_district_avg": 4109.8
             }
         }
 
