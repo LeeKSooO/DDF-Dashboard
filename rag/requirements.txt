@@ -1,0 +1,30 @@
+# Core dependencies
+python-dotenv
+pandas
+sqlalchemy
+requests
+numpy
+
+# Text processing
+fuzzywuzzy
+python-levenshtein
+
+# FastAPI for web service
+fastapi
+uvicorn
+
+# LangChain packages
+langchain-core
+langchain-community
+langchain
+langchain-text-splitters
+langchain-huggingface
+
+# IBM Watson AI
+ibm-watsonx-ai
+
+# PDF processing
+pymupdf
+
+# Vector store
+chromadb

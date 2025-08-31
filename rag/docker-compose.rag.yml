@@ -1,0 +1,72 @@
+# ===============================================
+# RAG Service Docker Compose
+# DDF-MSTGCN 논문 기반 RAG 질의응답 시스템
+# ===============================================
+
+services:
+  # RAG Application Service
+  rag-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ddf-rag-service
+    environment:
+      # Watson AI 설정 (환경변수로 관리)
+      WATSONX_APIKEY: ${WATSONX_APIKEY}
+      WATSONX_PROJECT_ID: ${WATSONX_PROJECT_ID}
+      
+      # 데이터베이스 연결 설정
+      DB_HOST: host.docker.internal
+      DB_PORT: 5432
+      DB_NAME: ddf_db
+      DB_USER: ddf_user
+      DB_PASSWORD: ddf_password
+      
+      # RAG 설정
+      EMBEDDING_MODEL: sentence-transformers/all-MiniLM-L12-v2
+      VECTOR_DB_PATH: /app/chroma_db
+      PAPERS_PATH: /app/papers
+    volumes:
+      # 논문 데이터 볼륨
+      - ./papers:/app/papers:ro
+      
+      # 벡터 데이터베이스 영구 저장
+      - ./chroma_db_watson_sentence_transformers_all_MiniLM_L12_v2:/app/chroma_db
+      
+      # 환경 설정
+      - ./.env:/app/.env:ro
+    ports:
+      - "8080:8080"
+    networks:
+      - ddf-rag-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8080/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      - postgres
+
+  # PostgreSQL (재사용 - 기존 인프라와 연결)
+  postgres:
+    image: timescale/timescaledb-ha:pg14-latest
+    container_name: ddf-postgres-rag
+    environment:
+      POSTGRES_USER: ddf_user
+      POSTGRES_PASSWORD: ddf_password
+      POSTGRES_DB: ddf_db
+    volumes:
+      - postgres_rag_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"  # 기존 postgres와 포트 충돌 방지
+    networks:
+      - ddf-rag-network
+
+volumes:
+  postgres_rag_data:
+    driver: local
+
+networks:
+  ddf-rag-network:
+    driver: bridge
