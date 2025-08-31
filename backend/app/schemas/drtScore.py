@@ -43,7 +43,7 @@ class CommuterDRTScoreSchema(BaseModel):
     hour: int = Field(..., description="시간대 (0-23)")
     tc_score: float = Field(..., description="시간 집중도 지수 (TC_t): 특정 시간 배차수 / 일일 최대 배차수")
     pdr_score: float = Field(..., description="피크 수요 비율 (PDR_t): 특정 시간 승하차수 / 일일 최대 승하차수")
-    ru_score: float = Field(..., description="노선 활용도 (RU_t): 시간별 구간 승객수 / 1000")
+    ru_score: float = Field(..., description="노선 활용도 (RU_t): 시간별 해당 정류장을 지나는 노선에 속한 구간별 승객수, min-max 정규화")
     pcw_score: float = Field(..., description="POI 카테고리 가중치 (PCW)")
     total_score: float = Field(..., description="출퇴근형 총 DRT 점수")
 
