@@ -1072,7 +1072,7 @@ class SeoulTrafficETL:
                     self.conn.commit()
                     logger.info("✅ Anomaly Pattern MV refreshed successfully!")
                 else:
-                    logger.warning("⚠️ mv_station_hourly_patterns not found. Please run create_station_hourly_patterns.sql first.")
+                    logger.warning("⚠️ mv_station_hourly_patterns not found. Please run 002_station_hourly_patterns.sql first.")
                 
             except Exception as e:
                 logger.warning(f"⚠️ Could not refresh Anomaly Pattern MV: {e}")
@@ -1414,6 +1414,7 @@ def main():
         
         # 병렬 ETL 실행 (기본 날짜 범위: 2025-07-19 ~ 2025-07-31)
         etl.run_parallel_etl()
+        etl_success = True  # ETL 완료 가정
     else:
         logger.info("🚀 Starting Standard Seoul Traffic ETL Process")
         logger.info("📊 APIs to process: API1, API2, API3, API4 (Sequential Execution)")
@@ -1421,6 +1422,58 @@ def main():
         
         # 기본 ETL 실행 (순차 처리)
         etl.run_full_etl()
+        etl_success = True  # ETL 완료 가정
+    
+    # ETL 완료 후 DRT 집계 실행 (기존 MV 갱신 방식과 동일)
+    logger.info("🎯 Starting DRT Score Aggregation...")
+    try:
+        # DB 연결이 없으면 연결
+        if not etl.conn or etl.conn.closed:
+            etl.connect_db()
+        
+        # mv_station_hourly_patterns에서 사용 가능한 월 조회
+        check_months_sql = """
+            SELECT DISTINCT month_date 
+            FROM mv_station_hourly_patterns 
+            ORDER BY month_date DESC
+        """
+        etl.cur.execute(check_months_sql)
+        available_months = [row[0] for row in etl.cur.fetchall()]
+        
+        if available_months:
+            logger.info(f"📅 Found {len(available_months)} months to aggregate: {[m.strftime('%Y-%m') for m in available_months]}")
+            
+            # 각 월별로 DRT 집계 함수 실행
+            for month_date in available_months:
+                logger.info(f"🚀 Processing DRT aggregation for {month_date.strftime('%Y-%m')}...")
+                
+                # 3개 DRT 모델 모두 실행
+                for model_name, function_name in [
+                    ('Commuter', 'calculate_commuter_drt_scores'),
+                    ('Tourism', 'calculate_tourism_drt_scores'), 
+                    ('Vulnerable', 'calculate_vulnerable_drt_scores')
+                ]:
+                    try:
+                        logger.info(f"  ⚡ Running {model_name} model...")
+                        drt_sql = f"SELECT {function_name}(%s);"
+                        etl.cur.execute(drt_sql, (month_date,))
+                        result = etl.cur.fetchone()[0]
+                        etl.conn.commit()
+                        logger.info(f"  ✅ {model_name} completed: {result:,} records")
+                    except Exception as e:
+                        logger.warning(f"  ⚠️ {model_name} failed: {e}")
+                        # 실패해도 다음 모델 계속 진행
+                
+                logger.info(f"✅ {month_date.strftime('%Y-%m')} DRT aggregation completed")
+            
+            logger.info("🎉 All DRT Score aggregation completed!")
+        else:
+            logger.warning("⚠️ No months found in mv_station_hourly_patterns, skipping DRT aggregation")
+            
+    except Exception as e:
+        logger.warning(f"⚠️ DRT Score aggregation failed: {e}")
+        # 실패해도 전체 ETL은 성공으로 처리
+        logger.info("   ETL data is still available, DRT aggregation can be run manually")
 
 if __name__ == "__main__":
     main()
