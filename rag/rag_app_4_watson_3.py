@@ -32,6 +32,10 @@ except ImportError:
     from langchain_community.vectorstores import Chroma
     print("⚠️ 기존 chroma 패키지를 사용합니다. 업그레이드를 권장합니다: pip install -U langchain-chroma")
 
+# Llama 4 Maverick 모델 임포트
+from transformers import AutoTokenizer, AutoModelForCausalLM
+import torch
+
 from langchain.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
@@ -67,6 +71,7 @@ EMBEDDING_MODEL = "intfloat/multilingual-e5-large"
 # 대화형 AI 모델: Watson AI의 Granite 모델 사용
 # granite-3-8b-instruct는 한국어 지원이 우수한 지시 튜닝 모델
 CHAT_MODEL = "ibm/granite-3-8b-instruct"
+# CHAT_MODEL = "meta-llama/llama-3-3-70b-instruct"
 
 # =============================================================================
 # 데이터베이스 연결 설정
@@ -147,69 +152,13 @@ class WatsonXLLM(LLM):
             str: 모델이 생성한 응답 텍스트
         """
         try:
-            # =====================================
-            # 디버깅을 위한 프롬프트 상세 출력
-            # =====================================
-            print("\n" + "🔥" * 100)
-            print("📤 Watson AI로 전송하는 전체 프롬프트:")
-            print("🔥" * 100)
-            print(f"📝 프롬프트 길이: {len(prompt)} 문자")
-            print("🔥" * 100)
-            
-            # 프롬프트를 라인별로 번호를 매겨서 출력 (디버깅 용도)
-            lines = prompt.split('\n')
-            for i, line in enumerate(lines, 1):
-                print(f"{i:3d}│ {line}")
-            
-            print("🔥" * 100)
-            print("🔄 Watson AI에 요청 전송 중...")
-            print("⏳ 응답 대기 중... (이 과정은 몇 초에서 몇 분이 걸릴 수 있습니다)")
-            print("🔥" * 100)
-            
-            # =====================================
-            # Watson AI 모델 호출
-            # =====================================
+            print("🤖 Watson AI 응답 생성 중...")
             response = self.model.generate_text(prompt=prompt)
-            
-            # =====================================
-            # 응답 결과 상세 출력 (디버깅 용도)
-            # =====================================
-            print("\n" + "✅" * 100)
-            print("📥 Watson AI 응답 완료!")
-            print("✅" * 100)
-            print(f"📊 응답 길이: {len(response)} 문자")
-            print("✅" * 100)
-            
-            # 응답도 라인별로 번호를 매겨서 출력 (디버깅 용도)
-            response_lines = response.split('\n')
-            for i, line in enumerate(response_lines, 1):
-                print(f"{i:3d}│ {line}")
-            
-            print("✅" * 100)
-            print("🎉 Watson AI 처리 완료!")
-            print("✅" * 100)
-            
             return response
             
         except Exception as e:
-            # =====================================
-            # 오류 처리 및 사용자 친화적 안내
-            # =====================================
-            print("\n" + "❌" * 100)
-            print(f"💥 Watson AI 모델 호출 중 오류 발생!")
-            print("❌" * 100)
-            print(f"🔴 오류 내용: {str(e)}")
-            print(f"🔴 오류 타입: {type(e).__name__}")
-            print("❌" * 100)
-            print("🛠️  해결 방법:")
-            print("   1. Watson AI API 키와 Project ID 확인 (.env 파일)")
-            print("   2. 네트워크 연결 상태 확인")
-            print("   3. Watson AI 서비스 상태 확인")
-            print("   4. 프롬프트 길이나 내용 확인 (너무 길거나 부적절한 내용)")
-            print("   5. Watson AI 크레딧 잔량 확인")
-            print("❌" * 100)
-            
-            return "죄송합니다. Watson AI 모델 응답 생성 중 오류가 발생했습니다."
+            print(f"❌ Watson AI 오류: {str(e)}")
+            return "죄송합니다. 응답 생성 중 오류가 발생했습니다."
 
 # =============================================================================
 # 질문 분류 시스템
@@ -477,7 +426,7 @@ class QuantitativeAnalyzer:
         if not best_match:
             return None, "매칭되는 SQL 쿼리를 찾을 수 없습니다.", None
         
-        print(f"📊 매칭된 쿼리: {best_match['question']} (신뢰도: {best_match['confidence']}%)")
+        print(f"📊 데이터 조회 중...")
         
         # 3. SQL 실행
         try:
@@ -640,7 +589,7 @@ class QualitativeAnalyzer:
             'file_size': os.path.getsize(filepath)
         }
     
-    def initialize(self, papers_dir: str = "../papers/"):
+    def initialize(self, papers_dir: str = "./papers/"):
         """
         RAG 시스템을 초기화합니다.
         
@@ -669,8 +618,8 @@ class QualitativeAnalyzer:
         # 3. HuggingFace 임베딩 초기화
         embeddings = HuggingFaceEmbeddings(
             model_name=EMBEDDING_MODEL,
-            model_kwargs={'device': 'cpu'},
-            encode_kwargs={'normalize_embeddings': True}
+            model_kwargs={'device': 'cuda'},
+            encode_kwargs={'normalize_embeddings': True, 'batch_size': 64}
         )
         
         # 4. 기존 벡터 데이터베이스 확인
@@ -736,17 +685,14 @@ class QualitativeAnalyzer:
         )
         print("🔍 문서 검색기 구성 완료 (유사도 기반, k=6)")
         
-        # 8. RAG 체인 구성
+        # 8. 간결한 RAG 체인 구성
         prompt = PromptTemplate(
-            template="""당신은 DRT(수요응답형 교통) 전문가입니다.
-제공된 문서를 바탕으로 질문에 정확하고 상세하게 답변하세요.
+            template="""질문: {question}
 
-**참고 문서:**
+참고자료:
 {context}
 
-**질문:** {question}
-
-**답변:**""",
+위 자료를 바탕으로 질문에 답변해주세요.""",
             input_variables=["question", "context"]
         )
         
@@ -769,14 +715,8 @@ class QualitativeAnalyzer:
                 for i, doc in enumerate(docs)
             ])
             
-            # 컨텍스트 정보 출력 (디버깅용)
-            print(f"\n🔍 정성분석을 위한 문서 컨텍스트 정보:")
-            print(f"📋 검색된 문서 수: {len(docs)}")
-            print(f"📏 전체 컨텍스트 길이: {len(context)} 문자")
-            print("📑 문서별 정보:")
-            for i, doc in enumerate(docs):
-                preview = doc.page_content[:100].replace('\n', ' ') + "..." if len(doc.page_content) > 100 else doc.page_content
-                print(f"   문서 {i+1}: {len(doc.page_content)} 문자 - {preview}")
+            # 간단한 컨텍스트 정보 출력
+            print(f"📚 {len(docs)}개 문서 참조")
             
             return context
         
@@ -799,7 +739,6 @@ class QualitativeAnalyzer:
             return "정성분석 시스템이 초기화되지 않았습니다."
         
         try:
-            print(f"\n🎯 정성분석 시작 - 질문: {question}")
             answer = self.rag_chain.invoke(question)
             if hasattr(answer, 'content'):
                 return answer.content
@@ -1036,126 +975,96 @@ class ResponseGenerator:
     
     def _generate_quantitative_response(self, question: str, data: pd.DataFrame, sql_info: Dict) -> str:
         if data is None or data.empty:
-            return "요청하신 정량적 데이터를 조회할 수 없습니다."
+            return "요청하신 데이터를 조회할 수 없습니다."
         
-        # 데이터 포맷팅
-        formatted_data = self._format_dataframe(data, sql_info.get('description', '데이터'))
+        # 간결한 데이터 표시
+        formatted_data = self._format_dataframe_simple(data)
         
-        prompt = f"""당신은 DRT 전문가입니다. 다음 정량적 데이터를 분석하여 전문적인 인사이트를 제공하세요.
+        prompt = f"""질문: {question}
 
-**질문:** {question}
-
-**데이터 결과:**
+다음 데이터를 한 문단으로 간결하게 분석해주세요:
 {formatted_data}
 
-**분석 요청:**
-1. 데이터의 주요 특징과 의미 해석
-2. 운영상의 시사점
-3. 개선 방안 제안
-
-**전문가 분석:**"""
+답변 형식:
+- 핵심 수치만 언급
+- 1-2문장으로 요약
+- 표나 구조화된 형태로 제시 가능"""
         
-        print(f"\n🎯 정량분석용 최종 응답 생성 - 질문 타입: QUANTITATIVE")
         try:
             return self.llm.invoke(prompt)
         except Exception as e:
-            return f"분석 중 오류가 발생했습니다: {str(e)}\n\n원본 데이터:\n{formatted_data}"
+            return formatted_data
     
     def _generate_qualitative_response(self, question: str, qualitative_answer: str) -> str:
         if not qualitative_answer:
             return "정성적 분석 결과를 가져올 수 없습니다."
         
-        prompt = f"""당신은 DRT 전문가입니다. 다음 정성적 분석 결과를 검토하고 보완하여 최종 답변을 작성하세요.
-
-**질문:** {question}
-
-**정성분석 결과:**
-{qualitative_answer}
-
-**요청사항:**
-- 위 분석을 검토하고 더 명확하고 체계적으로 정리
-- 실무적 적용 방안 추가
-- 필요시 추가적인 전문 지식 보완
-
-**최종 전문가 답변:**"""
+        # RAG 답변이 이미 충분히 간결하다면 추가 요약 없이 바로 반환
+        if len(qualitative_answer.strip()) < 500:  # 500자 이하면 바로 반환
+            return qualitative_answer.strip()
         
-        print(f"\n🎯 정성분석용 최종 응답 생성 - 질문 타입: QUALITATIVE")
+        # 길 경우에만 간단한 요약 요청
+        prompt = f"""다음 내용을 2-3문장으로 간단히 요약해주세요:
+
+{qualitative_answer}"""
+        
         try:
-            return self.llm.invoke(prompt)
+            response = self.llm.invoke(prompt)
+            # 응답이 원본보다 길어지거나 이상하면 원본 그대로 반환
+            if len(response) > len(qualitative_answer) or "-> " in response or "사용" in response[:20]:
+                return qualitative_answer.strip()
+            return response.strip()
         except Exception as e:
-            return qualitative_answer  # 오류 시 원본 반환
+            return qualitative_answer.strip()
     
     def _generate_mixed_response(self, question: str, quantitative_data: pd.DataFrame, 
                                qualitative_answer: str, sql_info: Dict) -> str:
         
-        # 정량 데이터 포맷팅
-        formatted_data = ""
+        data_text = ""
         if quantitative_data is not None and not quantitative_data.empty:
-            formatted_data = self._format_dataframe(quantitative_data, sql_info.get('description', '데이터'))
+            data_text = self._format_dataframe_simple(quantitative_data)
         
-        prompt = f"""당신은 DRT 전문가입니다. 정량적 데이터와 정성적 분석을 통합하여 종합적인 답변을 제공하세요.
+        prompt = f"""질문: {question}
 
-**질문:** {question}
+데이터: {data_text if data_text else "데이터 없음"}
+분석: {qualitative_answer if qualitative_answer else "분석 없음"}
 
-**정량적 데이터:**
-{formatted_data if formatted_data else "정량적 데이터가 없습니다."}
-
-**정성적 분석:**
-{qualitative_answer if qualitative_answer else "정성적 분석이 없습니다."}
-
-**통합 분석 요청:**
-1. 정량적 데이터와 정성적 분석을 연결하여 해석
-2. 데이터가 이론을 어떻게 뒷받침하는지 설명
-3. 종합적인 결론과 실무적 제언 제시
-
-**종합 전문가 답변:**"""
+위 정보를 통합하여 2-3문장으로 간결하게 답변해주세요."""
         
-        print(f"\n🎯 통합분석용 최종 응답 생성 - 질문 타입: MIXED")
         try:
             return self.llm.invoke(prompt)
         except Exception as e:
-            # 오류 시 각각의 결과를 단순 조합
-            result = f"**정량적 분석 결과:**\n{formatted_data}\n\n"
-            result += f"**정성적 분석 결과:**\n{qualitative_answer}"
+            result = f"데이터: {data_text}\n"
+            result += f"분석: {qualitative_answer}"
             return result
     
-    def _format_dataframe(self, df: pd.DataFrame, description: str) -> str:
-        """DataFrame을 읽기 쉬운 텍스트로 변환"""
+    def _format_dataframe_simple(self, df: pd.DataFrame) -> str:
+        """DataFrame을 간단한 형태로 변환"""
         if df.empty:
-            return "데이터가 없습니다."
-        
-        formatted = f"📊 {description}\n\n"
+            return "데이터 없음"
         
         if len(df) == 1:
-            # 단일 행 (집계 결과)
+            # 단일 행 - 핵심 수치만 표시
             row = df.iloc[0]
+            items = []
             for col, val in row.items():
                 if pd.notna(val):
                     if isinstance(val, (int, float)):
                         val = f"{val:,.0f}" if val == int(val) else f"{val:,.2f}"
-                    formatted += f"• {col}: {val}\n"
+                    items.append(f"{col}: {val}")
+            return ", ".join(items[:3])  # 최대 3개 항목만
         else:
-            # 여러 행
-            display_df = df.head(5)
-            for idx, row in display_df.iterrows():
-                formatted += f"\n[{idx + 1}]\n"
-                for col, val in row.items():
-                    if pd.notna(val):
-                        if isinstance(val, (int, float)):
-                            val = f"{val:,.0f}" if val == int(val) else f"{val:,.2f}"
-                        formatted += f"  {col}: {val}\n"
-            
-            if len(df) > 5:
-                formatted += f"\n*(총 {len(df)}개 결과 중 상위 5개 표시)*"
-        
-        return formatted
+            # 여러 행 - 테이블 형태
+            return df.head(3).to_string(index=False)  # 최대 3행만
 
 class SmartRAGSystem:
     """
-    통합 스마트 RAG 시스템 (Watson AI 기반 - 전체 프롬프트 출력 버전)
+    통합 스마트 RAG 시스템 (Watson AI 기반 - 간결한 출력 버전)
     """
     
-    def __init__(self, papers_dir: str = "../papers/"):
+    def __init__(self, papers_dir: str = "./papers/"):
+        # 중복 방지를 위한 응답 캐시
+        self.response_cache = {}
         # 예시 SQL 쿼리 (실제 테이블 구조에 맞게 수정 필요)
         self.predefined_queries = {
             "지난달 총 운행건수는?": {
@@ -1195,12 +1104,17 @@ class SmartRAGSystem:
             print("⚠️ 정성분석 시스템 초기화 실패 - 정량분석만 사용 가능")
     
     def answer_question(self, question: str) -> str:
-        """질문에 대한 통합 분석 및 답변"""
-        print(f"🔍 질문 분석 중: {question}")
+        """질문에 대한 통합 분석 및 답변 (중복 방지)"""
+        # 캐시 확인
+        question_key = question.strip().lower()
+        if question_key in self.response_cache:
+            print("💾 캐시된 답변 반환")
+            return self.response_cache[question_key]
+        
+        print(f"🔍 분석 중...")
         
         # 1. 질문 분류
         question_type = self.classifier.classify_question(question)
-        print(f"📋 질문 유형: {question_type.value}")
         
         # 2. 질문 유형별 처리
         quantitative_data = None
@@ -1208,25 +1122,24 @@ class SmartRAGSystem:
         sql_info = None
         
         if question_type in [QuestionType.QUANTITATIVE, QuestionType.MIXED]:
-            print("📊 정량분석 수행 중...")
             quantitative_data, error, sql_info = self.quantitative_analyzer.analyze(question)
-            if error:
-                print(f"⚠️ 정량분석 오류: {error}")
         
         if question_type in [QuestionType.QUALITATIVE, QuestionType.MIXED]:
-            print("📚 정성분석 수행 중...")
             qualitative_answer = self.qualitative_analyzer.analyze(question)
         
-        # 3. 최종 답변 생성 (Watson AI 사용)
-        print("🤖 최종 답변 생성 중...")
+        # 3. 최종 답변 생성
         final_answer = self.response_generator.generate_final_response(
             question, question_type, quantitative_data, qualitative_answer, sql_info
         )
         
-        # 답변 텍스트 처리
+        # 답변 처리 및 캐시 저장
         if hasattr(final_answer, 'content'):
-            return final_answer.content
-        return str(final_answer)
+            result = final_answer.content
+        else:
+            result = str(final_answer)
+            
+        self.response_cache[question_key] = result
+        return result
 
 def interactive_chat(rag_system: SmartRAGSystem):
     """대화형 채팅 인터페이스"""
@@ -1284,25 +1197,25 @@ def main():
         # 시스템 생성
         rag_system = SmartRAGSystem()
         
-        # 테스트
-        test_questions = [
-            "안녕하세요?",  # 관련없는 질문
-            "지난달 운행 건수는?",  # 정량분석
-            "DRT의 장점은 무엇인가요?",  # 정성분석
-            "지난달 승객 수와 DRT 효과를 분석해주세요"  # 통합분석
-        ]
+        # # 테스트
+        # test_questions = [
+        #     "안녕하세요?",  # 관련없는 질문
+        #     "지난달 운행 건수는?",  # 정량분석
+        #     "DRT의 장점은 무엇인가요?",  # 정성분석
+        #     "지난달 승객 수와 DRT 효과를 분석해주세요"  # 통합분석
+        # ]
         
-        print("\n🧪 Watson AI 시스템 테스트 (전체 프롬프트 출력):")
-        for i, q in enumerate(test_questions, 1):
-            print(f"\n[테스트 {i}] {q}")
-            try:
-                answer = rag_system.answer_question(q)
-                preview = answer[:100] + "..." if len(answer) > 100 else answer
-                print(f"✓ 답변: {preview}")
-            except Exception as e:
-                print(f"❌ 오류: {str(e)}")
+        # print("\n🧪 Watson AI 시스템 테스트 (전체 프롬프트 출력):")
+        # for i, q in enumerate(test_questions, 1):
+        #     print(f"\n[테스트 {i}] {q}")
+        #     try:
+        #         answer = rag_system.answer_question(q)
+        #         preview = answer[:100] + "..." if len(answer) > 100 else answer
+        #         print(f"✓ 답변: {preview}")
+        #     except Exception as e:
+        #         print(f"❌ 오류: {str(e)}")
         
-        print("\n✅ 테스트 완료! 대화형 모드를 시작합니다.\n")
+        # print("\n✅ 테스트 완료! 대화형 모드를 시작합니다.\n")
         
         # 대화형 모드
         interactive_chat(rag_system)
