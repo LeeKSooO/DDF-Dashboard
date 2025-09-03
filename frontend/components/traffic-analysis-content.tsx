@@ -174,289 +174,7 @@ export function TrafficAnalysisContent({ selectedMonth, selectedRegion }: Traffi
 
         {/* 이상 패턴 감지 탭 */}
         <TabsContent value="patterns" className="space-y-6">
-          {/* 패턴 요약 카드들 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">주말 우세 정류장</CardTitle>
-                <Activity className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  TOP {weekendData?.data?.length || 0}
-                </div>
-                <p className="text-xs text-muted-foreground">관광/레저 지역</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">심야 고수요</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  TOP {nightData?.data?.length || 0}
-                </div>
-                <p className="text-xs text-muted-foreground">야간 활동 지역</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">저활용 정류장</CardTitle>
-                <TrendingDown className="h-4 w-4 text-red-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-600">
-                  TOP {underutilizedData?.data?.length || 0}
-                </div>
-                <p className="text-xs text-muted-foreground">운영 최적화 대상</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">점심시간 특화</CardTitle>
-                <Users className="h-4 w-4 text-green-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">
-                  TOP {lunchTimeData?.data?.length || 0}
-                </div>
-                <p className="text-xs text-muted-foreground">업무 중심 지역</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">러시아워 핫스팟</CardTitle>
-                <Zap className="h-4 w-4 text-orange-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-orange-600">
-                  TOP {rushHourData?.data?.morning_rush?.length || 0}
-                </div>
-                <p className="text-xs text-muted-foreground">출퇴근 집중 구간</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">지역 특성 분석</CardTitle>
-                <MapPin className="h-4 w-4 text-purple-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-purple-600">
-                  {((areaTypeData?.data?.residential_stations?.length || 0) + (areaTypeData?.data?.business_stations?.length || 0))}개
-                </div>
-                <p className="text-xs text-muted-foreground">주거/업무 분류</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* 시간대별 이상 패턴 */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* 주말 우세 정류장 */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5 text-blue-500" />
-                  주말 우세 정류장
-                </CardTitle>
-                <CardDescription>주말 수요가 높은 관광/레저 지역</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {weekendData?.data?.map((item: any, index: number) => (
-                    <div key={item.station.station_id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-blue-600">#{item.rank}</div>
-                        </div>
-                        <div>
-                          <h4 className="font-medium">{item.station.station_name}</h4>
-                          <p className="text-sm text-gray-600">
-                            주말 교통량: {item.weekend_total_traffic?.toLocaleString()}명
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <Badge variant="secondary">
-                          {item.vs_district_avg?.toFixed(1)}x
-                        </Badge>
-                        <p className="text-xs text-gray-600 mt-1">구평균 대비</p>
-                      </div>
-                    </div>
-                  )) || (
-                    <div className="text-center text-gray-500 py-8">
-                      데이터를 불러오는 중...
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* 심야 고수요 정류장 */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-purple-500" />
-                  심야 고수요 정류장
-                </CardTitle>
-                <CardDescription>23:00-03:00 시간대 높은 수요</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {nightData?.data?.map((item: any, index: number) => (
-                    <div key={item.station.station_id} className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-purple-600">#{index + 1}</div>
-                        </div>
-                        <div>
-                          <h4 className="font-medium">{item.station.station_name}</h4>
-                          <p className="text-sm text-gray-600">
-                            심야 승차: {item.total_night_ride?.toLocaleString()}명
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <Badge variant="outline">
-                          {item.vs_district_avg?.toFixed(1)}x
-                        </Badge>
-                        <p className="text-xs text-gray-600 mt-1">구평균 대비</p>
-                      </div>
-                    </div>
-                  )) || (
-                    <div className="text-center text-gray-500 py-8">
-                      데이터를 불러오는 중...
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* 러시아워 고수요 정류장 */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Zap className="h-5 w-5 text-orange-500" />
-                  러시아워 고수요 정류장
-                </CardTitle>
-                <CardDescription>출퇴근 시간대(06-09시, 17-19시) 교통 집중 구간</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  {/* 오전 러시아워 */}
-                  <div>
-                    <h5 className="font-medium text-orange-800 mb-3">🌅 오전 러시아워 (06-09시)</h5>
-                    <div className="space-y-3">
-                      {rushHourData?.data?.morning_rush?.map((item: any, index: number) => (
-                        <div key={item.station.station_id} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <div className="text-center">
-                              <div className="text-lg font-bold text-orange-600">#{index + 1}</div>
-                            </div>
-                            <div>
-                              <h4 className="font-medium">{item.station.station_name}</h4>
-                              <p className="text-sm text-gray-600">
-                                오전 승차: {item.total_morning_rush?.toLocaleString()}명
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <Badge variant="outline">
-                              {item.vs_district_avg?.toFixed(1)}x
-                            </Badge>
-                            <p className="text-xs text-gray-600 mt-1">구평균 대비</p>
-                          </div>
-                        </div>
-                      )) || (
-                        <div className="text-center text-gray-500 py-4">
-                          데이터를 불러오는 중...
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 오후 러시아워 */}
-                  <div>
-                    <h5 className="font-medium text-orange-800 mb-3">🌆 오후 러시아워 (17-19시)</h5>
-                    <div className="space-y-3">
-                      {rushHourData?.data?.evening_rush?.map((item: any, index: number) => (
-                        <div key={item.station.station_id} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <div className="text-center">
-                              <div className="text-lg font-bold text-orange-600">#{index + 1}</div>
-                            </div>
-                            <div>
-                              <h4 className="font-medium">{item.station.station_name}</h4>
-                              <p className="text-sm text-gray-600">
-                                오후 승차: {item.total_evening_rush?.toLocaleString()}명
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <Badge variant="outline">
-                              {item.vs_district_avg?.toFixed(1)}x
-                            </Badge>
-                            <p className="text-xs text-gray-600 mt-1">구평균 대비</p>
-                          </div>
-                        </div>
-                      )) || (
-                        <div className="text-center text-gray-500 py-4">
-                          데이터를 불러오는 중...
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* 점심시간 특화 정류장 */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-green-500" />
-                  점심시간 특화 정류장
-                </CardTitle>
-                <CardDescription>점심시간대(11:00-13:00) 하차 집중 구간</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {lunchTimeData?.data?.map((item: any, index: number) => (
-                    <div key={item.station.station_id} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-green-600">#{index + 1}</div>
-                        </div>
-                        <div>
-                          <h4 className="font-medium">{item.station.station_name}</h4>
-                          <p className="text-sm text-gray-600">
-                            점심시간 하차: {item.total_lunch_alight?.toLocaleString()}명
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <Badge variant="outline">
-                          {item.vs_district_avg?.toFixed(1)}x
-                        </Badge>
-                        <p className="text-xs text-gray-600 mt-1">구평균 대비</p>
-                      </div>
-                    </div>
-                  )) || (
-                    <div className="text-center text-gray-500 py-8">
-                      데이터를 불러오는 중...
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* 지역 특성별 정류장 분석 */}
+          {/* 지역 특성별 정류장 분석 - 상단으로 이동 */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -552,46 +270,305 @@ export function TrafficAnalysisContent({ selectedMonth, selectedRegion }: Traffi
             </CardContent>
           </Card>
 
-          {/* 저활용 정류장 분석 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingDown className="h-5 w-5 text-red-500" />
-                저활용 정류장 분석
-              </CardTitle>
-              <CardDescription>운영 효율성 개선이 필요한 정류장들</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {underutilizedData?.data?.map((item: any) => (
-                  <Alert key={item.station.station_id} className="border-l-4 border-l-red-500">
-                    <AlertTriangle className="h-4 w-4" />
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium">{item.station.station_name}</h4>
-                        <Badge variant="destructive">
-                          효율성 {item.efficiency_score}%
-                        </Badge>
-                      </div>
-                      <AlertDescription>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>일평균 이용: {item.avg_daily_passengers?.toLocaleString()}명</div>
-                          <div>활용도: {(item.utilization_rate * 100).toFixed(1)}%</div>
+          {/* 러시아워 고수요 정류장과 저활용 정류장 분석을 나란히 배치 */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* 러시아워 고수요 정류장 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-orange-500" />
+                  러시아워 고수요 정류장
+                </CardTitle>
+                <CardDescription>출퇴근 시간대(06-09시, 17-19시) 교통 집중 구간</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {/* 오전 러시아워 */}
+                  <div>
+                    <h5 className="font-medium text-orange-800 mb-3">🌅 오전 러시아워 (06-09시)</h5>
+                    <div className="space-y-3">
+                      {rushHourData?.data?.morning_rush?.map((item: any, index: number) => (
+                        <div key={item.station.station_id} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className="text-center">
+                              <div className="text-lg font-bold text-orange-600">#{index + 1}</div>
+                            </div>
+                            <div>
+                              <h4 className="font-medium">{item.station.station_name}</h4>
+                              <p className="text-sm text-gray-600">
+                                오전 승차: {item.total_morning_rush?.toLocaleString()}명
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <Badge variant="outline">
+                              {item.vs_district_avg?.toFixed(1)}x
+                            </Badge>
+                            <p className="text-xs text-gray-600 mt-1">구평균 대비</p>
+                          </div>
                         </div>
-                        <div className="mt-2 text-sm">
-                          <strong>노선 수:</strong> {item.connecting_routes}개 | <strong>최대 이용:</strong> {item.max_daily_passengers}명/일
+                      )) || (
+                        <div className="text-center text-gray-500 py-4">
+                          데이터를 불러오는 중...
                         </div>
-                      </AlertDescription>
+                      )}
                     </div>
-                  </Alert>
-                )) || (
-                  <div className="text-center text-gray-500 py-8">
-                    데이터를 불러오는 중...
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+
+                  {/* 오후 러시아워 */}
+                  <div>
+                    <h5 className="font-medium text-orange-800 mb-3">🌆 오후 러시아워 (17-19시)</h5>
+                    <div className="space-y-3">
+                      {rushHourData?.data?.evening_rush?.map((item: any, index: number) => (
+                        <div key={item.station.station_id} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className="text-center">
+                              <div className="text-lg font-bold text-orange-600">#{index + 1}</div>
+                            </div>
+                            <div>
+                              <h4 className="font-medium">{item.station.station_name}</h4>
+                              <p className="text-sm text-gray-600">
+                                오후 승차: {item.total_evening_rush?.toLocaleString()}명
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <Badge variant="outline">
+                              {item.vs_district_avg?.toFixed(1)}x
+                            </Badge>
+                            <p className="text-xs text-gray-600 mt-1">구평균 대비</p>
+                          </div>
+                        </div>
+                      )) || (
+                        <div className="text-center text-gray-500 py-4">
+                          데이터를 불러오는 중...
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 저활용 정류장 분석 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingDown className="h-5 w-5 text-red-500" />
+                  저활용 정류장 분석
+                </CardTitle>
+                <CardDescription>운영 효율성 개선이 필요한 정류장들</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {underutilizedData?.data?.map((item: any) => (
+                    <Alert key={item.station.station_id} className="border-l-4 border-l-red-500">
+                      <AlertTriangle className="h-4 w-4" />
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-medium">{item.station.station_name}</h4>
+                          <Badge variant="destructive">
+                            효율성 {item.efficiency_score}%
+                          </Badge>
+                        </div>
+                        <AlertDescription>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>일평균 이용: {item.avg_daily_passengers?.toLocaleString()}명</div>
+                            <div>활용도: {(item.utilization_rate * 100).toFixed(1)}%</div>
+                          </div>
+                          <div className="mt-2 text-sm">
+                            <strong>노선 수:</strong> {item.connecting_routes}개 | <strong>최대 이용:</strong> {item.max_daily_passengers}명/일
+                          </div>
+                        </AlertDescription>
+                      </div>
+                    </Alert>
+                  )) || (
+                    <div className="text-center text-gray-500 py-8">
+                      데이터를 불러오는 중...
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* 4개 카드들을 하단에 배치 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">주말 우세 정류장</CardTitle>
+                <Activity className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  TOP {weekendData?.data?.length || 0}
+                </div>
+                <p className="text-xs text-muted-foreground">관광/레저 지역</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">심야 고수요</CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  TOP {nightData?.data?.length || 0}
+                </div>
+                <p className="text-xs text-muted-foreground">야간 활동 지역</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">점심시간 특화</CardTitle>
+                <Users className="h-4 w-4 text-green-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">
+                  TOP {lunchTimeData?.data?.length || 0}
+                </div>
+                <p className="text-xs text-muted-foreground">업무 중심 지역</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">지역 특성 분석</CardTitle>
+                <MapPin className="h-4 w-4 text-purple-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-purple-600">
+                  {((areaTypeData?.data?.residential_stations?.length || 0) + (areaTypeData?.data?.business_stations?.length || 0))}개
+                </div>
+                <p className="text-xs text-muted-foreground">주거/업무 분류</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* 나머지 카드들 (주말/심야) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* 주말 우세 정류장 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-blue-500" />
+                  주말 우세 정류장
+                </CardTitle>
+                <CardDescription>주말 수요가 높은 관광/레저 지역</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {weekendData?.data?.map((item: any, index: number) => (
+                    <div key={item.station.station_id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-blue-600">#{item.rank}</div>
+                        </div>
+                        <div>
+                          <h4 className="font-medium">{item.station.station_name}</h4>
+                          <p className="text-sm text-gray-600">
+                            주말 교통량: {item.weekend_total_traffic?.toLocaleString()}명
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <Badge variant="secondary">
+                          {item.vs_district_avg?.toFixed(1)}x
+                        </Badge>
+                        <p className="text-xs text-gray-600 mt-1">구평균 대비</p>
+                      </div>
+                    </div>
+                  )) || (
+                    <div className="text-center text-gray-500 py-8">
+                      데이터를 불러오는 중...
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 심야 고수요 정류장 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-purple-500" />
+                  심야 고수요 정류장
+                </CardTitle>
+                <CardDescription>23:00-03:00 시간대 높은 수요</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {nightData?.data?.map((item: any, index: number) => (
+                    <div key={item.station.station_id} className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-purple-600">#{index + 1}</div>
+                        </div>
+                        <div>
+                          <h4 className="font-medium">{item.station.station_name}</h4>
+                          <p className="text-sm text-gray-600">
+                            심야 승차: {item.total_night_ride?.toLocaleString()}명
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <Badge variant="outline">
+                          {item.vs_district_avg?.toFixed(1)}x
+                        </Badge>
+                        <p className="text-xs text-gray-600 mt-1">구평균 대비</p>
+                      </div>
+                    </div>
+                  )) || (
+                    <div className="text-center text-gray-500 py-8">
+                      데이터를 불러오는 중...
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 점심시간 특화 정류장 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-green-500" />
+                  점심시간 특화 정류장
+                </CardTitle>
+                <CardDescription>점심시간대(11:00-13:00) 하차 집중 구간</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {lunchTimeData?.data?.map((item: any, index: number) => (
+                    <div key={item.station.station_id} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-green-600">#{index + 1}</div>
+                        </div>
+                        <div>
+                          <h4 className="font-medium">{item.station.station_name}</h4>
+                          <p className="text-sm text-gray-600">
+                            점심시간 하차: {item.total_lunch_alight?.toLocaleString()}명
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <Badge variant="outline">
+                          {item.vs_district_avg?.toFixed(1)}x
+                        </Badge>
+                        <p className="text-xs text-gray-600 mt-1">구평균 대비</p>
+                      </div>
+                    </div>
+                  )) || (
+                    <div className="text-center text-gray-500 py-8">
+                      데이터를 불러오는 중...
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* 노선 최적화 탭 */}

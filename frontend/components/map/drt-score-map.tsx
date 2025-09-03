@@ -120,7 +120,7 @@ function DRTScoreMapComponent({ drtData, selectedModel, loading = false, error =
         
         // Add popup with station details
         marker.bindPopup(`
-          <div class="text-sm">
+          <div class="text-base">
             <strong>${station.station_name}</strong><br/>
             DRT 점수: <span class="font-bold" style="color: ${getDRTScoreColor(station.drt_score)}">${station.drt_score.toFixed(1)}</span><br/>
             피크시간: ${station.peak_hour}시<br/>
@@ -157,7 +157,7 @@ function DRTScoreMapComponent({ drtData, selectedModel, loading = false, error =
       <div className="h-[400px] bg-gray-100 rounded-lg flex items-center justify-center">
         <div className="text-center text-red-500">
           <p className="font-medium">DRT 데이터 로드 실패</p>
-          <p className="text-sm mt-2">{error}</p>
+          <p className="text-base mt-2">{error}</p>
         </div>
       </div>
     )
@@ -168,7 +168,7 @@ function DRTScoreMapComponent({ drtData, selectedModel, loading = false, error =
       <div className="h-[400px] bg-gray-100 rounded-lg flex items-center justify-center">
         <div className="text-center text-gray-500">
           <p className="font-medium">DRT 데이터 없음</p>
-          <p className="text-sm mt-2">선택된 지역/모델의 데이터가 없습니다</p>
+          <p className="text-base mt-2">선택된 지역/모델의 데이터가 없습니다</p>
         </div>
       </div>
     )
@@ -194,7 +194,7 @@ function DRTScoreMapComponent({ drtData, selectedModel, loading = false, error =
       />
 
       {/* DRT Score Legend */}
-      <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg text-xs z-20">
+      <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg text-base z-20">
         <div className="font-medium mb-2">DRT 점수 범례</div>
         <div className="space-y-1">
           <div className="flex items-center gap-2">
@@ -222,7 +222,7 @@ function DRTScoreMapComponent({ drtData, selectedModel, loading = false, error =
 
       {/* Model Info */}
       <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg p-2 shadow-sm z-20">
-        <div className="text-xs">
+        <div className="text-base">
           <div className="font-medium">{selectedModel} 모델</div>
           <div className="text-gray-600">{drtData?.stations.length}개 정류장</div>
         </div>
@@ -231,8 +231,8 @@ function DRTScoreMapComponent({ drtData, selectedModel, loading = false, error =
       {/* Top Stations Info */}
       {drtData.top_stations.length > 0 && (
         <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-sm z-20">
-          <div className="font-medium mb-2 text-xs">🏆 TOP 3 정류장</div>
-          <div className="space-y-1 text-xs">
+          <div className="font-medium mb-2 text-base">🏆 TOP 3 정류장</div>
+          <div className="space-y-1 text-base">
             {drtData.top_stations.slice(0, 3).map((station, idx) => (
               <div key={station.station_id} className="flex justify-between items-center">
                 <span className="truncate max-w-24">{station.station_name}</span>

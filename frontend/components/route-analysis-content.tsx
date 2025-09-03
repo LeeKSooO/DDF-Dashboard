@@ -20,7 +20,7 @@ import {
 // Month names in Korean
 const monthNames = ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"]
 
-// 노선별 km당 승객수 데이터
+// 노선별 km당 승하차수 데이터
 const routePassengerPerKm = [
   { route: "노선 A", passengersPerKm: 145, totalKm: 12.5, totalPassengers: 1813, efficiency: 92 },
   { route: "노선 B", passengersPerKm: 132, totalKm: 15.2, totalPassengers: 2006, efficiency: 88 },
@@ -182,12 +182,12 @@ export function RouteAnalysisContent({ selectedMonth, selectedRegion }: RouteAna
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">최고 효율 노선</CardTitle>
+            <CardTitle className="text-base font-medium">최고 효율 노선</CardTitle>
             <Star className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{regionalData.topRoute}</div>
-            <div className="flex items-center text-xs text-muted-foreground">
+            <div className="flex items-center text-base text-muted-foreground">
               <TrendingUp className="mr-1 h-3 w-3 text-green-500" />
               km당 {regionalData.passengersPerKm}명
             </div>
@@ -199,12 +199,12 @@ export function RouteAnalysisContent({ selectedMonth, selectedRegion }: RouteAna
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">이용 집중도</CardTitle>
+            <CardTitle className="text-base font-medium">이용 집중도</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{regionalData.concentration}%</div>
-            <div className="flex items-center text-xs text-muted-foreground">
+            <div className="flex items-center text-base text-muted-foreground">
               <TrendingUp className="mr-1 h-3 w-3 text-green-500" />
               피크시간 집중도
             </div>
@@ -216,12 +216,12 @@ export function RouteAnalysisContent({ selectedMonth, selectedRegion }: RouteAna
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">재이용률</CardTitle>
+            <CardTitle className="text-base font-medium">재이용률</CardTitle>
             <Repeat className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{regionalData.reuseRate}%</div>
-            <div className="flex items-center text-xs text-muted-foreground">
+            <div className="flex items-center text-base text-muted-foreground">
               <TrendingUp className="mr-1 h-3 w-3 text-green-500" />
               월간 재이용률
             </div>
@@ -232,10 +232,10 @@ export function RouteAnalysisContent({ selectedMonth, selectedRegion }: RouteAna
         </Card>
       </div>
 
-      {/* 노선별 km당 승객수 */}
+      {/* 노선별 km당 승하차수 */}
       <Card>
         <CardHeader>
-          <CardTitle>노선별 km당 승객수</CardTitle>
+          <CardTitle>노선별 km당 승하차수</CardTitle>
           <CardDescription>노선 효율성 비교 분석</CardDescription>
         </CardHeader>
         <CardContent>
@@ -246,7 +246,7 @@ export function RouteAnalysisContent({ selectedMonth, selectedRegion }: RouteAna
               <YAxis />
               <Tooltip />
               <Legend />
-              <Bar dataKey="passengersPerKm" fill="#3b82f6" name="km당 승객수" />
+              <Bar dataKey="passengersPerKm" fill="#3b82f6" name="km당 승하차수" />
               <Bar dataKey="efficiency" fill="#10b981" name="효율성 (%)" />
             </BarChart>
           </ResponsiveContainer>
@@ -273,10 +273,10 @@ export function RouteAnalysisContent({ selectedMonth, selectedRegion }: RouteAna
                     </div>
                     <div>
                       <h4 className="font-medium">{route.route}</h4>
-                      <p className="text-sm text-muted-foreground">피크시간: {route.peakHours}</p>
+                      <p className="text-base text-muted-foreground">피크시간: {route.peakHours}</p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs">대기시간: {route.avgWaitTime}분</span>
-                        <span className="text-xs">만족도: {route.satisfaction}/5.0</span>
+                        <span className="text-base">대기시간: {route.avgWaitTime}분</span>
+                        <span className="text-base">만족도: {route.satisfaction}/5.0</span>
                       </div>
                     </div>
                   </div>
@@ -287,7 +287,7 @@ export function RouteAnalysisContent({ selectedMonth, selectedRegion }: RouteAna
                     </Badge>
                     <div className="mt-2">
                       <Progress value={route.peakRatio} className="w-20" />
-                      <span className="text-xs text-muted-foreground">피크비율 {route.peakRatio}%</span>
+                      <span className="text-base text-muted-foreground">피크비율 {route.peakRatio}%</span>
                     </div>
                   </div>
                 </div>
@@ -315,12 +315,12 @@ export function RouteAnalysisContent({ selectedMonth, selectedRegion }: RouteAna
                     </div>
                     <div>
                       <h4 className="font-medium">{route.route}</h4>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-base text-muted-foreground">
                         주간 이용자: {route.weeklyUsers.toLocaleString()}명
                       </p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs">월간: {route.monthlyUsers.toLocaleString()}명</span>
-                        <span className="text-xs">평균 {route.avgTripsPerUser}회/인</span>
+                        <span className="text-base">월간: {route.monthlyUsers.toLocaleString()}명</span>
+                        <span className="text-base">평균 {route.avgTripsPerUser}회/인</span>
                       </div>
                     </div>
                   </div>
@@ -331,7 +331,7 @@ export function RouteAnalysisContent({ selectedMonth, selectedRegion }: RouteAna
                     </Badge>
                     <div className="mt-2">
                       <Progress value={route.reuseRate} className="w-20" />
-                      <span className="text-xs text-muted-foreground">재이용률</span>
+                      <span className="text-base text-muted-foreground">재이용률</span>
                     </div>
                   </div>
                 </div>
@@ -380,22 +380,22 @@ export function RouteAnalysisContent({ selectedMonth, selectedRegion }: RouteAna
             <div className="p-4 bg-blue-50 rounded-lg text-center">
               <h5 className="font-medium text-blue-800 mb-2">🚌 최고 성과 노선</h5>
               <div className="text-3xl font-bold text-blue-600">{regionalData.topRoute}</div>
-              <div className="text-sm text-blue-600 mt-1">종합 1위</div>
+              <div className="text-base text-blue-600 mt-1">종합 1위</div>
             </div>
             <div className="p-4 bg-green-50 rounded-lg text-center">
-              <h5 className="font-medium text-green-800 mb-2">📊 km당 승객수</h5>
+              <h5 className="font-medium text-green-800 mb-2">📊 km당 승하차수</h5>
               <div className="text-3xl font-bold text-green-600">{regionalData.passengersPerKm}명</div>
-              <div className="text-sm text-green-600 mt-1">최고 효율</div>
+              <div className="text-base text-green-600 mt-1">최고 효율</div>
             </div>
             <div className="p-4 bg-purple-50 rounded-lg text-center">
               <h5 className="font-medium text-purple-800 mb-2">🔄 재이용률</h5>
               <div className="text-3xl font-bold text-purple-600">{regionalData.reuseRate}%</div>
-              <div className="text-sm text-purple-600 mt-1">고객 충성도</div>
+              <div className="text-base text-purple-600 mt-1">고객 충성도</div>
             </div>
           </div>
           <div className="mt-6 p-4 bg-yellow-50 rounded-lg">
             <h5 className="font-medium text-yellow-800 mb-3">📋 개선 제안</h5>
-            <div className="text-sm space-y-2">
+            <div className="text-base space-y-2">
               <div>• 최고 성과 노선의 운영 방식을 다른 노선에 적용</div>
               <div>• 이용 집중도가 낮은 시간대 서비스 최적화</div>
               <div>• 재이용률 향상을 위한 고객 만족도 개선</div>

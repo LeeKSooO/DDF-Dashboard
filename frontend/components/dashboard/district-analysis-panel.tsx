@@ -60,7 +60,7 @@ export function DistrictAnalysisPanel({
             {isStationAnalysis ? (
               <>
                 <div>🚏 {stationName}</div>
-                <div className="text-sm font-normal text-gray-600">({districtName})</div>
+                <div className="text-base font-normal text-gray-600">({districtName})</div>
               </>
             ) : (
               <>{districtName} 분석 결과</>
@@ -81,7 +81,7 @@ export function DistrictAnalysisPanel({
         {/* Current Model Analysis */}
         <div className="bg-blue-50 p-3 rounded-lg">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-blue-900">
+            <span className="text-base font-medium text-blue-900">
               {isStationAnalysis ? '정류장 ' : ''}DRT 적합도: {selectedModel}
             </span>
             <Badge variant={getSuitabilityBadgeVariant(suitabilityLevel)}>
@@ -99,7 +99,7 @@ export function DistrictAnalysisPanel({
               </span>
             </div>
             {peakHour && (
-              <div className="text-sm text-blue-700">
+              <div className="text-base text-blue-700">
                 피크: {peakHour}시
               </div>
             )}
@@ -108,10 +108,10 @@ export function DistrictAnalysisPanel({
 
         {isStationAnalysis && (
           <div className="bg-purple-50 p-3 rounded-lg">
-            <div className="text-sm font-medium text-purple-900 mb-2">
+            <div className="text-base font-medium text-purple-900 mb-2">
               🚏 정류장 정보
             </div>
-            <div className="space-y-1 text-xs">
+            <div className="space-y-1 text-base">
               <div className="flex justify-between">
                 <span>위치:</span>
                 <span className="font-medium">{districtName}</span>
@@ -132,7 +132,7 @@ export function DistrictAnalysisPanel({
         
         {/* Best Model Recommendation */}
         <div className="bg-green-50 p-3 rounded-lg">
-          <div className="text-sm font-medium text-green-900 mb-2">
+          <div className="text-base font-medium text-green-900 mb-2">
             🏆 {isStationAnalysis ? '이 정류장' : '이 지역'}의 최적 모델
           </div>
           <div className="flex items-center justify-between">
@@ -146,7 +146,7 @@ export function DistrictAnalysisPanel({
         {/* All Models Comparison */}
         {!isStationAnalysis && (
         <div>
-          <div className="text-sm font-medium mb-3">📊 전체 모델 비교</div>
+          <div className="text-base font-medium mb-3">📊 전체 모델 비교</div>
           <div className="space-y-2">
             {Object.entries(allModelScores)
               .sort(([,a], [,b]) => b - a)
@@ -165,12 +165,12 @@ export function DistrictAnalysisPanel({
                     }`}
                   >
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500">#{index + 1}</span>
+                      <span className="text-base text-gray-500">#{index + 1}</span>
                       <div className="flex flex-col">
-                        <span className={`text-sm ${isSelected ? 'font-semibold text-blue-700' : ''}`}>
-                          {model} {isBest && <span className="text-xs">🏆</span>}
+                        <span className={`text-base ${isSelected ? 'font-semibold text-blue-700' : ''}`}>
+                          {model} {isBest && <span className="text-base">🏆</span>}
                         </span>
-                        <span className="text-xs text-gray-500">{suitabilityLevel}</span>
+                        <span className="text-base text-gray-500">{suitabilityLevel}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -182,7 +182,7 @@ export function DistrictAnalysisPanel({
                                          score >= 40 ? '#F97316' : '#EF4444'
                         }}
                       />
-                      <span className={`text-sm ${isSelected ? 'font-semibold' : ''}`}>
+                      <span className={`text-base ${isSelected ? 'font-semibold' : ''}`}>
                         {score.toFixed(1)}
                       </span>
                     </div>
@@ -194,13 +194,13 @@ export function DistrictAnalysisPanel({
           
           {/* Quick Comparison Chart */}
           <div className="mt-3 p-2 bg-gray-50 rounded-lg">
-            <div className="text-xs font-medium mb-2">모델 점수 비교</div>
+            <div className="text-base font-medium mb-2">모델 점수 비교</div>
             <div className="space-y-1">
               {Object.entries(allModelScores)
                 .sort(([,a], [,b]) => b - a)
                 .map(([model, score]) => (
                   <div key={model} className="flex items-center gap-2">
-                    <span className="text-xs w-12 truncate">{model}</span>
+                    <span className="text-base w-12 truncate">{model}</span>
                     <div className="flex-1 bg-gray-200 rounded-full h-1.5">
                       <div 
                         className="h-1.5 rounded-full transition-all duration-300"
@@ -212,7 +212,7 @@ export function DistrictAnalysisPanel({
                         }}
                       />
                     </div>
-                    <span className="text-xs w-8">{score.toFixed(0)}</span>
+                    <span className="text-base w-8">{score.toFixed(0)}</span>
                   </div>
                 ))
               }
@@ -223,10 +223,10 @@ export function DistrictAnalysisPanel({
 
         {/* Recommendations */}
         <div className="bg-yellow-50 p-3 rounded-lg">
-          <div className="text-sm font-medium text-yellow-900 mb-2">
+          <div className="text-base font-medium text-yellow-900 mb-2">
             💡 권장사항
           </div>
-          <div className="text-xs text-yellow-800">
+          <div className="text-base text-yellow-800">
             {isStationAnalysis ? (
               selectedModelScore >= 80 ? (
                 `이 정류장은 ${selectedModel} 모델에 매우 적합합니다. DRT 서비스 우선 도입을 권장합니다.`
@@ -248,10 +248,10 @@ export function DistrictAnalysisPanel({
         {/* Station-specific insights */}
         {isStationAnalysis && peakHour && (
           <div className="bg-indigo-50 p-3 rounded-lg">
-            <div className="text-sm font-medium text-indigo-900 mb-2">
+            <div className="text-base font-medium text-indigo-900 mb-2">
               📈 운영 가이드
             </div>
-            <div className="text-xs text-indigo-800 space-y-1">
+            <div className="text-base text-indigo-800 space-y-1">
               <div>• 피크 시간({peakHour}:00) 전후로 DRT 차량 배치 강화</div>
               <div>• {selectedModel === '출퇴근' ? '출퇴근 시간대' : selectedModel === '관광형' ? '관광 성수기' : '복지/의료 서비스'} 집중 운영</div>
               <div>• 수요 예측 기반 사전 배차 시스템 적용</div>

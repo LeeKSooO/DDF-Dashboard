@@ -160,7 +160,7 @@ export function DRTScoreContent({ selectedMonth, selectedRegion }: DRTScoreConte
           <CardContent className="p-6">
             <div className="text-center text-red-500">
               <p className="font-medium">데이터 로드 실패</p>
-              <p className="text-sm mt-2">{error}</p>
+              <p className="text-base mt-2">{error}</p>
             </div>
           </CardContent>
         </Card>
@@ -235,19 +235,19 @@ export function DRTScoreContent({ selectedMonth, selectedRegion }: DRTScoreConte
               <Briefcase className="h-8 w-8 text-blue-600 mx-auto mb-2" />
               <h3 className="font-medium text-blue-800">출퇴근족 DRT</h3>
               <div className="text-2xl font-bold text-blue-600 mt-2">{avgCommuterScore.toFixed(1)}점</div>
-              <p className="text-sm text-blue-600 mt-1">평균 스코어 ({commuterData?.stations?.length || 0}개 정류장)</p>
+              <p className="text-base text-blue-600 mt-1">평균 스코어 ({commuterData?.stations?.length || 0}개 정류장)</p>
             </div>
             <div className="p-4 bg-green-50 rounded-lg text-center">
               <Camera className="h-8 w-8 text-green-600 mx-auto mb-2" />
               <h3 className="font-medium text-green-800">관광객 DRT</h3>
               <div className="text-2xl font-bold text-green-600 mt-2">{avgTourismScore.toFixed(1)}점</div>
-              <p className="text-sm text-green-600 mt-1">평균 스코어 ({tourismData?.stations?.length || 0}개 정류장)</p>
+              <p className="text-base text-green-600 mt-1">평균 스코어 ({tourismData?.stations?.length || 0}개 정류장)</p>
             </div>
             <div className="p-4 bg-purple-50 rounded-lg text-center">
               <Heart className="h-8 w-8 text-purple-600 mx-auto mb-2" />
               <h3 className="font-medium text-purple-800">교통약자 DRT</h3>
               <div className="text-2xl font-bold text-purple-600 mt-2">{avgVulnerableScore.toFixed(1)}점</div>
-              <p className="text-sm text-purple-600 mt-1">평균 스코어 ({vulnerableData?.stations?.length || 0}개 정류장)</p>
+              <p className="text-base text-purple-600 mt-1">평균 스코어 ({vulnerableData?.stations?.length || 0}개 정류장)</p>
             </div>
           </div>
         </CardContent>
@@ -286,7 +286,7 @@ export function DRTScoreContent({ selectedMonth, selectedRegion }: DRTScoreConte
                       <div className="flex items-center justify-between mb-3">
                         <div>
                           <h4 className="font-medium">{station.station_name}</h4>
-                          <p className="text-sm text-muted-foreground">{(station as ExtendedDRTStationData).original_district || commuterData?.district_name}</p>
+                          <p className="text-base text-muted-foreground">{(station as ExtendedDRTStationData).original_district || commuterData?.district_name}</p>
                         </div>
                         <div className="text-right">
                           <div className="text-lg font-bold text-blue-600">{station.drt_score?.toFixed(1)}점</div>
@@ -299,25 +299,25 @@ export function DRTScoreContent({ selectedMonth, selectedRegion }: DRTScoreConte
                       {/* 좌표 및 피크시간 정보 */}
                       <div className="grid grid-cols-2 gap-3 mb-3">
                         <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
+                          <div className="flex justify-between text-base">
                             <span>위도</span>
                             <span>{station.coordinate?.lat.toFixed(4)}</span>
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
+                          <div className="flex justify-between text-base">
                             <span>경도</span>
                             <span>{station.coordinate?.lng.toFixed(4)}</span>
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
+                          <div className="flex justify-between text-base">
                             <span>피크 시간</span>
                             <span>{station.peak_hour}시</span>
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
+                          <div className="flex justify-between text-base">
                             <span>DRT 스코어</span>
                             <span className="font-medium">{station.drt_score?.toFixed(2)}</span>
                           </div>
@@ -328,7 +328,7 @@ export function DRTScoreContent({ selectedMonth, selectedRegion }: DRTScoreConte
                       {/* 추천사항 (실제 데이터 기반) */}
                       <div className="p-3 bg-blue-50 rounded-lg">
                         <h5 className="font-medium text-blue-800 mb-2">💡 분석 결과</h5>
-                        <ul className="text-sm space-y-1">
+                        <ul className="text-base space-y-1">
                           <li className="flex items-start gap-2">
                             <span className="text-blue-600">•</span>
                             <span>피크 시간({station.peak_hour}시)에 높은 출퇴근 수요 예상</span>
@@ -372,7 +372,7 @@ export function DRTScoreContent({ selectedMonth, selectedRegion }: DRTScoreConte
                       <div className="flex items-center gap-3">
                         <span className="font-bold">#{district.rank}</span>
                         <span>{district.district}</span>
-                        <span className="text-sm text-muted-foreground">({district.stationCount}개 정류장)</span>
+                        <span className="text-base text-muted-foreground">({district.stationCount}개 정류장)</span>
                       </div>
                       <span className="font-medium">{district.avgScore}점</span>
                     </div>
@@ -399,7 +399,7 @@ export function DRTScoreContent({ selectedMonth, selectedRegion }: DRTScoreConte
                       <div className="flex items-center justify-between mb-3">
                         <div>
                           <h4 className="font-medium">{station.station_name}</h4>
-                          <p className="text-sm text-muted-foreground">{(station as ExtendedDRTStationData).original_district || tourismData?.district_name}</p>
+                          <p className="text-base text-muted-foreground">{(station as ExtendedDRTStationData).original_district || tourismData?.district_name}</p>
                         </div>
                         <div className="text-right">
                           <div className="text-lg font-bold text-green-600">{station.drt_score?.toFixed(1)}점</div>
@@ -412,25 +412,25 @@ export function DRTScoreContent({ selectedMonth, selectedRegion }: DRTScoreConte
                       {/* 좌표 및 피크시간 정보 */}
                       <div className="grid grid-cols-2 gap-3 mb-3">
                         <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
+                          <div className="flex justify-between text-base">
                             <span>위도</span>
                             <span>{station.coordinate?.lat.toFixed(4)}</span>
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
+                          <div className="flex justify-between text-base">
                             <span>경도</span>
                             <span>{station.coordinate?.lng.toFixed(4)}</span>
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
+                          <div className="flex justify-between text-base">
                             <span>피크 시간</span>
                             <span>{station.peak_hour}시</span>
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
+                          <div className="flex justify-between text-base">
                             <span>DRT 스코어</span>
                             <span className="font-medium">{station.drt_score?.toFixed(2)}</span>
                           </div>
@@ -441,7 +441,7 @@ export function DRTScoreContent({ selectedMonth, selectedRegion }: DRTScoreConte
                       {/* 추천사항 (실제 데이터 기반) */}
                       <div className="p-3 bg-green-50 rounded-lg">
                         <h5 className="font-medium text-green-800 mb-2">💡 분석 결과</h5>
-                        <ul className="text-sm space-y-1">
+                        <ul className="text-base space-y-1">
                           <li className="flex items-start gap-2">
                             <span className="text-green-600">•</span>
                             <span>피크 시간({station.peak_hour}시)에 높은 관광 수요 예상</span>
@@ -485,7 +485,7 @@ export function DRTScoreContent({ selectedMonth, selectedRegion }: DRTScoreConte
                       <div className="flex items-center gap-3">
                         <span className="font-bold">#{district.rank}</span>
                         <span>{district.district}</span>
-                        <span className="text-sm text-muted-foreground">({district.stationCount}개 정류장)</span>
+                        <span className="text-base text-muted-foreground">({district.stationCount}개 정류장)</span>
                       </div>
                       <span className="font-medium">{district.avgScore}점</span>
                     </div>
@@ -512,7 +512,7 @@ export function DRTScoreContent({ selectedMonth, selectedRegion }: DRTScoreConte
                       <div className="flex items-center justify-between mb-3">
                         <div>
                           <h4 className="font-medium">{station.station_name}</h4>
-                          <p className="text-sm text-muted-foreground">{(station as ExtendedDRTStationData).original_district || vulnerableData?.district_name}</p>
+                          <p className="text-base text-muted-foreground">{(station as ExtendedDRTStationData).original_district || vulnerableData?.district_name}</p>
                         </div>
                         <div className="text-right">
                           <div className="text-lg font-bold text-purple-600">{station.drt_score?.toFixed(1)}점</div>
@@ -525,25 +525,25 @@ export function DRTScoreContent({ selectedMonth, selectedRegion }: DRTScoreConte
                       {/* 좌표 및 피크시간 정보 */}
                       <div className="grid grid-cols-2 gap-3 mb-3">
                         <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
+                          <div className="flex justify-between text-base">
                             <span>위도</span>
                             <span>{station.coordinate?.lat.toFixed(4)}</span>
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
+                          <div className="flex justify-between text-base">
                             <span>경도</span>
                             <span>{station.coordinate?.lng.toFixed(4)}</span>
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
+                          <div className="flex justify-between text-base">
                             <span>피크 시간</span>
                             <span>{station.peak_hour}시</span>
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
+                          <div className="flex justify-between text-base">
                             <span>DRT 스코어</span>
                             <span className="font-medium">{station.drt_score?.toFixed(2)}</span>
                           </div>
@@ -554,7 +554,7 @@ export function DRTScoreContent({ selectedMonth, selectedRegion }: DRTScoreConte
                       {/* 추천사항 (실제 데이터 기반) */}
                       <div className="p-3 bg-purple-50 rounded-lg">
                         <h5 className="font-medium text-purple-800 mb-2">💡 분석 결과</h5>
-                        <ul className="text-sm space-y-1">
+                        <ul className="text-base space-y-1">
                           <li className="flex items-start gap-2">
                             <span className="text-purple-600">•</span>
                             <span>피크 시간({station.peak_hour}시)에 높은 교통약자 수요 예상</span>
@@ -598,7 +598,7 @@ export function DRTScoreContent({ selectedMonth, selectedRegion }: DRTScoreConte
                       <div className="flex items-center gap-3">
                         <span className="font-bold">#{district.rank}</span>
                         <span>{district.district}</span>
-                        <span className="text-sm text-muted-foreground">({district.stationCount}개 정류장)</span>
+                        <span className="text-base text-muted-foreground">({district.stationCount}개 정류장)</span>
                       </div>
                       <span className="font-medium">{district.avgScore}점</span>
                     </div>
@@ -623,7 +623,7 @@ export function DRTScoreContent({ selectedMonth, selectedRegion }: DRTScoreConte
                 <Briefcase className="h-5 w-5" />
                 출퇴근족 DRT 결론
               </h4>
-              <div className="text-sm space-y-2">
+              <div className="text-base space-y-2">
                 <div>
                   • <strong>분석 지역:</strong> {commuterData?.district_name || '데이터 로딩 중'}
                 </div>
@@ -644,7 +644,7 @@ export function DRTScoreContent({ selectedMonth, selectedRegion }: DRTScoreConte
                 <Camera className="h-5 w-5" />
                 관광객 DRT 결론
               </h4>
-              <div className="text-sm space-y-2">
+              <div className="text-base space-y-2">
                 <div>
                   • <strong>분석 지역:</strong> {tourismData?.district_name || '데이터 로딩 중'}
                 </div>
@@ -665,7 +665,7 @@ export function DRTScoreContent({ selectedMonth, selectedRegion }: DRTScoreConte
                 <Heart className="h-5 w-5" />
                 교통약자 DRT 결론
               </h4>
-              <div className="text-sm space-y-2">
+              <div className="text-base space-y-2">
                 <div>
                   • <strong>분석 지역:</strong> {vulnerableData?.district_name || '데이터 로딩 중'}
                 </div>
@@ -684,7 +684,7 @@ export function DRTScoreContent({ selectedMonth, selectedRegion }: DRTScoreConte
 
           <div className="mt-6 p-4 bg-yellow-50 rounded-lg">
             <h5 className="font-medium text-yellow-800 mb-3">📋 통합 정책 제언</h5>
-            <div className="text-sm space-y-2">
+            <div className="text-base space-y-2">
               <div>
                 • <strong>지역별 특화:</strong> 각 구의 특성에 맞는 DRT 모델 적용
               </div>

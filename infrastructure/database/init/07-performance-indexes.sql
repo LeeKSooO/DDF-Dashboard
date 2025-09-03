@@ -7,22 +7,19 @@
 -- 1. 월별 노드별 집계 최적화 인덱스 (가장 중요!)
 -- ===============================================
 CREATE INDEX IF NOT EXISTS idx_sph_monthly_node_traffic 
-ON station_passenger_history (node_id, record_date) 
-INCLUDE (hour, ride_passenger, alight_passenger);
+ON station_passenger_history (node_id, record_date, hour, ride_passenger, alight_passenger);
 
 -- ===============================================
 -- 2. 범위 기반 날짜 조회 최적화 
 -- ===============================================
 CREATE INDEX IF NOT EXISTS idx_sph_date_range_node
-ON station_passenger_history (record_date, node_id) 
-INCLUDE (ride_passenger, alight_passenger);
+ON station_passenger_history (record_date, node_id, ride_passenger, alight_passenger);
 
 -- ===============================================
 -- 3. 시간대별 패턴 분석 최적화
 -- ===============================================
 CREATE INDEX IF NOT EXISTS idx_sph_hourly_analysis
-ON station_passenger_history (record_date, hour, node_id) 
-INCLUDE (ride_passenger, alight_passenger);
+ON station_passenger_history (record_date, hour, node_id, ride_passenger, alight_passenger);
 
 -- ===============================================
 -- 4. 요일별 분석을 위한 함수형 인덱스
@@ -31,31 +28,29 @@ CREATE INDEX IF NOT EXISTS idx_sph_weekday_analysis
 ON station_passenger_history (
     EXTRACT(DOW FROM record_date),
     hour,
-    record_date
-) INCLUDE (node_id, ride_passenger, alight_passenger);
+    record_date,
+    node_id, ride_passenger, alight_passenger
+);
 
 -- ===============================================
 -- 5. spatial_mapping JOIN 최적화 
 -- ===============================================
 CREATE INDEX IF NOT EXISTS idx_spatial_enhanced_join 
-ON spatial_mapping (node_id, sgg_name, is_seoul)
-INCLUDE (sgg_code, adm_name);
+ON spatial_mapping (node_id, sgg_name, is_seoul, sgg_code, adm_name);
 
 -- ===============================================
 -- 6. bus_stops JOIN 성능 향상
 -- ===============================================
 CREATE INDEX IF NOT EXISTS idx_bus_stops_join_optimized
-ON bus_stops (node_id)
-WHERE is_active = TRUE
-INCLUDE (node_name, coordinates_x, coordinates_y);
+ON bus_stops (node_id, node_name, coordinates_x, coordinates_y)
+WHERE is_active = TRUE;
 
 -- ===============================================
 -- 7. 서울시 구별 경계 조회 최적화
 -- ===============================================
 CREATE INDEX IF NOT EXISTS idx_admin_seoul_districts
 ON admin_boundaries (sidonm, sggnm)
-WHERE sidonm = '서울특별시'
-INCLUDE (geometry);
+WHERE sidonm = '서울특별시';
 
 -- ===============================================
 -- 8. 월별 집계를 위한 Materialized View 생성

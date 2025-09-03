@@ -50,7 +50,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
         </div>
         <div className="flex items-center space-x-2">
           <Calendar className="h-4 w-4 text-gray-500" />
-          <span className="text-sm text-gray-600">{selectedMonth}</span>
+          <span className="text-base text-gray-600">{selectedMonth}</span>
         </div>
       </div>
 
@@ -58,7 +58,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
         <nav className="-mb-px flex space-x-8">
           <button
             onClick={() => setActiveTab('seoul')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+            className={`py-2 px-1 border-b-2 font-medium text-base ${
               activeTab === 'seoul'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -68,7 +68,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
           </button>
           <button
             onClick={() => setActiveTab('districts')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+            className={`py-2 px-1 border-b-2 font-medium text-base ${
               activeTab === 'districts'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -109,7 +109,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
                 <Users className="h-5 w-5 text-blue-500" />
-                <span className="text-sm font-medium text-gray-600">평일 총 승객</span>
+                <span className="text-base font-medium text-gray-600">평일 총 승객</span>
               </div>
               <div className="text-2xl font-bold text-gray-900 mt-2">
                 {seoulData?.total_weekday_passengers ? seoulData.total_weekday_passengers.toLocaleString() : '259'}
@@ -121,7 +121,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
                 <Users className="h-5 w-5 text-green-500" />
-                <span className="text-sm font-medium text-gray-600">주말 총 승객</span>
+                <span className="text-base font-medium text-gray-600">주말 총 승객</span>
               </div>
               <div className="text-2xl font-bold text-gray-900 mt-2">
                 {seoulData?.total_weekend_passengers ? seoulData.total_weekend_passengers.toLocaleString() : '178'}
@@ -133,7 +133,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
                 <TrendingUp className="h-5 w-5 text-purple-500" />
-                <span className="text-sm font-medium text-gray-600">평일/주말 비율</span>
+                <span className="text-base font-medium text-gray-600">평일/주말 비율</span>
               </div>
               <div className="text-2xl font-bold text-gray-900 mt-2">
                 {seoulData?.weekday_weekend_ratio ? seoulData.weekday_weekend_ratio.toFixed(2) : '1.45'}
@@ -145,7 +145,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
                 <Clock className="h-5 w-5 text-orange-500" />
-                <span className="text-sm font-medium text-gray-600">평일 피크시간</span>
+                <span className="text-base font-medium text-gray-600">평일 피크시간</span>
               </div>
               <div className="text-2xl font-bold text-gray-900 mt-2">
                 {seoulData ? 
@@ -263,7 +263,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
                 </LineChart>
               </ResponsiveContainer>
             </div>
-            <div className="flex items-center justify-center mt-4 space-x-6 text-sm">
+            <div className="flex items-center justify-center mt-4 space-x-6 text-base">
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                 <span>평일</span>
@@ -461,7 +461,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
                           <Badge variant="outline">#{index + 1}</Badge>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="grid grid-cols-2 gap-2 text-base">
                         <div className={patternType === 'weekday' ? 'bg-blue-50 p-2 rounded' : ''}>
                           <div className={`text-gray-600 ${patternType === 'weekday' ? 'text-blue-600 font-semibold' : ''}`}>평일</div>
                           <div className={`font-bold ${patternType === 'weekday' ? 'text-blue-800 text-lg' : ''}`}>{item.weekday.toLocaleString()}</div>

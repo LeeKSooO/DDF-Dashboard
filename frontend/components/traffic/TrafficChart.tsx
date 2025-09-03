@@ -97,7 +97,7 @@ export function TrafficChart({ className }: TrafficChartProps) {
             {utils.formatHour(hour)} ({hour}시)
           </p>
           {payload.map((entry: any, index: number) => (
-            <div key={index} className="flex items-center gap-2 text-sm">
+            <div key={index} className="flex items-center gap-2 text-base">
               <div 
                 className="w-3 h-3 rounded-full" 
                 style={{ backgroundColor: entry.color }}
@@ -143,7 +143,7 @@ export function TrafficChart({ className }: TrafficChartProps) {
         <CardContent className="flex flex-col items-center justify-center h-96 gap-4">
           <div className="text-red-500 text-center">
             <p className="font-medium">데이터 로드 실패</p>
-            <p className="text-sm text-muted-foreground">{error}</p>
+            <p className="text-base text-muted-foreground">{error}</p>
           </div>
           <Button onClick={loadData} variant="outline" size="sm">
             <RefreshCw className="h-4 w-4 mr-2" />
@@ -175,7 +175,7 @@ export function TrafficChart({ className }: TrafficChartProps) {
         {/* 컨트롤 섹션 */}
         <div className="flex gap-4 mt-4">
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium">지역 구분:</label>
+            <label className="text-base font-medium">지역 구분:</label>
             <Select value={regionType} onValueChange={(value: 'seoul' | 'district') => setRegionType(value)}>
               <SelectTrigger className="w-32">
                 <SelectValue />
@@ -189,7 +189,7 @@ export function TrafficChart({ className }: TrafficChartProps) {
 
           {regionType === 'district' && (
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium">구 선택:</label>
+              <label className="text-base font-medium">구 선택:</label>
               <Select value={selectedDistrict} onValueChange={setSelectedDistrict}>
                 <SelectTrigger className="w-32">
                   <SelectValue placeholder="구 선택" />
@@ -215,25 +215,25 @@ export function TrafficChart({ className }: TrafficChartProps) {
               <div className="text-2xl font-bold text-blue-600">
                 {utils.formatNumber(statistics.totalWeekday)}
               </div>
-              <div className="text-sm text-muted-foreground">평일 총 승객</div>
+              <div className="text-base text-muted-foreground">평일 총 승객</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-orange-600">
                 {utils.formatNumber(statistics.totalWeekend)}
               </div>
-              <div className="text-sm text-muted-foreground">주말 총 승객</div>
+              <div className="text-base text-muted-foreground">주말 총 승객</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">
                 {(statistics.ratio * 100).toFixed(1)}%
               </div>
-              <div className="text-sm text-muted-foreground">평일/주말 비율</div>
+              <div className="text-base text-muted-foreground">평일/주말 비율</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-600">
                 {utils.formatHour(statistics.peakHours.weekday_morning_peak.hour)}
               </div>
-              <div className="text-sm text-muted-foreground">평일 피크</div>
+              <div className="text-base text-muted-foreground">평일 피크</div>
             </div>
           </div>
         )}
@@ -297,7 +297,7 @@ export function TrafficChart({ className }: TrafficChartProps) {
         </div>
 
         {/* 범례 */}
-        <div className="flex justify-center mt-4 gap-6 text-sm">
+        <div className="flex justify-center mt-4 gap-6 text-base">
           <div className="flex items-center gap-2">
             <div className="w-4 h-1 bg-blue-600 rounded"></div>
             <span>평일 ({utils.formatNumber(statistics?.totalWeekday || 0)}명)</span>

@@ -54,7 +54,7 @@ export function DRTApiTest() {
         <CardContent className="space-y-4">
           <div className="flex gap-4">
             <div className="flex-1">
-              <label className="text-sm font-medium">구 선택</label>
+              <label className="text-base font-medium">구 선택</label>
               <Select value={selectedDistrict} onValueChange={setSelectedDistrict}>
                 <SelectTrigger>
                   <SelectValue placeholder="구를 선택하세요" />
@@ -70,7 +70,7 @@ export function DRTApiTest() {
             </div>
 
             <div className="flex-1">
-              <label className="text-sm font-medium">모델 타입</label>
+              <label className="text-base font-medium">모델 타입</label>
               <Select value={selectedModel} onValueChange={(value) => setSelectedModel(value as DRTModelType)}>
                 <SelectTrigger>
                   <SelectValue placeholder="모델을 선택하세요" />
@@ -98,7 +98,7 @@ export function DRTApiTest() {
                 <CardTitle className="text-red-600">에러 발생</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-red-700 font-mono text-sm">{error}</p>
+                <p className="text-red-700 font-mono text-base">{error}</p>
               </CardContent>
             </Card>
           )}
@@ -109,7 +109,7 @@ export function DRTApiTest() {
                 <CardTitle className="text-green-600">API 응답 성공</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-2 gap-4 text-base">
                   <div>
                     <strong>구명:</strong> {result.district_name}
                   </div>
@@ -129,7 +129,7 @@ export function DRTApiTest() {
                     <h4 className="font-medium mb-2">Top 정류장:</h4>
                     <div className="space-y-1">
                       {result.top_stations.slice(0, 3).map((station, idx) => (
-                        <div key={station.station_id} className="text-sm bg-white p-2 rounded border">
+                        <div key={station.station_id} className="text-base bg-white p-2 rounded border">
                           <strong>{idx + 1}.</strong> {station.station_name} 
                           <span className="ml-2 text-blue-600">
                             점수: {station.drt_score.toFixed(1)}
@@ -142,7 +142,7 @@ export function DRTApiTest() {
 
                 <details className="mt-4">
                   <summary className="cursor-pointer font-medium">전체 응답 데이터 보기</summary>
-                  <pre className="mt-2 p-2 bg-gray-100 rounded text-xs overflow-auto max-h-40">
+                  <pre className="mt-2 p-2 bg-gray-100 rounded text-base overflow-auto max-h-40">
                     {JSON.stringify(result, null, 2)}
                   </pre>
                 </details>

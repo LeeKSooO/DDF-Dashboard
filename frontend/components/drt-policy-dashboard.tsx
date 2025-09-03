@@ -312,7 +312,7 @@ export function DRTPolicyDashboard() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">DRT 정책 의사결정 대시보드</h1>
-                <p className="text-sm text-gray-600">서울시 수요응답형 교통 분석 시스템</p>
+                <p className="text-base text-gray-600">서울시 수요응답형 교통 분석 시스템</p>
               </div>
             </div>
           </div>
@@ -353,7 +353,7 @@ export function DRTPolicyDashboard() {
                 <MapPin className="h-16 w-16 text-blue-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-700 mb-2">서울시 교통량 히트맵</h3>
                 <p className="text-gray-500 mb-4">25개 자치구 실시간 교통 현황</p>
-                <div className="flex items-center justify-center gap-4 text-sm">
+                <div className="flex items-center justify-center gap-4 text-base">
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 bg-blue-500 rounded"></div>
                     <span>낮음</span>
@@ -396,7 +396,7 @@ export function DRTPolicyDashboard() {
                       variant={selectedDistrict === district.district_name ? "default" : "outline"}
                       size="sm"
                       onClick={() => setSelectedDistrict(district.district_name)}
-                      className="text-xs"
+                      className="text-base"
                     >
                       {district.district_name}
                     </Button>
@@ -412,12 +412,12 @@ export function DRTPolicyDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">총 교통량</CardTitle>
+                  <CardTitle className="text-base font-medium">총 교통량</CardTitle>
                   <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{totalTraffic.toLocaleString()}명</div>
-                  <div className="flex items-center text-xs text-muted-foreground">
+                  <div className="flex items-center text-base text-muted-foreground">
                     <TrendingUp className="mr-1 h-3 w-3 text-green-500" />
                     전월 대비 +8.2%
                   </div>
@@ -426,12 +426,12 @@ export function DRTPolicyDashboard() {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">최대 교통량 구</CardTitle>
+                  <CardTitle className="text-base font-medium">최대 교통량 구</CardTitle>
                   <Target className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{maxTrafficDistrict.district_name}</div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-base text-muted-foreground">
                     {maxTrafficDistrict.total_traffic.toLocaleString()}명
                   </div>
                 </CardContent>
@@ -439,12 +439,12 @@ export function DRTPolicyDashboard() {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">총 정류장 수</CardTitle>
+                  <CardTitle className="text-base font-medium">총 정류장 수</CardTitle>
                   <Bus className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{totalStations.toLocaleString()}개</div>
-                  <div className="flex items-center text-xs text-muted-foreground">
+                  <div className="flex items-center text-base text-muted-foreground">
                     <TrendingUp className="mr-1 h-3 w-3 text-green-500" />
                     신규 정류장 +12개
                   </div>
@@ -453,12 +453,12 @@ export function DRTPolicyDashboard() {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">AI 예측 정확도</CardTitle>
+                  <CardTitle className="text-base font-medium">AI 예측 정확도</CardTitle>
                   <Zap className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">94.8%</div>
-                  <div className="flex items-center text-xs text-muted-foreground">
+                  <div className="flex items-center text-base text-muted-foreground">
                     <TrendingUp className="mr-1 h-3 w-3 text-green-500" />
                     MSTGCN 모델
                   </div>
@@ -548,24 +548,24 @@ export function DRTPolicyDashboard() {
                         <h4 className="font-medium">{model.type}</h4>
                         <Badge style={{ backgroundColor: model.color, color: "white" }}>추천</Badge>
                       </div>
-                      <p className="text-sm text-gray-600 mb-3">{model.description}</p>
+                      <p className="text-base text-gray-600 mb-3">{model.description}</p>
                       <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
+                        <div className="flex justify-between text-base">
                           <span>효율성</span>
                           <span>{model.efficiency}%</span>
                         </div>
                         <Progress value={model.efficiency} className="h-2" />
-                        <div className="flex justify-between text-sm">
+                        <div className="flex justify-between text-base">
                           <span>비용 효과성</span>
                           <span>{model.cost_effectiveness}%</span>
                         </div>
                         <Progress value={model.cost_effectiveness} className="h-2" />
                       </div>
                       <div className="mt-3">
-                        <p className="text-xs text-gray-500">적합 지역:</p>
+                        <p className="text-base text-gray-500">적합 지역:</p>
                         <div className="flex flex-wrap gap-1 mt-1">
                           {model.suitable_areas.map((area) => (
-                            <Badge key={area} variant="outline" className="text-xs">
+                            <Badge key={area} variant="outline" className="text-base">
                               {area}
                             </Badge>
                           ))}
@@ -643,23 +643,23 @@ export function DRTPolicyDashboard() {
                       <CardContent className="p-4">
                         <div className="space-y-3">
                           <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">총 교통량</span>
+                            <span className="text-base text-gray-600">총 교통량</span>
                             <span className="font-medium">{selectedDistrictData.total_traffic.toLocaleString()}명</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">일평균</span>
+                            <span className="text-base text-gray-600">일평균</span>
                             <span className="font-medium">{selectedDistrictData.daily_average.toLocaleString()}명</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">정류장 수</span>
+                            <span className="text-base text-gray-600">정류장 수</span>
                             <span className="font-medium">{selectedDistrictData.station_count}개</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">교통량 순위</span>
+                            <span className="text-base text-gray-600">교통량 순위</span>
                             <Badge variant="outline">#{selectedDistrictData.traffic_rank}</Badge>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">교통 밀도</span>
+                            <span className="text-base text-gray-600">교통 밀도</span>
                             <span className="font-medium">{selectedDistrictData.traffic_density}%</span>
                           </div>
                         </div>
@@ -673,19 +673,19 @@ export function DRTPolicyDashboard() {
                       <CardContent>
                         <div className="space-y-3">
                           <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">총 승차</span>
+                            <span className="text-base text-gray-600">총 승차</span>
                             <span className="font-medium text-blue-600">
                               {selectedDistrictData.total_ride.toLocaleString()}명
                             </span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">총 하차</span>
+                            <span className="text-base text-gray-600">총 하차</span>
                             <span className="font-medium text-green-600">
                               {selectedDistrictData.total_alight.toLocaleString()}명
                             </span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">순 유입</span>
+                            <span className="text-base text-gray-600">순 유입</span>
                             <span
                               className={`font-medium ${
                                 selectedDistrictData.total_ride - selectedDistrictData.total_alight > 0
@@ -711,7 +711,7 @@ export function DRTPolicyDashboard() {
                             const isRecommended = model.suitable_areas.includes(selectedDistrictData.district_name)
                             return (
                               <div key={model.type} className="flex items-center justify-between">
-                                <span className="text-sm">{model.type}</span>
+                                <span className="text-base">{model.type}</span>
                                 <Badge variant={isRecommended ? "default" : "outline"}>
                                   {isRecommended ? "추천" : "검토"}
                                 </Badge>

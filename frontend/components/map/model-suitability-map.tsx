@@ -433,7 +433,7 @@ function ModelSuitabilityMapComponent({
       <div className="h-[400px] bg-gray-100 rounded-lg flex items-center justify-center">
         <div className="text-center text-red-500">
           <p className="font-medium">지도 로딩 실패</p>
-          <p className="text-sm">{error}</p>
+          <p className="text-base">{error}</p>
         </div>
       </div>
     )
@@ -469,7 +469,7 @@ function ModelSuitabilityMapComponent({
       )}
 
       {/* Station DRT Legend */}
-      <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg text-xs z-20">
+      <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg text-base z-20">
         <div className="font-medium mb-2">🚏 정류장 DRT 적합성</div>
         <div className="space-y-1">
           <div className="flex items-center gap-2">
@@ -503,7 +503,7 @@ function ModelSuitabilityMapComponent({
 
       {/* Instructions */}
       <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-sm z-20">
-        <div className="text-xs">
+        <div className="text-base">
           <div className="font-medium text-blue-600">💡 사용법</div>
           <div className="text-gray-600">1. 구를 클릭하여 정류장 표시</div>
           <div className="text-gray-600">2. 정류장을 클릭하여 상세 분석</div>
@@ -513,7 +513,7 @@ function ModelSuitabilityMapComponent({
       {/* Selected Station Info */}
       {selectedStation ? (
         <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-sm z-20">
-          <div className="text-xs">
+          <div className="text-base">
             <div className="font-medium">🚏 선택된 정류장</div>
             <div className="text-blue-600 font-bold">{selectedStation.stationName}</div>
             <div className="flex items-center gap-2 mt-1">
@@ -528,7 +528,7 @@ function ModelSuitabilityMapComponent({
         </div>
       ) : selectedDistrict && (
         <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-sm z-20">
-          <div className="text-xs">
+          <div className="text-base">
             <div className="font-medium">📍 선택된 구</div>
             <div className="text-blue-600 font-bold">{selectedDistrict}</div>
             <div className="text-gray-500">{stationData.length}개 정류장 표시됨</div>

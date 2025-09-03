@@ -158,7 +158,7 @@ export const DemandContent = memo(function DemandContent({
           { 
             label: "이동성 불리 지수 (MDI)", 
             score: (feature_scores.mdi_t_score * 100).toFixed(1),
-            description: "구간별 승객수 부족도 (역전 지수)",
+            description: "구간별 승하차수 부족도 (역전 지수)",
             level: feature_scores.mdi_t_score > 0.7 ? "높음" : feature_scores.mdi_t_score > 0.5 ? "보통" : "낮음"
           },
           { 
@@ -188,7 +188,7 @@ export const DemandContent = memo(function DemandContent({
           { 
             label: "노선 활용도 (RU)", 
             score: (feature_scores.ru_score * 100).toFixed(1),
-            description: "시간별 구간 승객수/1000",
+            description: "시간별 구간 승하차수/1000",
             level: feature_scores.ru_score > 0.05 ? "높음" : feature_scores.ru_score > 0.02 ? "보통" : "낮음"
           },
           { 
@@ -254,7 +254,7 @@ export const DemandContent = memo(function DemandContent({
           <Card className="h-full">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg">모델 선택</CardTitle>
-              <CardDescription className="text-xs">
+              <CardDescription className="text-base">
                 DRT 운영 모델
               </CardDescription>
             </CardHeader>
@@ -266,7 +266,7 @@ export const DemandContent = memo(function DemandContent({
                     <button
                       key={model.model}
                       onClick={() => setSelectedModel(model.model)}
-                      className={`w-full p-3 text-sm font-medium rounded-lg transition-all ${
+                      className={`w-full p-3 text-base font-medium rounded-lg transition-all ${
                         isSelected
                           ? "bg-blue-600 text-white shadow-md"
                           : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -275,7 +275,7 @@ export const DemandContent = memo(function DemandContent({
                       <div className="flex flex-col items-center gap-1">
                         <span className="text-lg">{model.icon}</span>
                         <span>{model.model}</span>
-                        <span className="text-xs opacity-75">
+                        <span className="text-base opacity-75">
                           정확도 {model.accuracy}%
                         </span>
                       </div>
@@ -364,8 +364,8 @@ export const DemandContent = memo(function DemandContent({
                           <div key={idx} className="bg-white p-3 rounded-lg">
                             <div className="flex items-center justify-between mb-2">
                               <div>
-                                <div className="font-medium text-sm">{item.label}</div>
-                                <div className="text-xs text-gray-500">{item.description}</div>
+                                <div className="font-medium text-base">{item.label}</div>
+                                <div className="text-base text-gray-500">{item.description}</div>
                               </div>
                               <div className="text-right">
                                 <div className="text-lg font-bold text-blue-600">
@@ -395,14 +395,14 @@ export const DemandContent = memo(function DemandContent({
                     </div>
 
                     <div className="p-3 bg-green-50 rounded-lg">
-                      <div className="text-sm font-medium text-green-800 mb-1">
+                      <div className="text-base font-medium text-green-800 mb-1">
                         종합 DRT 적합도
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="text-2xl font-bold text-green-600">
                           {stationDetail.current_score.toFixed(1)}점
                         </div>
-                        <div className="text-sm text-green-700">
+                        <div className="text-base text-green-700">
                           피크: {stationDetail.peak_hour}시 ({stationDetail.peak_score.toFixed(1)}점)
                         </div>
                       </div>
@@ -469,21 +469,21 @@ export const DemandContent = memo(function DemandContent({
                   </LineChart>
                 </ResponsiveContainer>
 
-                <div className="grid grid-cols-3 gap-3 text-sm">
+                <div className="grid grid-cols-3 gap-3 text-base">
                   <div className="text-center p-2 bg-blue-50 rounded">
-                    <div className="text-xs text-blue-600">현재 점수</div>
+                    <div className="text-base text-blue-600">현재 점수</div>
                     <div className="font-bold text-blue-700">
                       {stationDetail.current_score.toFixed(1)}점
                     </div>
                   </div>
                   <div className="text-center p-2 bg-green-50 rounded">
-                    <div className="text-xs text-green-600">피크 시간</div>
+                    <div className="text-base text-green-600">피크 시간</div>
                     <div className="font-bold text-green-700">
                       {stationDetail.peak_hour}시
                     </div>
                   </div>
                   <div className="text-center p-2 bg-purple-50 rounded">
-                    <div className="text-xs text-purple-600">일평균</div>
+                    <div className="text-base text-purple-600">일평균</div>
                     <div className="font-bold text-purple-700">
                       {stationDetail.monthly_average.toFixed(1)}점
                     </div>

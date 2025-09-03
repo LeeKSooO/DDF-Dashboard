@@ -105,7 +105,7 @@ export const DashboardContent = memo(function DashboardContent({ selectedMonth }
           {[...Array(4)].map((_, i) => (
             <Card key={i}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">로딩 중...</CardTitle>
+                <CardTitle className="text-base font-medium">로딩 중...</CardTitle>
                 <div className="h-4 w-4 bg-gray-200 rounded animate-pulse" />
               </CardHeader>
               <CardContent>
@@ -127,7 +127,7 @@ export const DashboardContent = memo(function DashboardContent({ selectedMonth }
           <CardContent className="pt-6">
             <div className="text-center text-red-500">
               <p className="font-medium">데이터 로드 실패</p>
-              <p className="text-sm text-muted-foreground">{error || "알 수 없는 오류"}</p>
+              <p className="text-base text-muted-foreground">{error || "알 수 없는 오류"}</p>
             </div>
           </CardContent>
         </Card>
@@ -178,12 +178,12 @@ export const DashboardContent = memo(function DashboardContent({ selectedMonth }
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">총 교통량</CardTitle>
+            <CardTitle className="text-base font-medium">총 교통량</CardTitle>
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{metrics.totalTraffic.toLocaleString()}</div>
-            <div className="flex items-center text-xs text-muted-foreground">
+            <div className="flex items-center text-base text-muted-foreground">
               <TrendingUp className="mr-1 h-3 w-3 text-green-500" />
               서울시 전체 승하차
             </div>
@@ -195,12 +195,12 @@ export const DashboardContent = memo(function DashboardContent({ selectedMonth }
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">총 승객수</CardTitle>
+            <CardTitle className="text-base font-medium">총 승하차수</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{metrics.totalPassengers.toLocaleString()}</div>
-            <div className="flex items-center text-xs text-muted-foreground">
+            <div className="flex items-center text-base text-muted-foreground">
               <TrendingUp className="mr-1 h-3 w-3 text-green-500" />
               평일/주말 포함 전체
             </div>
@@ -212,12 +212,12 @@ export const DashboardContent = memo(function DashboardContent({ selectedMonth }
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">피크 시간</CardTitle>
+            <CardTitle className="text-base font-medium">피크 시간</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{metrics.peakHour}시</div>
-            <div className="flex items-center text-xs text-muted-foreground">
+            <div className="flex items-center text-base text-muted-foreground">
               <Activity className="mr-1 h-3 w-3 text-blue-500" />
               오전/오후 평균 피크
             </div>

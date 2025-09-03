@@ -142,3 +142,5 @@
   font-size: 10px !important;
   background: rgba(255, 255, 255, 0.8) !important;
 }
+
+/* 패턴 마커는 JavaScript로 radius 직접 변경하여 애니메이션 처리 */

@@ -117,45 +117,45 @@ export function AnomalyContent({ selectedMonth, selectedRegion }: AnomalyContent
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">분석 대상</CardTitle>
+            <CardTitle className="text-base font-medium">분석 대상</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{anomalyData.summary.totalRegionsAnalyzed}개 구</div>
-            <p className="text-xs text-muted-foreground">서울시 전체 자치구</p>
+            <p className="text-base text-muted-foreground">서울시 전체 자치구</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">급증 지역</CardTitle>
+            <CardTitle className="text-base font-medium">급증 지역</CardTitle>
             <TrendingUp className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{anomalyData.summary.significantIncreases}개</div>
-            <p className="text-xs text-muted-foreground">+20% 이상 증가</p>
+            <p className="text-base text-muted-foreground">+20% 이상 증가</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">급감 지역</CardTitle>
+            <CardTitle className="text-base font-medium">급감 지역</CardTitle>
             <TrendingDown className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{anomalyData.summary.significantDecreases}개</div>
-            <p className="text-xs text-muted-foreground">-20% 이상 감소</p>
+            <p className="text-base text-muted-foreground">-20% 이상 감소</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">안정 지역</CardTitle>
+            <CardTitle className="text-base font-medium">안정 지역</CardTitle>
             <Zap className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{anomalyData.summary.stableRegions}개</div>
-            <p className="text-xs text-muted-foreground">±20% 이내 변화</p>
+            <p className="text-base text-muted-foreground">±20% 이내 변화</p>
           </CardContent>
         </Card>
       </div>
@@ -182,13 +182,13 @@ export function AnomalyContent({ selectedMonth, selectedRegion }: AnomalyContent
                       <Badge variant="destructive">+{region.changePercentage}%</Badge>
                     </div>
                     <AlertDescription className="mb-2">
-                      <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="grid grid-cols-2 gap-4 text-base">
                         <div>현재: {region.currentTraffic.toLocaleString()}명</div>
                         <div>이전: {region.previousTraffic.toLocaleString()}명</div>
                       </div>
                     </AlertDescription>
                     <AlertDescription>
-                      <div className="text-sm">
+                      <div className="text-base">
                         <strong>가능한 원인:</strong>
                         <ul className="list-disc list-inside mt-1 space-y-1">
                           {region.possibleCauses.map((cause, i) => (
@@ -224,13 +224,13 @@ export function AnomalyContent({ selectedMonth, selectedRegion }: AnomalyContent
                       <Badge variant="secondary">{region.changePercentage}%</Badge>
                     </div>
                     <AlertDescription className="mb-2">
-                      <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="grid grid-cols-2 gap-4 text-base">
                         <div>현재: {region.currentTraffic.toLocaleString()}명</div>
                         <div>이전: {region.previousTraffic.toLocaleString()}명</div>
                       </div>
                     </AlertDescription>
                     <AlertDescription>
-                      <div className="text-sm">
+                      <div className="text-base">
                         <strong>가능한 원인:</strong>
                         <ul className="list-disc list-inside mt-1 space-y-1">
                           {region.possibleCauses.map((cause, i) => (
@@ -294,7 +294,7 @@ export function AnomalyContent({ selectedMonth, selectedRegion }: AnomalyContent
           </ResponsiveContainer>
           <div className="mt-4 p-4 bg-yellow-50 rounded-lg">
             <h5 className="font-medium text-yellow-800 mb-2">🔍 패턴 분석 결과</h5>
-            <div className="text-sm space-y-1">
+            <div className="text-base space-y-1">
               <div>• 오전 6시, 8시: 평소보다 높은 교통량 (재택근무 감소 영향)</div>
               <div>• 오전 7시: 평소보다 낮은 교통량 (출근 시간 분산)</div>
               <div>• 오후 2시: 평소보다 낮은 교통량 (점심시간 연장)</div>

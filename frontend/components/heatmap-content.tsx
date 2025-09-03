@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { MapPin, TrendingUp, Users, Navigation } from "lucide-react"
+import { MapPin, TrendingUp, Users, Navigation, Activity, Clock, TrendingDown, Zap } from "lucide-react"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
 import { useState, useEffect, useRef } from "react"
 import { apiService, HeatmapResponse, DistrictData, StationData } from "@/lib/api"
@@ -20,9 +20,19 @@ interface HeatmapContentProps {
 export function HeatmapContent({ selectedMonth, selectedRegion }: HeatmapContentProps) {
   const [viewMode, setViewMode] = useState<"district" | "station">("district")
   const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null)
+  const [highlightTopStations, setHighlightTopStations] = useState(false)
   const [heatmapData, setHeatmapData] = useState<HeatmapResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  
+  // 이상 패턴 분석 데이터 상태들
+  const [selectedPattern, setSelectedPattern] = useState<string | null>(null)
+  const [weekendData, setWeekendData] = useState<any>(null)
+  const [nightData, setNightData] = useState<any>(null)
+  const [rushHourData, setRushHourData] = useState<any>(null)
+  const [lunchTimeData, setLunchTimeData] = useState<any>(null)
+  const [areaTypeData, setAreaTypeData] = useState<any>(null)
+  const [underutilizedData, setUnderutilizedData] = useState<any>(null)
   const mapRef = useRef<HeatmapSeoulMapRef>(null)
 
   // API 데이터 로드
@@ -32,15 +42,61 @@ export function HeatmapContent({ selectedMonth, selectedRegion }: HeatmapContent
         setLoading(true)
         setError(null)
         
-        console.log('🗺️ Loading heatmap data for month:', selectedMonth)
+        console.log('🗺️ Loading heatmap and pattern data for:', { selectedMonth, selectedRegion })
         
-        const response = await apiService.getSeoulHeatmap(
-          "2025-07-01", // 교통분석 탭과 동일한 날짜 사용
-          true // 항상 정류장 상세 정보 포함 (정류장별 모드에서 필요)
+        // 지역이 변경되면 패턴 선택 초기화
+        setSelectedPattern(null)
+        console.log('🔄 패턴 선택 초기화 - 지역 변경:', selectedRegion)
+        
+        const analysisMonth = "2025-07-01"
+        
+        // 히트맵 데이터 로드
+        const heatmapResponse = await apiService.getSeoulHeatmap(
+          analysisMonth,
+          true // 항상 정류장 상세 정보 포함
         )
         
-        console.log('🗺️ Heatmap API response:', response)
-        setHeatmapData(response)
+        console.log('🗺️ Heatmap API response:', heatmapResponse)
+        setHeatmapData(heatmapResponse)
+        
+        // 선택된 지역에 따른 이상 패턴 분석 데이터 로드
+        if (selectedRegion !== "전체") {
+          console.log('📊 Loading pattern analysis for district:', selectedRegion)
+          
+          // 모든 패턴 분석 API 병렬 호출
+          const [
+            weekendResult,
+            nightResult, 
+            rushHourResult,
+            lunchTimeResult,
+            areaTypeResult,
+            underutilizedResult
+          ] = await Promise.allSettled([
+            apiService.getWeekendDominantStations(selectedRegion, analysisMonth, 5),
+            apiService.getNightDemandStations(selectedRegion, analysisMonth, 5),
+            apiService.getRushHourAnalysis(selectedRegion, analysisMonth),
+            apiService.getLunchTimeStations(selectedRegion, analysisMonth, 5),
+            apiService.getAreaTypeAnalysis(selectedRegion, analysisMonth),
+            apiService.getUnderutilizedStations(selectedRegion, analysisMonth, 5)
+          ])
+
+          // 성공한 결과들 저장
+          if (weekendResult.status === 'fulfilled') setWeekendData(weekendResult.value)
+          if (nightResult.status === 'fulfilled') setNightData(nightResult.value)
+          if (rushHourResult.status === 'fulfilled') setRushHourData(rushHourResult.value)
+          if (lunchTimeResult.status === 'fulfilled') setLunchTimeData(lunchTimeResult.value)
+          if (areaTypeResult.status === 'fulfilled') setAreaTypeData(areaTypeResult.value)
+          if (underutilizedResult.status === 'fulfilled') setUnderutilizedData(underutilizedResult.value)
+        } else {
+          // 전체 선택시 패턴 데이터 초기화
+          setWeekendData(null)
+          setNightData(null) 
+          setRushHourData(null)
+          setLunchTimeData(null)
+          setAreaTypeData(null)
+          setUnderutilizedData(null)
+        }
+        
       } catch (err) {
         console.error('🚨 Heatmap API error:', err)
         setError(err instanceof Error ? err.message : 'Failed to load heatmap data')
@@ -50,7 +106,7 @@ export function HeatmapContent({ selectedMonth, selectedRegion }: HeatmapContent
     }
 
     loadHeatmapData()
-  }, [selectedMonth]) // viewMode 제거 - API는 한 번만 호출하고 클라이언트에서 필터링
+  }, [selectedMonth, selectedRegion]) // selectedRegion 추가
 
   // 선택된 지역에 따른 데이터 필터링
   const filteredDistricts = heatmapData?.districts.filter(d => 
@@ -68,11 +124,144 @@ export function HeatmapContent({ selectedMonth, selectedRegion }: HeatmapContent
     .sort((a, b) => b.total_traffic - a.total_traffic)
     .slice(0, 5) || []
   
+  // 선택된 패턴에 따른 정류장 데이터 추출
+  const getPatternStations = () => {
+    if (!selectedPattern || (selectedRegion === "전체" && !selectedDistrict)) return []
+    
+    switch (selectedPattern) {
+      case 'weekend':
+        return weekendData?.data?.map((item: any) => ({
+          ...item.station,
+          patternType: 'weekend',
+          patternColor: '#3B82F6', // blue
+          patternInfo: `주말 교통량: ${item.weekend_total_traffic?.toLocaleString()}명`
+        })) || []
+        
+      case 'night':
+        return nightData?.data?.map((item: any) => ({
+          ...item.station,
+          patternType: 'night', 
+          patternColor: '#8B5CF6', // purple
+          patternInfo: `심야 승차: ${item.total_night_ride?.toLocaleString()}명`
+        })) || []
+        
+      case 'underutilized':
+        return underutilizedData?.data?.map((item: any) => ({
+          ...item.station,
+          patternType: 'underutilized',
+          patternColor: '#EF4444', // red
+          patternInfo: `효율성: ${item.efficiency_score}% | 일평균: ${item.avg_daily_passengers?.toLocaleString()}명`
+        })) || []
+        
+      case 'lunchtime':
+        return lunchTimeData?.data?.map((item: any) => ({
+          ...item.station,
+          patternType: 'lunchtime',
+          patternColor: '#10B981', // green
+          patternInfo: `점심시간 하차: ${item.total_lunch_alight?.toLocaleString()}명`
+        })) || []
+        
+      case 'rushhour':
+        const morningStations = rushHourData?.data?.morning_rush?.map((item: any) => ({
+          ...item.station,
+          patternType: 'rushhour',
+          patternColor: '#F97316', // orange
+          patternInfo: `오전 승차: ${item.total_morning_rush?.toLocaleString()}명`,
+          rushType: 'morning'
+        })) || []
+        
+        const eveningStations = rushHourData?.data?.evening_rush?.map((item: any) => ({
+          ...item.station,
+          patternType: 'rushhour',
+          patternColor: '#EA580C', // darker orange
+          patternInfo: `오후 승차: ${item.total_evening_rush?.toLocaleString()}명`,
+          rushType: 'evening'
+        })) || []
+        
+        return [...morningStations, ...eveningStations]
+        
+      case 'areatype':
+        const residentialStations = areaTypeData?.data?.residential_stations?.map((item: any) => ({
+          ...item.station,
+          patternType: 'areatype',
+          patternColor: '#0EA5E9', // sky blue - 하늘색으로 변경
+          patternInfo: `주거지역 | 오전승차: ${item.morning_ride?.toLocaleString()}명`,
+          areaType: 'residential'
+        })) || []
+        
+        const businessStations = areaTypeData?.data?.business_stations?.map((item: any) => ({
+          ...item.station,
+          patternType: 'areatype', 
+          patternColor: '#8B5CF6', // purple
+          patternInfo: `업무지역 | 오전하차: ${item.morning_alight?.toLocaleString()}명`,
+          areaType: 'business'
+        })) || []
+        
+        return [...residentialStations, ...businessStations]
+        
+      default:
+        return []
+    }
+  }
+  
+  const patternStations = getPatternStations()
+  
   // 지도에서 구 클릭 시 호출
   const handleDistrictClick = (districtName: string, districtCode: string) => {
     console.log(`District clicked: ${districtName} (${districtCode})`)
+    
+    // 새로운 구를 선택할 때 패턴 선택 초기화
+    if (selectedDistrict !== districtName) {
+      setSelectedPattern(null)
+      console.log('🔄 패턴 선택 초기화 - 새로운 구 선택:', districtName)
+    }
+    
     setSelectedDistrict(districtName)
   }
+
+  // 지도에서 구 클릭 시 해당 구의 패턴 데이터 로드
+  useEffect(() => {
+    if (!selectedDistrict) return
+
+    const loadDistrictPatternData = async () => {
+      try {
+        console.log('📊 Loading pattern analysis for clicked district:', selectedDistrict)
+        
+        const analysisMonth = "2025-07-01"
+        
+        // 클릭된 구의 패턴 분석 데이터 로드 (기존 selectedRegion 패턴과 동일)
+        const [
+          weekendResult,
+          nightResult, 
+          rushHourResult,
+          lunchTimeResult,
+          areaTypeResult,
+          underutilizedResult
+        ] = await Promise.allSettled([
+          apiService.getWeekendDominantStations(selectedDistrict, analysisMonth, 5),
+          apiService.getNightDemandStations(selectedDistrict, analysisMonth, 5),
+          apiService.getRushHourAnalysis(selectedDistrict, analysisMonth),
+          apiService.getLunchTimeStations(selectedDistrict, analysisMonth, 5),
+          apiService.getAreaTypeAnalysis(selectedDistrict, analysisMonth),
+          apiService.getUnderutilizedStations(selectedDistrict, analysisMonth, 5)
+        ])
+
+        // 성공한 결과들 저장
+        if (weekendResult.status === 'fulfilled') setWeekendData(weekendResult.value)
+        if (nightResult.status === 'fulfilled') setNightData(nightResult.value)
+        if (rushHourResult.status === 'fulfilled') setRushHourData(rushHourResult.value)
+        if (lunchTimeResult.status === 'fulfilled') setLunchTimeData(lunchTimeResult.value)
+        if (areaTypeResult.status === 'fulfilled') setAreaTypeData(areaTypeResult.value)
+        if (underutilizedResult.status === 'fulfilled') setUnderutilizedData(underutilizedResult.value)
+
+        console.log('✅ Pattern data loaded for district:', selectedDistrict)
+      } catch (err) {
+        console.error('🚨 Failed to load district pattern data:', err)
+      }
+    }
+
+    loadDistrictPatternData()
+  }, [selectedDistrict]) // selectedDistrict 변경 시 실행
 
   // 지도 중심 이동 함수
   const handleResetMapCenter = () => {
@@ -103,7 +292,7 @@ export function HeatmapContent({ selectedMonth, selectedRegion }: HeatmapContent
           <CardContent className="p-6">
             <div className="text-center text-red-500">
               <p className="font-medium">데이터 로드 실패</p>
-              <p className="text-sm mt-2">{error}</p>
+              <p className="text-base mt-2">{error}</p>
             </div>
           </CardContent>
         </Card>
@@ -123,9 +312,9 @@ export function HeatmapContent({ selectedMonth, selectedRegion }: HeatmapContent
           <CardDescription>지도 시각화 옵션 및 필터 설정</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium">보기 모드:</label>
+              <label className="text-base font-medium">보기 모드:</label>
               <Select value={viewMode} onValueChange={(value: "district" | "station") => setViewMode(value)}>
                 <SelectTrigger className="w-32">
                   <SelectValue />
@@ -136,6 +325,22 @@ export function HeatmapContent({ selectedMonth, selectedRegion }: HeatmapContent
                 </SelectContent>
               </Select>
             </div>
+            
+            {/* TOP 5 정류장 강조 옵션 */}
+            {viewMode === "station" && (
+              <div className="flex items-center gap-2">
+                <input 
+                  type="checkbox" 
+                  id="highlight-top-stations" 
+                  checked={highlightTopStations}
+                  onChange={(e) => setHighlightTopStations(e.target.checked)}
+                  className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500"
+                />
+                <label htmlFor="highlight-top-stations" className="text-base font-medium text-orange-700">
+                  ⭐ TOP 5 정류장 강조
+                </label>
+              </div>
+            )}
             <Button variant="outline" size="sm" onClick={handleResetMapCenter}>
               <Navigation className="h-4 w-4 mr-2" />
               지도 중심 이동
@@ -144,7 +349,11 @@ export function HeatmapContent({ selectedMonth, selectedRegion }: HeatmapContent
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => setSelectedDistrict(null)}
+                onClick={() => {
+                  setSelectedDistrict(null)
+                  setSelectedPattern(null) // 패턴도 함께 초기화
+                  console.log('🔄 패턴 선택 초기화 - 전체 정류장 보기')
+                }}
                 className="ml-2"
               >
                 전체 정류장 보기
@@ -170,6 +379,9 @@ export function HeatmapContent({ selectedMonth, selectedRegion }: HeatmapContent
                 districts={filteredDistricts}
                 viewMode={viewMode}
                 loading={loading}
+                highlightTopStations={highlightTopStations}
+                selectedPattern={selectedPattern}
+                patternStations={patternStations}
               />
               <CardDescription className="mt-2">
                 {monthNames[Number.parseInt(selectedMonth) - 1]} 데이터 (최종 업데이트: 2024-01-30 14:30)
@@ -196,12 +408,12 @@ export function HeatmapContent({ selectedMonth, selectedRegion }: HeatmapContent
                   <div className="space-y-2">
                     {topStations.length > 0 ? (
                       topStations.slice(0, 3).map((station, index) => (
-                        <div key={station.station_id} className="flex items-center justify-between p-2 bg-white rounded text-sm">
+                        <div key={station.station_id} className="flex items-center justify-between p-2 bg-white rounded text-base">
                           <div className="flex items-center gap-2">
-                            <div className="text-xs font-bold text-blue-600">#{index + 1}</div>
+                            <div className="text-base font-bold text-blue-600">#{index + 1}</div>
                             <div>
                               <div className="font-medium">{station.station_name}</div>
-                              <div className="text-xs text-gray-500">
+                              <div className="text-base text-gray-500">
                                 {heatmapData?.districts.find(d => 
                                   d.stations?.some(s => s.station_id === station.station_id)
                                 )?.district_name}
@@ -210,12 +422,12 @@ export function HeatmapContent({ selectedMonth, selectedRegion }: HeatmapContent
                           </div>
                           <div className="text-right">
                             <div className="font-medium text-green-600">{station.total_traffic.toLocaleString()}</div>
-                            <div className="text-xs text-gray-500">명/월</div>
+                            <div className="text-base text-gray-500">명/월</div>
                           </div>
                         </div>
                       ))
                     ) : (
-                      <div className="text-center py-2 text-gray-500 text-sm">
+                      <div className="text-center py-2 text-gray-500 text-base">
                         {viewMode === 'station' ? '정류장 데이터를 로딩 중입니다...' : '정류장별 모드를 선택하세요'}
                       </div>
                     )}
@@ -225,7 +437,7 @@ export function HeatmapContent({ selectedMonth, selectedRegion }: HeatmapContent
                 {/* 통계 요약 - 지도 하단 */}
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h4 className="font-medium text-gray-800 mb-3">📊 핵심 통계</h4>
-                  <div className="space-y-2 text-sm">
+                  <div className="space-y-2 text-base">
                     <div className="flex justify-between p-2 bg-white rounded">
                       <span>총 교통량:</span>
                       <span className="font-medium">
@@ -255,55 +467,160 @@ export function HeatmapContent({ selectedMonth, selectedRegion }: HeatmapContent
           </Card>
         </div>
 
-        {/* 사이드 패널 - 간소화 */}
+        {/* 사이드 패널 - 이상 패턴 분석 */}
         <div>
-          {/* 교통량 순위 */}
+          {/* 이상 패턴 탐지 버튼들 */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                교통량 TOP 10
+                <Activity className="h-5 w-5" />
+                이상 패턴 탐지
               </CardTitle>
-              <CardDescription>구별 교통량 순위 및 승하차 특성</CardDescription>
+              <CardDescription>
+                {selectedRegion === "전체" && !selectedDistrict
+                  ? "구를 선택하면 해당 지역의 패턴을 분석합니다" 
+                  : `${selectedDistrict || selectedRegion} 지역의 교통 패턴 분석`
+                }
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {rankedDistricts.slice(0, 10).map((district, index) => (
-                  <div
-                    key={`${district.sgg_code}-${district.district_name}-${index}`}
-                    className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
-                      selectedDistrict === district.district_name
-                        ? "bg-blue-50 border border-blue-200"
-                        : "bg-gray-50 hover:bg-gray-100"
+              {selectedRegion === "전체" && !selectedDistrict ? (
+                <div className="text-center text-gray-500 py-8">
+                  <Activity className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-base font-medium">구를 선택해주세요</p>
+                  <p className="text-base">해당 지역의 이상 패턴을 분석하여 지도에 표시합니다</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {/* 주말 우세 정류장 */}
+                  <button
+                    onClick={() => {
+                      setSelectedPattern(selectedPattern === 'weekend' ? null : 'weekend')
+                      setViewMode('station')
+                    }}
+                    className={`w-full p-3 text-base font-medium rounded-lg transition-all ${
+                      selectedPattern === 'weekend'
+                        ? "bg-blue-600 text-white shadow-md"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                     }`}
-                    onClick={() => setSelectedDistrict(district.district_name)}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="text-center">
-                        <div className="text-lg font-bold">#{district.rank}</div>
-                      </div>
-                      <div>
-                        <h4 className="font-medium">{district.district_name}</h4>
-                        <p className="text-sm text-muted-foreground">정류장 {district.stations?.length || 0}개</p>
-                      </div>
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-lg">🏖️</span>
+                      <span>주말 우세</span>
+                      <span className="text-base opacity-75">
+                        {weekendData?.data?.length || 0}개 정류장
+                      </span>
                     </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-blue-600">{district.total_traffic.toLocaleString()}</div>
-                      <div className="text-sm text-muted-foreground">일평균 {Math.round(district.avg_daily_traffic).toLocaleString()}명</div>
-                      <div className="text-xs text-green-600 mt-1">
-                        승하차비율: {district.total_ride && district.total_alight ? 
-                          (district.total_ride / district.total_alight).toFixed(2) : 'N/A'}
-                        {district.total_ride && district.total_alight && (district.total_ride / district.total_alight) > 1.0 ? 
-                          " (유출)" : district.total_ride && district.total_alight ? " (유입)" : ""}
-                      </div>
+                  </button>
+
+                  {/* 심야 고수요 */}
+                  <button
+                    onClick={() => {
+                      setSelectedPattern(selectedPattern === 'night' ? null : 'night')
+                      setViewMode('station')
+                    }}
+                    className={`w-full p-3 text-base font-medium rounded-lg transition-all ${
+                      selectedPattern === 'night'
+                        ? "bg-blue-600 text-white shadow-md"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-lg">🌙</span>
+                      <span>심야 고수요</span>
+                      <span className="text-base opacity-75">
+                        {nightData?.data?.length || 0}개 정류장
+                      </span>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  </button>
+
+                  {/* 저활용 정류장 */}
+                  <button
+                    onClick={() => {
+                      setSelectedPattern(selectedPattern === 'underutilized' ? null : 'underutilized')
+                      setViewMode('station')
+                    }}
+                    className={`w-full p-3 text-base font-medium rounded-lg transition-all ${
+                      selectedPattern === 'underutilized'
+                        ? "bg-blue-600 text-white shadow-md"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-lg">⚡</span>
+                      <span>저활용 정류장</span>
+                      <span className="text-base opacity-75">
+                        {underutilizedData?.data?.length || 0}개 정류장
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* 점심시간 특화 */}
+                  <button
+                    onClick={() => {
+                      setSelectedPattern(selectedPattern === 'lunchtime' ? null : 'lunchtime')
+                      setViewMode('station')
+                    }}
+                    className={`w-full p-3 text-base font-medium rounded-lg transition-all ${
+                      selectedPattern === 'lunchtime'
+                        ? "bg-blue-600 text-white shadow-md"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-lg">🍽️</span>
+                      <span>점심시간 특화</span>
+                      <span className="text-base opacity-75">
+                        {lunchTimeData?.data?.length || 0}개 정류장
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* 러시아워 핫스팟 */}
+                  <button
+                    onClick={() => {
+                      setSelectedPattern(selectedPattern === 'rushhour' ? null : 'rushhour')
+                      setViewMode('station')
+                    }}
+                    className={`w-full p-3 text-base font-medium rounded-lg transition-all ${
+                      selectedPattern === 'rushhour'
+                        ? "bg-blue-600 text-white shadow-md"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-lg">🚗</span>
+                      <span>러시아워 핫스팟</span>
+                      <span className="text-base opacity-75">
+                        {((rushHourData?.data?.morning_rush?.length || 0) + (rushHourData?.data?.evening_rush?.length || 0))}개 정류장
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* 지역 특성 분석 */}
+                  <button
+                    onClick={() => {
+                      setSelectedPattern(selectedPattern === 'areatype' ? null : 'areatype')
+                      setViewMode('station')
+                    }}
+                    className={`w-full p-3 text-base font-medium rounded-lg transition-all ${
+                      selectedPattern === 'areatype'
+                        ? "bg-blue-600 text-white shadow-md"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-lg">🏢</span>
+                      <span>지역 특성</span>
+                      <span className="text-base opacity-75">
+                        {((areaTypeData?.data?.residential_stations?.length || 0) + (areaTypeData?.data?.business_stations?.length || 0))}개 정류장
+                      </span>
+                    </div>
+                  </button>
+                </div>
+              )}
             </CardContent>
           </Card>
-
-
         </div>
       </div>
 
@@ -333,7 +650,7 @@ export function HeatmapContent({ selectedMonth, selectedRegion }: HeatmapContent
                     return `${imbalanceIndex}%`;
                   })()}
                 </div>
-                <div className="text-sm text-gray-600">
+                <div className="text-base text-gray-600">
                   <div>최대-최소 격차 대비 평균</div>
                   <div className="mt-2 space-y-1">
                     <div className="flex justify-between">
@@ -363,15 +680,15 @@ export function HeatmapContent({ selectedMonth, selectedRegion }: HeatmapContent
                     return `${(top5Traffic / totalTraffic * 100).toFixed(1)}%`;
                   })()}
                 </div>
-                <div className="text-sm text-gray-600">
+                <div className="text-base text-gray-600">
                   <div>상위 5개구 교통량 비중</div>
                   <div className="mt-2">
-                    <div className="text-xs">집중 구역:</div>
+                    <div className="text-base">집중 구역:</div>
                     {[...filteredDistricts]
                       .sort((a, b) => b.total_traffic - a.total_traffic)
                       .slice(0, 3)
                       .map((d, i) => (
-                        <div key={d.sgg_code} className="text-xs">
+                        <div key={d.district_name} className="text-base">
                           {i + 1}. {d.district_name}
                         </div>
                       ))}
@@ -393,16 +710,16 @@ export function HeatmapContent({ selectedMonth, selectedRegion }: HeatmapContent
                     return Math.round(totalTraffic / totalStations).toLocaleString();
                   })()}
                 </div>
-                <div className="text-sm text-gray-600">
+                <div className="text-base text-gray-600">
                   <div>정류장당 평균 이용객</div>
                   <div className="mt-2 space-y-1">
-                    <div className="flex justify-between text-xs">
+                    <div className="flex justify-between text-base">
                       <span>총 정류장:</span>
                       <span className="font-medium">
                         {filteredDistricts.reduce((sum, d) => sum + (d.stations?.length || 0), 0).toLocaleString()}개
                       </span>
                     </div>
-                    <div className="flex justify-between text-xs">
+                    <div className="flex justify-between text-base">
                       <span>최고 효율구:</span>
                       <span className="font-medium">
                         {(() => {
