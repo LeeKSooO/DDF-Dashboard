@@ -432,8 +432,8 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
         {/* 구 선택 */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <MapPin className="h-5 w-5" />
+            <CardTitle className="flex items-center space-x-2 text-lg">
+              <MapPin className="h-6 w-6" />
               <span>비교할 구 선택</span>
             </CardTitle>
           </CardHeader>
