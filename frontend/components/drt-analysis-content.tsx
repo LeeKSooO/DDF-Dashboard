@@ -1,7 +1,5 @@
 "use client"
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { DRTScoreContent } from "./drt-score-content"
 import { DemandContent } from "./dashboard/demand-content"
 import { Brain } from "lucide-react"
 
@@ -29,31 +27,13 @@ export function DRTAnalysisContent({
         </div>
       </div>
 
-      {/* 탭 구조 */}
-      <Tabs defaultValue="suitability" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="suitability">🎯 DRT 적합도 분석</TabsTrigger>
-          <TabsTrigger value="score">📊 DRT 스코어 분석</TabsTrigger>
-        </TabsList>
-
-        {/* DRT 적합도 분석 탭 */}
-        <TabsContent value="suitability" className="space-y-6">
-          <DemandContent
-            selectedModel={selectedModel}
-            setSelectedModel={setSelectedModel}
-            selectedMonth={selectedMonth}
-            selectedRegion={selectedRegion}
-          />
-        </TabsContent>
-
-        {/* DRT 스코어 분석 탭 */}
-        <TabsContent value="score" className="space-y-6">
-          <DRTScoreContent
-            selectedMonth={selectedMonth}
-            selectedRegion={selectedRegion}
-          />
-        </TabsContent>
-      </Tabs>
+      {/* DRT 적합도 분석 */}
+      <DemandContent
+        selectedModel={selectedModel}
+        setSelectedModel={setSelectedModel}
+        selectedMonth={selectedMonth}
+        selectedRegion={selectedRegion}
+      />
     </div>
   )
 }

@@ -35,13 +35,13 @@ function DRTScoreMapComponent({ drtData, selectedModel, loading = false, error =
     setIsClient(true)
   }, [])
 
-  // DRT Score colors based on score value
+  // Pastel DRT Score colors based on score value
   const getDRTScoreColor = (score: number): string => {
-    if (score >= 80) return '#DC2626' // Red - Excellent
-    if (score >= 60) return '#EA580C' // Orange - Good  
-    if (score >= 40) return '#EAB308' // Yellow - Fair
-    if (score >= 20) return '#16A34A' // Green - Poor
-    return '#6B7280' // Gray - Very Poor
+    if (score >= 80) return '#fca5a5' // 파스텔 레드
+    if (score >= 60) return '#fed7aa' // 파스텔 오렌지  
+    if (score >= 40) return '#fde68a' // 파스텔 노랑
+    if (score >= 20) return '#bbf7d0' // 파스텔 그린
+    return '#d1d5db' // 파스텔 그레이
   }
 
   // Initialize map
@@ -112,10 +112,10 @@ function DRTScoreMapComponent({ drtData, selectedModel, loading = false, error =
         const marker = L.circleMarker([lat, lng], {
           radius: markerSize,
           fillColor: getDRTScoreColor(station.drt_score),
-          color: '#ffffff',
-          weight: 2,
-          opacity: 1,
-          fillOpacity: 0.8
+          color: getDRTScoreColor(station.drt_score),
+          weight: 1,
+          opacity: 0.7,
+          fillOpacity: 0.5
         })
         
         // Add popup with station details

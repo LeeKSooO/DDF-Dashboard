@@ -503,62 +503,6 @@ export const DemandContent = memo(function DemandContent({
           </CardContent>
         </Card>
 
-        {/* 모델별 TOP 5 정류장 */}
-        <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="text-xl flex items-center gap-2">
-              🏆 {selectedModel} DRT TOP 5 정류장
-            </CardTitle>
-            <CardDescription className="text-base">
-              {selectedModel} 모델 기준 상위 정류장 분석
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {drtData?.stations && drtData.stations.length > 0 ? (
-                [...drtData.stations]
-                  .sort((a, b) => (b.drt_score || 0) - (a.drt_score || 0))
-                  .slice(0, 5)
-                  .map((station, index) => (
-                    <div key={station.station_id} className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                      <div className="flex items-center justify-between mb-3">
-                        <div>
-                          <h4 className="font-medium text-base">{station.station_name}</h4>
-                          <p className="text-sm text-muted-foreground">{selectedDistrictName}</p>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-lg font-bold text-blue-600">{station.drt_score?.toFixed(1)}점</div>
-                          <Badge variant={index === 0 ? "default" : index < 3 ? "secondary" : "outline"}>
-                            {index === 0 ? "최우수" : index === 1 ? "우수" : index === 2 ? "양호" : index === 3 ? "보통" : "기타"}
-                          </Badge>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>피크 시간:</span>
-                          <span>{station.peak_hour}시</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>DRT 스코어:</span>
-                          <span className="font-medium">{station.drt_score?.toFixed(2)}</span>
-                        </div>
-                        <Progress value={station.drt_score || 0} max={100} className="h-2" />
-                      </div>
-                    </div>
-                  ))
-              ) : (
-                <div className="col-span-full text-center text-gray-500 py-8">
-                  <div className="text-4xl mb-3">
-                    {selectedModel === '교통취약지' ? '💜' : selectedModel === '출퇴근' ? '🏢' : '📸'}
-                  </div>
-                  <div className="text-base">{selectedModel} DRT 데이터를 불러오는 중...</div>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
         {/* DRT 필요성 진단 지표 */}
         <Card>
           <CardHeader>
@@ -736,6 +680,120 @@ export const DemandContent = memo(function DemandContent({
           </CardContent>
         </Card>
       </div>
+
+      {/* 우측 - 모델별 TOP 5 정류장 */}
+      <div className="col-span-4">
+        <Card className="sticky top-6">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl flex items-center gap-2">
+              🏆 {selectedModel} DRT TOP 5 정류장
+            </CardTitle>
+            <CardDescription className="text-base">
+              {selectedModel} 모델 기준 상위 정류장 분석
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="space-y-4">
+              {drtData?.stations && drtData.stations.length > 0 ? (
+                [...drtData.stations]
+                  .sort((a, b) => (b.drt_score || 0) - (a.drt_score || 0))
+                  .slice(0, 5)
+                  .map((station, index) => (
+                    <div key={station.station_id} className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h4 className="font-medium text-base">{station.station_name}</h4>
+                          <p className="text-sm text-muted-foreground">{selectedDistrictName}</p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg font-bold text-blue-600">{station.drt_score?.toFixed(1)}점</div>
+                          <Badge variant={index === 0 ? "default" : index < 3 ? "secondary" : "outline"}>
+                            {index === 0 ? "최우수" : index === 1 ? "우수" : index === 2 ? "양호" : index === 3 ? "보통" : "기타"}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      {/* 좌표 및 피크시간 정보 */}
+                      <div className="grid grid-cols-2 gap-3 mb-3">
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span>위도</span>
+                            <span>{station.coordinate?.lat.toFixed(4)}</span>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span>경도</span>
+                            <span>{station.coordinate?.lng.toFixed(4)}</span>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span>피크 시간</span>
+                            <span>{station.peak_hour}시</span>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span>DRT 스코어</span>
+                            <span className="font-medium">{station.drt_score?.toFixed(2)}</span>
+                          </div>
+                          <Progress value={station.drt_score || 0} max={100} className="h-2" />
+                        </div>
+                      </div>
+
+                      {/* 모델별 분석 결과 */}
+                      <div className={`p-3 rounded-lg ${
+                        selectedModel === '교통취약지' ? 'bg-purple-50' :
+                        selectedModel === '출퇴근' ? 'bg-blue-50' :
+                        'bg-green-50'
+                      }`}>
+                        <h5 className={`font-medium mb-2 ${
+                          selectedModel === '교통취약지' ? 'text-purple-800' :
+                          selectedModel === '출퇴근' ? 'text-blue-800' :
+                          'text-green-800'
+                        }`}>
+                          💡 {selectedModel} 분석 결과
+                        </h5>
+                        <ul className="text-sm space-y-1">
+                          <li className="flex items-start gap-2">
+                            <span className={
+                              selectedModel === '교통취약지' ? 'text-purple-600' :
+                              selectedModel === '출퇴근' ? 'text-blue-600' :
+                              'text-green-600'
+                            }>•</span>
+                            <span>피크 시간({station.peak_hour}시)에 높은 {
+                              selectedModel === '교통취약지' ? '교통약자' :
+                              selectedModel === '출퇴근' ? '출퇴근' :
+                              '관광'
+                            } 수요 예상</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className={
+                              selectedModel === '교통취약지' ? 'text-purple-600' :
+                              selectedModel === '출퇴근' ? 'text-blue-600' :
+                              'text-green-600'
+                            }>•</span>
+                            <span>DRT 스코어 {station.drt_score?.toFixed(1)}점으로 {
+                              station.drt_score && station.drt_score > 70 ? '높은' :
+                              station.drt_score && station.drt_score > 40 ? '보통' : '낮은'
+                            } 적합도</span>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  ))
+              ) : (
+                <div className="text-center text-gray-500 py-8">
+                  <div className="text-4xl mb-3">
+                    {selectedModel === '교통취약지' ? '💜' : selectedModel === '출퇴근' ? '🏢' : '📸'}
+                  </div>
+                  <div className="text-base">{selectedModel} DRT 데이터를 불러오는 중...</div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
     </div>
   );
 });

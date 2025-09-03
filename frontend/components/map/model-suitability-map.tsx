@@ -101,18 +101,18 @@ function ModelSuitabilityMapComponent({
     return getSuitabilityColor(score)
   }
 
-  // Style function for districts
+  // Style function for districts with pastel colors
   const getFeatureStyle = (feature: any) => {
     const districtName = feature.properties.sggnm
     const isSelected = selectedDistrict === districtName
 
     return {
-      fillColor: '#e5e7eb', // 연한 회색으로 통일
-      weight: isSelected ? 3 : 2,
-      opacity: 1,
-      color: isSelected ? '#2563EB' : '#94a3b8', // 경계선 색상
+      fillColor: isSelected ? '#ddd6fe' : '#f3f4f6', // 파스텔 보라색 선택시, 연한 회색 기본
+      weight: isSelected ? 3 : 1,
+      opacity: 0.7, // 경계선 투명도
+      color: isSelected ? '#8b5cf6' : '#d1d5db', // 파스텔 보라 경계선
       dashArray: '',
-      fillOpacity: isSelected ? 0.3 : 0.15 // 투명도 조정
+      fillOpacity: isSelected ? 0.4 : 0.2 // 더 투명하게
     }
   }
 

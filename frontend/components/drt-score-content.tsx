@@ -222,38 +222,6 @@ export function DRTScoreContent({ selectedMonth, selectedRegion }: DRTScoreConte
   return (
     <TooltipProvider>
       <div className="space-y-6">
-      {/* DRT 스코어 개요 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5" />
-            DRT 스코어 분석 개요
-          </CardTitle>
-          <CardDescription>수요응답형 교통 최적화를 위한 3가지 유형별 분석</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-4 bg-blue-50 rounded-lg text-center">
-              <Briefcase className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-              <h3 className="font-medium text-blue-800">출퇴근족 DRT</h3>
-              <div className="text-2xl font-bold text-blue-600 mt-2">{avgCommuterScore.toFixed(1)}점</div>
-              <p className="text-base text-blue-600 mt-1">평균 스코어 ({commuterData?.stations?.length || 0}개 정류장)</p>
-            </div>
-            <div className="p-4 bg-green-50 rounded-lg text-center">
-              <Camera className="h-8 w-8 text-green-600 mx-auto mb-2" />
-              <h3 className="font-medium text-green-800">관광객 DRT</h3>
-              <div className="text-2xl font-bold text-green-600 mt-2">{avgTourismScore.toFixed(1)}점</div>
-              <p className="text-base text-green-600 mt-1">평균 스코어 ({tourismData?.stations?.length || 0}개 정류장)</p>
-            </div>
-            <div className="p-4 bg-purple-50 rounded-lg text-center">
-              <Heart className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-              <h3 className="font-medium text-purple-800">교통약자 DRT</h3>
-              <div className="text-2xl font-bold text-purple-600 mt-2">{avgVulnerableScore.toFixed(1)}점</div>
-              <p className="text-base text-purple-600 mt-1">평균 스코어 ({vulnerableData?.stations?.length || 0}개 정류장)</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* DRT 필요성 진단 지표 */}
       <Card>
@@ -523,7 +491,6 @@ export function DRTScoreContent({ selectedMonth, selectedRegion }: DRTScoreConte
 
         {/* 출퇴근족 DRT 탭 */}
         <TabsContent value="commuter" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* 상위 정류장 */}
             <Card>
               <CardHeader>
@@ -601,42 +568,10 @@ export function DRTScoreContent({ selectedMonth, selectedRegion }: DRTScoreConte
               </CardContent>
             </Card>
 
-            {/* 구별 순위 */}
-            <Card>
-              <CardHeader>
-                <CardTitle>구별 출퇴근 DRT 순위</CardTitle>
-                <CardDescription>자치구별 출퇴근 DRT 적합성 순위</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={selectedRegion === "전체" ? 400 : 300}>
-                  <BarChart data={currentDistrictData.commuter}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="district" />
-                    <YAxis domain={[0, 100]} />
-                    <Tooltip />
-                    <Bar dataKey="avgScore" fill="#3b82f6" />
-                  </BarChart>
-                </ResponsiveContainer>
-                <div className="mt-4 space-y-2">
-                  {currentDistrictData.commuter.map((district) => (
-                    <div key={district.district} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                      <div className="flex items-center gap-3">
-                        <span className="font-bold">#{district.rank}</span>
-                        <span>{district.district}</span>
-                        <span className="text-base text-muted-foreground">({district.stationCount}개 정류장)</span>
-                      </div>
-                      <span className="font-medium">{district.avgScore}점</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </TabsContent>
 
         {/* 관광객 DRT 탭 */}
         <TabsContent value="tourism" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* 상위 정류장 */}
             <Card>
               <CardHeader>
@@ -714,42 +649,10 @@ export function DRTScoreContent({ selectedMonth, selectedRegion }: DRTScoreConte
               </CardContent>
             </Card>
 
-            {/* 구별 순위 */}
-            <Card>
-              <CardHeader>
-                <CardTitle>구별 관광 DRT 순위</CardTitle>
-                <CardDescription>자치구별 관광 DRT 적합성 순위</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={selectedRegion === "전체" ? 400 : 300}>
-                  <BarChart data={currentDistrictData.tourism}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="district" />
-                    <YAxis domain={[0, 100]} />
-                    <Tooltip />
-                    <Bar dataKey="avgScore" fill="#10b981" />
-                  </BarChart>
-                </ResponsiveContainer>
-                <div className="mt-4 space-y-2">
-                  {currentDistrictData.tourism.map((district) => (
-                    <div key={district.district} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                      <div className="flex items-center gap-3">
-                        <span className="font-bold">#{district.rank}</span>
-                        <span>{district.district}</span>
-                        <span className="text-base text-muted-foreground">({district.stationCount}개 정류장)</span>
-                      </div>
-                      <span className="font-medium">{district.avgScore}점</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </TabsContent>
 
         {/* 교통약자 DRT 탭 */}
         <TabsContent value="vulnerable" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* 상위 정류장 */}
             <Card>
               <CardHeader>
@@ -827,138 +730,9 @@ export function DRTScoreContent({ selectedMonth, selectedRegion }: DRTScoreConte
               </CardContent>
             </Card>
 
-            {/* 구별 순위 */}
-            <Card>
-              <CardHeader>
-                <CardTitle>구별 교통약자 DRT 순위</CardTitle>
-                <CardDescription>자치구별 교통약자 DRT 적합성 순위</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={selectedRegion === "전체" ? 400 : 300}>
-                  <BarChart data={currentDistrictData.vulnerable}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="district" />
-                    <YAxis domain={[0, 100]} />
-                    <Tooltip />
-                    <Bar dataKey="avgScore" fill="#8b5cf6" />
-                  </BarChart>
-                </ResponsiveContainer>
-                <div className="mt-4 space-y-2">
-                  {currentDistrictData.vulnerable.map((district) => (
-                    <div key={district.district} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                      <div className="flex items-center gap-3">
-                        <span className="font-bold">#{district.rank}</span>
-                        <span>{district.district}</span>
-                        <span className="text-base text-muted-foreground">({district.stationCount}개 정류장)</span>
-                      </div>
-                      <span className="font-medium">{district.avgScore}점</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </TabsContent>
       </Tabs>
 
-      {/* 종합 분석 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>DRT 스코어 종합 분석</CardTitle>
-          <CardDescription>3가지 유형별 DRT 적합성 종합 평가</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
-              <h4 className="font-medium text-blue-800 mb-3 flex items-center gap-2">
-                <Briefcase className="h-5 w-5" />
-                출퇴근족 DRT 결론
-              </h4>
-              <div className="text-base space-y-2">
-                <div>
-                  • <strong>분석 지역:</strong> {commuterData?.district_name || '데이터 로딩 중'}
-                </div>
-                <div>
-                  • <strong>평균 스코어:</strong> {avgCommuterScore.toFixed(1)}점 ({commuterData?.stations?.length || 0}개 정류장)
-                </div>
-                <div>
-                  • <strong>최고 점수:</strong> {commuterData?.stations?.sort((a, b) => (b.drt_score || 0) - (a.drt_score || 0))[0]?.drt_score?.toFixed(1) || '0'}점
-                </div>
-                <div>
-                  • <strong>개선점:</strong> 실시간 수요 기반 배차 최적화
-                </div>
-              </div>
-            </div>
-
-            <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg">
-              <h4 className="font-medium text-green-800 mb-3 flex items-center gap-2">
-                <Camera className="h-5 w-5" />
-                관광객 DRT 결론
-              </h4>
-              <div className="text-base space-y-2">
-                <div>
-                  • <strong>분석 지역:</strong> {tourismData?.district_name || '데이터 로딩 중'}
-                </div>
-                <div>
-                  • <strong>평균 스코어:</strong> {avgTourismScore.toFixed(1)}점 ({tourismData?.stations?.length || 0}개 정류장)
-                </div>
-                <div>
-                  • <strong>최고 점수:</strong> {tourismData?.stations?.sort((a, b) => (b.drt_score || 0) - (a.drt_score || 0))[0]?.drt_score?.toFixed(1) || '0'}점
-                </div>
-                <div>
-                  • <strong>개선점:</strong> 관광지 연계 노선 강화 필요
-                </div>
-              </div>
-            </div>
-
-            <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg">
-              <h4 className="font-medium text-purple-800 mb-3 flex items-center gap-2">
-                <Heart className="h-5 w-5" />
-                교통약자 DRT 결론
-              </h4>
-              <div className="text-base space-y-2">
-                <div>
-                  • <strong>분석 지역:</strong> {vulnerableData?.district_name || '데이터 로딩 중'}
-                </div>
-                <div>
-                  • <strong>평균 스코어:</strong> {avgVulnerableScore.toFixed(1)}점 ({vulnerableData?.stations?.length || 0}개 정류장)
-                </div>
-                <div>
-                  • <strong>최고 점수:</strong> {vulnerableData?.stations?.sort((a, b) => (b.drt_score || 0) - (a.drt_score || 0))[0]?.drt_score?.toFixed(1) || '0'}점
-                </div>
-                <div>
-                  • <strong>개선점:</strong> 접근성 및 안전성 강화 필요
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-6 p-4 bg-yellow-50 rounded-lg">
-            <h5 className="font-medium text-yellow-800 mb-3">📋 통합 정책 제언</h5>
-            <div className="text-base space-y-2">
-              <div>
-                • <strong>지역별 특화:</strong> 각 구의 특성에 맞는 DRT 모델 적용
-              </div>
-              <div>
-                • <strong>시간대별 운영:</strong> 수요 패턴에 따른 탄력적 운영
-              </div>
-              <div>
-                • <strong>연계 교통:</strong> 지하철, 버스와의 환승 할인 확대
-              </div>
-              <div>
-                • <strong>기술 도입:</strong> AI 기반 실시간 배차 시스템 구축
-              </div>
-              <div>
-                • <strong>사회적 가치:</strong> 교통약자 우선 정책 강화
-              </div>
-            </div>
-          </div>
-
-          <CardDescription>
-            {monthNames[Number.parseInt(selectedMonth) - 1]} 데이터 (최종 업데이트: 2024-01-30 14:30)
-          </CardDescription>
-        </CardContent>
-      </Card>
       </div>
     </TooltipProvider>
   )
