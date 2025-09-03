@@ -85,8 +85,8 @@ services:
       TZ: Asia/Seoul
     ports:
       - "8080:8080"  # Inference API
-      - "8081:8081"  # Management API
-      - "8082:8082"  # Metrics API
+      #- "8081:8081"  # Management API
+      #- "8082:8082"  # Metrics API
     volumes:
       # .mar 파일이 있는 model-store와 config 파일만 마운트.
       - ../ai/torchserve/model-store:/home/model-server/model-store
@@ -124,6 +124,30 @@ services:
       - ddf-network
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+
+  # RAG API Server
+  rag:
+    build: ../RAG
+    container_name: ddf-rag
+    env_file:
+      - ../.env
+    environment:
+      BACKEND_API_URL: http://backend:8000
+      DATABASE_URL: postgresql://ddf_user:ddf_password@postgres:5432/ddf_db
+      TZ: Asia/Seoul
+    ports:
+      - "8001:8001"
+    volumes:
+      - ../RAG:/rag
+      - ../RAG/data:/rag/data  # Host 디렉토리 직접 마운트
+    depends_on:
+      backend:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    networks:
+      - ddf-network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 
   # Redis for caching (optional but recommended)
   redis:
