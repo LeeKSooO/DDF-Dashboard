@@ -56,7 +56,7 @@ const DashboardContent = lazy(() =>
   }))
 );
 const DashboardOverviewContent = lazy(() =>
-  import("./dashboard-overview-content").then((m) => ({
+  import("./pages/dashboard-overview-content").then((m) => ({
     default: m.DashboardOverviewContent,
   }))
 );
@@ -66,15 +66,15 @@ const TrafficContent = lazy(() =>
   }))
 );
 const HeatmapContent = lazy(() =>
-  import("./heatmap-content").then((m) => ({ default: m.HeatmapContent }))
+  import("./pages/heatmap-content").then((m) => ({ default: m.HeatmapContent }))
 );
 const TrafficAnalysisContent = lazy(() =>
-  import("./traffic-analysis-content").then((m) => ({
+  import("./pages/traffic-analysis-content").then((m) => ({
     default: m.TrafficAnalysisContent,
   }))
 );
 const DRTAnalysisContent = lazy(() =>
-  import("./drt-analysis-content").then((m) => ({
+  import("./pages/drt-analysis-content").then((m) => ({
     default: m.DRTAnalysisContent,
   }))
 );
@@ -236,7 +236,7 @@ export function DDFDashboard() {
             <DashboardOverviewContent
               selectedMonth={selectedMonth}
               selectedRegion={selectedRegion}
-              onNavigateToTab={handlePageChange}
+              onNavigateToTab={(tabId: string) => handlePageChange(tabId as ActivePage)}
             />
           </Suspense>
         );

@@ -1,7 +1,7 @@
 // API 서비스 레이어
-// DRT Dashboard API 통신을 위한 타입 정의 및 함수들
+// DRT Dashboard API 통신을 위한 함수들
 
-const API_BASE_URL = "http://localhost:8000/api/v1";
+import { API_BASE_URL } from './constants';
 
 // Traffic API 타입 정의
 export interface HourlyPattern {

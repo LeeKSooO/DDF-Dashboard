@@ -1,6 +1,6 @@
 "use client"
 
-import { DemandContent } from "./dashboard/demand-content"
+import { DemandContent } from "../dashboard/demand-content"
 import { Brain } from "lucide-react"
 
 interface DRTAnalysisContentProps {

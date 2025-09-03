@@ -8,11 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { RefreshCw, TrendingUp, Clock, Users } from 'lucide-react';
-import { apiService, TrafficResponse, utils } from '@/lib/api';
+import { apiService, utils } from '@/lib/api';
+import { TrafficResponse, TrafficChartProps } from '@/types';
 
-interface TrafficChartProps {
-  className?: string;
-}
 
 export function TrafficChart({ className }: TrafficChartProps) {
   const [data, setData] = useState<TrafficResponse | null>(null);
