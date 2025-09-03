@@ -14,9 +14,9 @@ services:
       POSTGRES_USER: ddf_user
       POSTGRES_PASSWORD: ddf_password
       POSTGRES_DB: ddf_db
-      PGDATA: /home/postgres/pgdata/data
+      PGDATA: /var/lib/postgresql/data
     volumes:
-      - ../postgres:/home/postgres/pgdata
+      - ../postgres/data:/var/lib/postgresql/data
       - ./database/init:/docker-entrypoint-initdb.d
       - ./database/migrations:/docker-entrypoint-initdb.d/migrations
     ports:
