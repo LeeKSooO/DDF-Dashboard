@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { TrendingUp, HelpCircle } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -158,7 +159,7 @@ export const DemandContent = memo(function DemandContent({
           { 
             label: "이동성 불리 지수 (MDI)", 
             score: (feature_scores.mdi_t_score * 100).toFixed(1),
-            description: "구간별 승객수 부족도 (역전 지수)",
+            description: "구간별 승하차수 부족도 (역전 지수)",
             level: feature_scores.mdi_t_score > 0.7 ? "높음" : feature_scores.mdi_t_score > 0.5 ? "보통" : "낮음"
           },
           { 
@@ -188,7 +189,7 @@ export const DemandContent = memo(function DemandContent({
           { 
             label: "노선 활용도 (RU)", 
             score: (feature_scores.ru_score * 100).toFixed(1),
-            description: "시간별 구간 승객수/1000",
+            description: "시간별 구간 승하차수/1000",
             level: feature_scores.ru_score > 0.05 ? "높음" : feature_scores.ru_score > 0.02 ? "보통" : "낮음"
           },
           { 
@@ -254,7 +255,7 @@ export const DemandContent = memo(function DemandContent({
           <Card className="h-full">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg">모델 선택</CardTitle>
-              <CardDescription className="text-xs">
+              <CardDescription className="text-base">
                 DRT 운영 모델
               </CardDescription>
             </CardHeader>
@@ -266,7 +267,7 @@ export const DemandContent = memo(function DemandContent({
                     <button
                       key={model.model}
                       onClick={() => setSelectedModel(model.model)}
-                      className={`w-full p-3 text-sm font-medium rounded-lg transition-all ${
+                      className={`w-full p-3 text-base font-medium rounded-lg transition-all ${
                         isSelected
                           ? "bg-blue-600 text-white shadow-md"
                           : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -275,7 +276,7 @@ export const DemandContent = memo(function DemandContent({
                       <div className="flex flex-col items-center gap-1">
                         <span className="text-lg">{model.icon}</span>
                         <span>{model.model}</span>
-                        <span className="text-xs opacity-75">
+                        <span className="text-base opacity-75">
                           정확도 {model.accuracy}%
                         </span>
                       </div>
@@ -364,8 +365,8 @@ export const DemandContent = memo(function DemandContent({
                           <div key={idx} className="bg-white p-3 rounded-lg">
                             <div className="flex items-center justify-between mb-2">
                               <div>
-                                <div className="font-medium text-sm">{item.label}</div>
-                                <div className="text-xs text-gray-500">{item.description}</div>
+                                <div className="font-medium text-base">{item.label}</div>
+                                <div className="text-base text-gray-500">{item.description}</div>
                               </div>
                               <div className="text-right">
                                 <div className="text-lg font-bold text-blue-600">
@@ -395,14 +396,14 @@ export const DemandContent = memo(function DemandContent({
                     </div>
 
                     <div className="p-3 bg-green-50 rounded-lg">
-                      <div className="text-sm font-medium text-green-800 mb-1">
+                      <div className="text-base font-medium text-green-800 mb-1">
                         종합 DRT 적합도
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="text-2xl font-bold text-green-600">
                           {stationDetail.current_score.toFixed(1)}점
                         </div>
-                        <div className="text-sm text-green-700">
+                        <div className="text-base text-green-700">
                           피크: {stationDetail.peak_hour}시 ({stationDetail.peak_score.toFixed(1)}점)
                         </div>
                       </div>
@@ -469,21 +470,21 @@ export const DemandContent = memo(function DemandContent({
                   </LineChart>
                 </ResponsiveContainer>
 
-                <div className="grid grid-cols-3 gap-3 text-sm">
+                <div className="grid grid-cols-3 gap-3 text-base">
                   <div className="text-center p-2 bg-blue-50 rounded">
-                    <div className="text-xs text-blue-600">현재 점수</div>
+                    <div className="text-base text-blue-600">현재 점수</div>
                     <div className="font-bold text-blue-700">
                       {stationDetail.current_score.toFixed(1)}점
                     </div>
                   </div>
                   <div className="text-center p-2 bg-green-50 rounded">
-                    <div className="text-xs text-green-600">피크 시간</div>
+                    <div className="text-base text-green-600">피크 시간</div>
                     <div className="font-bold text-green-700">
                       {stationDetail.peak_hour}시
                     </div>
                   </div>
                   <div className="text-center p-2 bg-purple-50 rounded">
-                    <div className="text-xs text-purple-600">일평균</div>
+                    <div className="text-base text-purple-600">일평균</div>
                     <div className="font-bold text-purple-700">
                       {stationDetail.monthly_average.toFixed(1)}점
                     </div>
@@ -499,6 +500,239 @@ export const DemandContent = memo(function DemandContent({
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* 모델별 TOP 5 정류장 */}
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl flex items-center gap-2">
+              🏆 {selectedModel} DRT TOP 5 정류장
+            </CardTitle>
+            <CardDescription className="text-base">
+              {selectedModel} 모델 기준 상위 정류장 분석
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {drtData?.stations && drtData.stations.length > 0 ? (
+                [...drtData.stations]
+                  .sort((a, b) => (b.drt_score || 0) - (a.drt_score || 0))
+                  .slice(0, 5)
+                  .map((station, index) => (
+                    <div key={station.station_id} className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h4 className="font-medium text-base">{station.station_name}</h4>
+                          <p className="text-sm text-muted-foreground">{selectedDistrictName}</p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg font-bold text-blue-600">{station.drt_score?.toFixed(1)}점</div>
+                          <Badge variant={index === 0 ? "default" : index < 3 ? "secondary" : "outline"}>
+                            {index === 0 ? "최우수" : index === 1 ? "우수" : index === 2 ? "양호" : index === 3 ? "보통" : "기타"}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>피크 시간:</span>
+                          <span>{station.peak_hour}시</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>DRT 스코어:</span>
+                          <span className="font-medium">{station.drt_score?.toFixed(2)}</span>
+                        </div>
+                        <Progress value={station.drt_score || 0} max={100} className="h-2" />
+                      </div>
+                    </div>
+                  ))
+              ) : (
+                <div className="col-span-full text-center text-gray-500 py-8">
+                  <div className="text-4xl mb-3">
+                    {selectedModel === '교통취약지' ? '💜' : selectedModel === '출퇴근' ? '🏢' : '📸'}
+                  </div>
+                  <div className="text-base">{selectedModel} DRT 데이터를 불러오는 중...</div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* DRT 필요성 진단 지표 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              DRT 필요성 진단 지표
+            </CardTitle>
+            <CardDescription>선택된 지역의 DRT 도입 효과성 및 필요성 분석</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              // 현재 선택된 모델의 정류장 데이터 수집
+              const currentStations = (() => {
+                if (selectedRegion === "전체") {
+                  // 전체 선택시 모든 정류장 (중복 제거)
+                  return drtData?.stations || []
+                } else {
+                  // 단일 구 선택시 해당 구의 정류장들
+                  return drtData?.stations || []
+                }
+              })();
+
+              if (currentStations.length === 0) {
+                return (
+                  <div className="text-center text-gray-500 py-8">
+                    <TrendingUp className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p className="text-base font-medium">DRT 데이터를 불러오는 중...</p>
+                    <p className="text-base">지표 분석을 위해 잠시만 기다려주세요</p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* DRT 점수 집중도 */}
+                  <div className="p-4 bg-red-50 rounded-lg">
+                    <h4 className="font-medium text-red-800 mb-3 flex items-center gap-2">
+                      🎯 DRT 점수 집중도
+                      <HelpCircle className="h-4 w-4 text-red-600 hover:text-red-800 cursor-help" />
+                    </h4>
+                    <div className="space-y-3">
+                      <div className="text-3xl font-bold text-red-600">
+                        {(() => {
+                          if (currentStations.length === 0) return "0%";
+                          
+                          const sortedStations = [...currentStations].sort((a, b) => (b.drt_score || 0) - (a.drt_score || 0));
+                          const top5Scores = sortedStations.slice(0, 5).reduce((sum, s) => sum + (s.drt_score || 0), 0);
+                          const totalScores = currentStations.reduce((sum, s) => sum + (s.drt_score || 0), 0);
+                          
+                          return totalScores > 0 ? `${(top5Scores / totalScores * 100).toFixed(1)}%` : "0%";
+                        })()}
+                      </div>
+                      <div className="text-base text-gray-600">
+                        <div>상위 5개 정류장 DRT 점수 비중</div>
+                        <div className="mt-2">
+                          <div className="flex justify-between text-sm">
+                            <span>우선순위 분석:</span>
+                            <span className="font-medium text-red-600">
+                              {(() => {
+                                if (currentStations.length === 0) return "대기중";
+                                const sortedStations = [...currentStations].sort((a, b) => (b.drt_score || 0) - (a.drt_score || 0));
+                                const top5Scores = sortedStations.slice(0, 5).reduce((sum, s) => sum + (s.drt_score || 0), 0);
+                                const totalScores = currentStations.reduce((sum, s) => sum + (s.drt_score || 0), 0);
+                                const concentration = totalScores > 0 ? (top5Scores / totalScores * 100) : 0;
+                                return concentration > 50 ? "높은집중" : concentration > 30 ? "중간집중" : "고른분산";
+                              })()}
+                            </span>
+                          </div>
+                          <div className="text-sm text-gray-500 mt-1">
+                            *집중도가 높을수록 우선 투입 지역 명확
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* DRT 점수 편차 */}
+                  <div className="p-4 bg-orange-50 rounded-lg">
+                    <h4 className="font-medium text-orange-800 mb-3 flex items-center gap-2">
+                      ⚖️ DRT 점수 편차
+                      <HelpCircle className="h-4 w-4 text-orange-600 hover:text-orange-800 cursor-help" />
+                    </h4>
+                    <div className="space-y-3">
+                      <div className="text-3xl font-bold text-orange-600">
+                        {(() => {
+                          if (currentStations.length < 2) return "0.0";
+                          
+                          const scores = currentStations.map(s => s.drt_score || 0);
+                          const mean = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+                          const variance = scores.reduce((sum, score) => sum + Math.pow(score - mean, 2), 0) / scores.length;
+                          const stdDev = Math.sqrt(variance);
+                          
+                          return stdDev.toFixed(1);
+                        })()}
+                      </div>
+                      <div className="text-base text-gray-600">
+                        <div>정류장 간 DRT 점수 표준편차</div>
+                        <div className="mt-2">
+                          <div className="flex justify-between text-sm">
+                            <span>서비스 균형:</span>
+                            <span className="font-medium text-orange-600">
+                              {(() => {
+                                if (currentStations.length < 2) return "측정불가";
+                                
+                                const scores = currentStations.map(s => s.drt_score || 0);
+                                const mean = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+                                const variance = scores.reduce((sum, score) => sum + Math.pow(score - mean, 2), 0) / scores.length;
+                                const stdDev = Math.sqrt(variance);
+                                
+                                return stdDev > 20 ? "불균형심화" : stdDev > 10 ? "중간불균형" : "균형양호";
+                              })()}
+                            </span>
+                          </div>
+                          <div className="text-sm text-gray-500 mt-1">
+                            *편차가 클수록 형평성 개선 필요
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 고점수-저점수 정류장 비율 */}
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <h4 className="font-medium text-blue-800 mb-3 flex items-center gap-2">
+                      🔴🟢 고점수-저점수 비율
+                      <HelpCircle className="h-4 w-4 text-blue-600 hover:text-blue-800 cursor-help" />
+                    </h4>
+                    <div className="space-y-3">
+                      <div className="text-3xl font-bold text-blue-600">
+                        {(() => {
+                          if (currentStations.length === 0) return "0:0";
+                          
+                          const avgScore = currentStations.reduce((sum, s) => sum + (s.drt_score || 0), 0) / currentStations.length;
+                          const highScores = currentStations.filter(s => (s.drt_score || 0) >= avgScore).length;
+                          const lowScores = currentStations.filter(s => (s.drt_score || 0) < avgScore).length;
+                          
+                          return `${highScores}:${lowScores}`;
+                        })()}
+                      </div>
+                      <div className="text-base text-gray-600">
+                        <div>우선투입:관찰필요 정류장 비율</div>
+                        <div className="mt-2 space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span>🔴 우선투입:</span>
+                            <span className="font-medium text-red-600">
+                              {(() => {
+                                if (currentStations.length === 0) return "0개";
+                                const avgScore = currentStations.reduce((sum, s) => sum + (s.drt_score || 0), 0) / currentStations.length;
+                                const highScores = currentStations.filter(s => (s.drt_score || 0) >= avgScore).length;
+                                return `${highScores}개`;
+                              })()}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span>🟢 관찰필요:</span>
+                            <span className="font-medium text-green-600">
+                              {(() => {
+                                if (currentStations.length === 0) return "0개";
+                                const avgScore = currentStations.reduce((sum, s) => sum + (s.drt_score || 0), 0) / currentStations.length;
+                                const lowScores = currentStations.filter(s => (s.drt_score || 0) < avgScore).length;
+                                return `${lowScores}개`;
+                              })()}
+                            </span>
+                          </div>
+                          <div className="text-sm text-gray-500 mt-1">
+                            *우선투입 지역부터 단계적 서비스 확대
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
       </div>

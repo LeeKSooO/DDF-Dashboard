@@ -240,7 +240,7 @@ function SeoulMapComponent({ onDistrictClick, selectedDistrict, trafficData = []
       <div className="h-[400px] bg-gray-100 rounded-lg flex items-center justify-center">
         <div className="text-center text-red-500">
           <p className="font-medium">지도 로딩 실패</p>
-          <p className="text-sm">{error}</p>
+          <p className="text-base">{error}</p>
         </div>
       </div>
     )
@@ -276,7 +276,7 @@ function SeoulMapComponent({ onDistrictClick, selectedDistrict, trafficData = []
       )}
 
       {/* Legend */}
-      <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg text-xs z-20">
+      <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg text-base z-20">
         <div className="font-medium mb-2">교통량 범례</div>
         <div className="space-y-1">
           <div className="flex items-center gap-2">

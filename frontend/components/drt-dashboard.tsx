@@ -131,12 +131,12 @@ export function DRTDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">오늘 총 운행 수</CardTitle>
+              <CardTitle className="text-base font-medium">오늘 총 운행 수</CardTitle>
               <Bus className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">1,847</div>
-              <div className="flex items-center text-xs text-muted-foreground">
+              <div className="flex items-center text-base text-muted-foreground">
                 <TrendingUp className="mr-1 h-3 w-3 text-green-500" />
                 어제 대비 +12.5%
               </div>
@@ -145,12 +145,12 @@ export function DRTDashboard() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">활성 승객 수</CardTitle>
+              <CardTitle className="text-base font-medium">활성 승객 수</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">2,764</div>
-              <div className="flex items-center text-xs text-muted-foreground">
+              <div className="flex items-center text-base text-muted-foreground">
                 <TrendingUp className="mr-1 h-3 w-3 text-green-500" />
                 어제 대비 +8.2%
               </div>
@@ -159,12 +159,12 @@ export function DRTDashboard() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">평균 대기 시간</CardTitle>
+              <CardTitle className="text-base font-medium">평균 대기 시간</CardTitle>
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">7.8 min</div>
-              <div className="flex items-center text-xs text-muted-foreground">
+              <div className="flex items-center text-base text-muted-foreground">
                 <TrendingDown className="mr-1 h-3 w-3 text-green-500" />
                 어제 대비 -2.1분
               </div>
@@ -173,12 +173,12 @@ export function DRTDashboard() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">서비스 효율성</CardTitle>
+              <CardTitle className="text-base font-medium">서비스 효율성</CardTitle>
               <CheckCircle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">89.4%</div>
-              <div className="flex items-center text-xs text-muted-foreground">
+              <div className="flex items-center text-base text-muted-foreground">
                 <TrendingUp className="mr-1 h-3 w-3 text-green-500" />
                 어제 대비 +3.2%
               </div>
@@ -263,7 +263,7 @@ export function DRTDashboard() {
                     {vehicleStatus.map((status) => (
                       <div key={status.name} className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: status.color }} />
-                        <span className="text-sm">
+                        <span className="text-base">
                           {status.name}: {status.value}
                         </span>
                       </div>
@@ -345,15 +345,15 @@ export function DRTDashboard() {
                 <CardContent>
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm">Vehicle #001</span>
+                      <span className="text-base">Vehicle #001</span>
                       <Badge variant="secondary">94% 활용</Badge>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm">Vehicle #002</span>
+                      <span className="text-base">Vehicle #002</span>
                       <Badge variant="secondary">87% 활용</Badge>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm">Vehicle #003</span>
+                      <span className="text-base">Vehicle #003</span>
                       <Badge variant="destructive">정비 중</Badge>
                     </div>
                   </div>
@@ -366,7 +366,7 @@ export function DRTDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">12.4 km/L</div>
-                  <p className="text-sm text-muted-foreground">차량 평균</p>
+                  <p className="text-base text-muted-foreground">차량 평균</p>
                 </CardContent>
               </Card>
 
@@ -377,11 +377,11 @@ export function DRTDashboard() {
                 <CardContent>
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-sm">오늘 예정</span>
+                      <span className="text-base">오늘 예정</span>
                       <Badge variant="destructive">3대 차량</Badge>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm">이번 주 예정</span>
+                      <span className="text-base">이번 주 예정</span>
                       <Badge variant="secondary">7대 차량</Badge>
                     </div>
                   </div>
@@ -404,13 +404,13 @@ export function DRTDashboard() {
                         <MapPin className="h-5 w-5 text-muted-foreground" />
                         <div>
                           <h4 className="font-medium">{route.route}</h4>
-                          <p className="text-sm text-muted-foreground">{route.rides}회 운행 오늘</p>
+                          <p className="text-base text-muted-foreground">{route.rides}회 운행 오늘</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-right">
-                          <p className="text-sm font-medium">{route.efficiency}% 효율성</p>
-                          <p className="text-sm text-muted-foreground">₩{route.revenue.toLocaleString()} 수익</p>
+                          <p className="text-base font-medium">{route.efficiency}% 효율성</p>
+                          <p className="text-base text-muted-foreground">₩{route.revenue.toLocaleString()} 수익</p>
                         </div>
                         <Badge variant={route.efficiency > 90 ? "default" : "secondary"}>
                           {route.efficiency > 90 ? "우수" : "양호"}
@@ -437,14 +437,14 @@ export function DRTDashboard() {
                     <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
                       <div>
                         <p className="font-medium text-red-800">차량 #003 고장</p>
-                        <p className="text-sm text-red-600">노선 A 영향 - 15분 전</p>
+                        <p className="text-base text-red-600">노선 A 영향 - 15분 전</p>
                       </div>
                       <Badge variant="destructive">중요</Badge>
                     </div>
                     <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
                       <div>
                         <p className="font-medium text-yellow-800">높은 대기 시간</p>
-                        <p className="text-sm text-yellow-600">노선 B - 평균 12분</p>
+                        <p className="text-base text-yellow-600">노선 B - 평균 12분</p>
                       </div>
                       <Badge variant="secondary">경고</Badge>
                     </div>

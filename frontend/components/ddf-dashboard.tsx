@@ -1,12 +1,24 @@
-"use client"
+"use client";
 
-import { useState, lazy, Suspense } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
+import { useState, lazy, Suspense } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Sidebar,
   SidebarContent,
@@ -21,7 +33,7 @@ import {
   SidebarProvider,
   SidebarRail,
   SidebarTrigger,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 import {
   RefreshCw,
   Settings,
@@ -35,19 +47,37 @@ import {
   Bell,
   Target,
   AlertTriangle,
-} from "lucide-react"
+} from "lucide-react";
 
 // Lazy load components for better performance
 const DashboardContent = lazy(() =>
-  import("./dashboard/dashboard-content").then((m) => ({ default: m.DashboardContent })),
-)
-const DashboardOverviewContent = lazy(() => 
-  import("./dashboard-overview-content").then((m) => ({ default: m.DashboardOverviewContent })),
-)
-const TrafficContent = lazy(() => import("./dashboard/traffic-content").then((m) => ({ default: m.TrafficContent })))
-const HeatmapContent = lazy(() => import("./heatmap-content").then((m) => ({ default: m.HeatmapContent })))
-const TrafficAnalysisContent = lazy(() => import("./traffic-analysis-content").then((m) => ({ default: m.TrafficAnalysisContent })))
-const DRTAnalysisContent = lazy(() => import("./drt-analysis-content").then((m) => ({ default: m.DRTAnalysisContent })))
+  import("./dashboard/dashboard-content").then((m) => ({
+    default: m.DashboardContent,
+  }))
+);
+const DashboardOverviewContent = lazy(() =>
+  import("./pages/dashboard-overview-content").then((m) => ({
+    default: m.DashboardOverviewContent,
+  }))
+);
+const TrafficContent = lazy(() =>
+  import("./dashboard/traffic-content").then((m) => ({
+    default: m.TrafficContent,
+  }))
+);
+const HeatmapContent = lazy(() =>
+  import("./pages/heatmap-content").then((m) => ({ default: m.HeatmapContent }))
+);
+const TrafficAnalysisContent = lazy(() =>
+  import("./pages/traffic-analysis-content").then((m) => ({
+    default: m.TrafficAnalysisContent,
+  }))
+);
+const DRTAnalysisContent = lazy(() =>
+  import("./pages/drt-analysis-content").then((m) => ({
+    default: m.DRTAnalysisContent,
+  }))
+);
 
 type ActivePage =
   | "dashboard"
@@ -56,10 +86,23 @@ type ActivePage =
   | "traffic-analysis"
   | "drt-analysis"
   | "reports"
-  | "settings"
+  | "settings";
 
 // Month names in Korean
-const monthNames = ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"]
+const monthNames = [
+  "1월",
+  "2월",
+  "3월",
+  "4월",
+  "5월",
+  "6월",
+  "7월",
+  "8월",
+  "9월",
+  "10월",
+  "11월",
+  "12월",
+];
 
 // Seoul Districts Data
 const seoulDistricts = [
@@ -88,64 +131,101 @@ const seoulDistricts = [
   "종로구",
   "중구",
   "중랑구",
-]
+];
 
 const vulnerableAreas = [
-  { rank: 1, area: "금천구 시흥동", score: 92, population: 15000, accessibility: "매우낮음", priority: "최우선" },
-  { rank: 2, area: "강서구 가양동", score: 88, population: 22000, accessibility: "낮음", priority: "최우선" },
-  { rank: 3, area: "구로구 항동", score: 85, population: 18000, accessibility: "낮음", priority: "우선" },
-  { rank: 4, area: "영등포구 신길동", score: 82, population: 25000, accessibility: "보통", priority: "우선" },
-  { rank: 5, area: "동작구 상도동", score: 78, population: 20000, accessibility: "보통", priority: "검토" },
-]
+  {
+    rank: 1,
+    area: "금천구 시흥동",
+    score: 92,
+    population: 15000,
+    accessibility: "매우낮음",
+    priority: "최우선",
+  },
+  {
+    rank: 2,
+    area: "강서구 가양동",
+    score: 88,
+    population: 22000,
+    accessibility: "낮음",
+    priority: "최우선",
+  },
+  {
+    rank: 3,
+    area: "구로구 항동",
+    score: 85,
+    population: 18000,
+    accessibility: "낮음",
+    priority: "우선",
+  },
+  {
+    rank: 4,
+    area: "영등포구 신길동",
+    score: 82,
+    population: 25000,
+    accessibility: "보통",
+    priority: "우선",
+  },
+  {
+    rank: 5,
+    area: "동작구 상도동",
+    score: 78,
+    population: 20000,
+    accessibility: "보통",
+    priority: "검토",
+  },
+];
 
 // Loading component
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center h-64">
     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
   </div>
-)
+);
 
 export function DDFDashboard() {
-  const [activePage, setActivePage] = useState<ActivePage>("dashboard")
-  const [selectedModel, setSelectedModel] = useState("교통취약지")
-  const [isRealTimeMode, setIsRealTimeMode] = useState(true)
-  const [selectedMonth, setSelectedMonth] = useState<string>("7")
-  
+  const [activePage, setActivePage] = useState<ActivePage>("dashboard");
+  const [selectedModel, setSelectedModel] = useState("교통취약지");
+  const [isRealTimeMode, setIsRealTimeMode] = useState(true);
+  const [selectedMonth, setSelectedMonth] = useState<string>("7");
+
   // 탭별 기본 지역 설정
   const getDefaultRegionForPage = (pageId: ActivePage): string => {
     switch (pageId) {
       case "dashboard":
-        return "전체"  // 대시보드 개요는 전체로 시작
+        return "전체"; // 대시보드 개요는 전체로 시작
       case "heatmap":
-        return "전체"  // 히트맵도 전체로 시작
+        return "전체"; // 히트맵도 전체로 시작
       case "traffic-analysis":
-        return "전체"  // 교통 패턴 분석도 전체로 시작
+        return "전체"; // 교통 패턴 분석도 전체로 시작
       case "traffic":
       case "drt-analysis":
       default:
-        return "강남구"  // 나머지는 강남구로 시작
+        return "강남구"; // 나머지는 강남구로 시작
     }
-  }
-  
+  };
+
   // 현재 페이지에 맞는 지역 상태
-  const [selectedRegion, setSelectedRegion] = useState(getDefaultRegionForPage(activePage))
-  
+  const [selectedRegion, setSelectedRegion] = useState(
+    getDefaultRegionForPage(activePage)
+  );
+
   // 페이지 변경시 해당 페이지의 기본 지역으로 리셋
   const handlePageChange = (pageId: ActivePage) => {
-    setActivePage(pageId)
-    setSelectedRegion(getDefaultRegionForPage(pageId))
-  }
+    setActivePage(pageId);
+    setSelectedRegion(getDefaultRegionForPage(pageId));
+  };
 
   // Navigation items
   const navigationItems = [
     { id: "dashboard", label: "대시보드 개요", icon: Home },
-    { id: "traffic", label: "교통 분석", icon: Activity },
-    { id: "heatmap", label: "교통량 히트맵", icon: Map },
-    { id: "traffic-analysis", label: "교통 패턴 & 노선 최적화", icon: AlertTriangle },
+    { id: "traffic", label: "교통 패턴 분석", icon: Activity },
+    { id: "heatmap", label: "지역별 교통량 분석", icon: Map },
+    { id: "traffic-analysis", label: "이상 패턴 분석", icon: AlertTriangle },
     { id: "drt-analysis", label: "DRT 분석", icon: Brain },
     { id: "reports", label: "리포트", icon: FileText },
     { id: "settings", label: "설정", icon: Settings },
-  ]
+  ];
 
   // Render different page content based on active page
   const renderPageContent = () => {
@@ -153,27 +233,40 @@ export function DDFDashboard() {
       case "dashboard":
         return (
           <Suspense fallback={<LoadingSpinner />}>
-            <DashboardOverviewContent selectedMonth={selectedMonth} selectedRegion={selectedRegion} />
+            <DashboardOverviewContent
+              selectedMonth={selectedMonth}
+              selectedRegion={selectedRegion}
+              onNavigateToTab={(tabId: string) => handlePageChange(tabId as ActivePage)}
+            />
           </Suspense>
-        )
+        );
       case "traffic":
         return (
           <Suspense fallback={<LoadingSpinner />}>
-            <TrafficContent selectedMonth={selectedMonth} selectedRegion={selectedRegion} />
+            <TrafficContent
+              selectedMonth={selectedMonth}
+              selectedRegion={selectedRegion}
+            />
           </Suspense>
-        )
+        );
       case "heatmap":
         return (
           <Suspense fallback={<LoadingSpinner />}>
-            <HeatmapContent selectedMonth={selectedMonth} selectedRegion={selectedRegion} />
+            <HeatmapContent
+              selectedMonth={selectedMonth}
+              selectedRegion={selectedRegion}
+            />
           </Suspense>
-        )
+        );
       case "traffic-analysis":
         return (
           <Suspense fallback={<LoadingSpinner />}>
-            <TrafficAnalysisContent selectedMonth={selectedMonth} selectedRegion={selectedRegion} />
+            <TrafficAnalysisContent
+              selectedMonth={selectedMonth}
+              selectedRegion={selectedRegion}
+            />
           </Suspense>
-        )
+        );
       case "drt-analysis":
         return (
           <Suspense fallback={<LoadingSpinner />}>
@@ -184,7 +277,7 @@ export function DDFDashboard() {
               selectedRegion={selectedRegion}
             />
           </Suspense>
-        )
+        );
       case "reports":
         return (
           <div className="space-y-6">
@@ -197,40 +290,64 @@ export function DDFDashboard() {
                 <CardContent>
                   <div className="space-y-4">
                     <div className="p-4 bg-blue-50 rounded-lg">
-                      <h4 className="font-medium text-blue-800 mb-2 flex items-center gap-2">📈 교통량 분석</h4>
+                      <h4 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
+                        📈 교통량 분석
+                      </h4>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <div className="text-lg font-bold text-blue-600">64.2%</div>
-                          <div className="text-sm text-blue-600">평균 교통량 지수</div>
+                          <div className="text-lg font-bold text-blue-600">
+                            64.2%
+                          </div>
+                          <div className="text-base text-blue-600">
+                            평균 교통량 지수
+                          </div>
                         </div>
                         <div>
-                          <div className="text-lg font-bold text-green-600">+5.8%</div>
-                          <div className="text-sm text-green-600">전월 대비 증가</div>
+                          <div className="text-lg font-bold text-green-600">
+                            +5.8%
+                          </div>
+                          <div className="text-base text-green-600">
+                            전월 대비 증가
+                          </div>
                         </div>
                       </div>
                     </div>
 
                     <div className="p-4 bg-green-50 rounded-lg">
-                      <h4 className="font-medium text-green-800 mb-2 flex items-center gap-2">🎯 DRT 적합성 정확도</h4>
+                      <h4 className="font-medium text-green-800 mb-2 flex items-center gap-2">
+                        🎯 DRT 적합성 정확도
+                      </h4>
                       <div className="grid grid-cols-3 gap-2">
                         <div className="text-center">
-                          <div className="text-lg font-bold text-green-600">97.2%</div>
-                          <div className="text-xs text-green-600">교통취약지</div>
+                          <div className="text-lg font-bold text-green-600">
+                            97.2%
+                          </div>
+                          <div className="text-base text-green-600">
+                            교통취약지
+                          </div>
                         </div>
                         <div className="text-center">
-                          <div className="text-lg font-bold text-blue-600">94.8%</div>
-                          <div className="text-xs text-blue-600">출퇴근</div>
+                          <div className="text-lg font-bold text-blue-600">
+                            94.8%
+                          </div>
+                          <div className="text-base text-blue-600">출퇴근</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-lg font-bold text-yellow-600">91.5%</div>
-                          <div className="text-xs text-yellow-600">관광형</div>
+                          <div className="text-lg font-bold text-yellow-600">
+                            91.5%
+                          </div>
+                          <div className="text-base text-yellow-600">
+                            관광형
+                          </div>
                         </div>
                       </div>
                     </div>
 
                     <div className="p-4 bg-purple-50 rounded-lg">
-                      <h4 className="font-medium text-purple-800 mb-2 flex items-center gap-2">🚌 서비스 품질</h4>
-                      <div className="space-y-2 text-sm">
+                      <h4 className="font-medium text-purple-800 mb-2 flex items-center gap-2">
+                        🚌 서비스 품질
+                      </h4>
+                      <div className="space-y-2 text-base">
                         <div className="flex justify-between">
                           <span>평균 대기시간:</span>
                           <span className="font-medium">6.2분</span>
@@ -247,7 +364,8 @@ export function DDFDashboard() {
                     </div>
                   </div>
                   <CardDescription>
-                    {monthNames[Number.parseInt(selectedMonth) - 1]} 데이터 (최종 업데이트: 2024-01-30 14:30)
+                    {monthNames[Number.parseInt(selectedMonth) - 1]} 데이터
+                    (최종 업데이트: 2024-01-30 14:30)
                   </CardDescription>
                 </CardContent>
               </Card>
@@ -255,30 +373,41 @@ export function DDFDashboard() {
               <Card>
                 <CardHeader>
                   <CardTitle>취약지역 개선 현황</CardTitle>
-                  <CardDescription>교통취약지역 접근성 개선 효과</CardDescription>
+                  <CardDescription>
+                    교통취약지역 접근성 개선 효과
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     {vulnerableAreas.slice(0, 5).map((area) => (
-                      <div key={area.rank} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div
+                        key={area.rank}
+                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                      >
                         <div className="flex items-center gap-3">
                           <div className="text-center">
-                            <div className="text-lg font-bold">#{area.rank}</div>
+                            <div className="text-lg font-bold">
+                              #{area.rank}
+                            </div>
                           </div>
                           <div>
                             <h4 className="font-medium">{area.area}</h4>
-                            <p className="text-sm text-muted-foreground">인구 {area.population.toLocaleString()}명</p>
+                            <p className="text-base text-muted-foreground">
+                              인구 {area.population.toLocaleString()}명
+                            </p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="text-lg font-bold text-blue-600">{area.score}점</div>
+                          <div className="text-lg font-bold text-blue-600">
+                            {area.score}점
+                          </div>
                           <Badge
                             variant={
                               area.priority === "최우선"
                                 ? "destructive"
                                 : area.priority === "우선"
-                                  ? "secondary"
-                                  : "outline"
+                                ? "secondary"
+                                : "outline"
                             }
                           >
                             {area.priority}
@@ -287,8 +416,10 @@ export function DDFDashboard() {
                       </div>
                     ))}
                     <div className="mt-4 p-4 bg-green-50 rounded-lg">
-                      <h5 className="font-medium text-green-800 mb-2">📊 개선 효과</h5>
-                      <div className="text-sm space-y-1">
+                      <h5 className="font-medium text-green-800 mb-2">
+                        📊 개선 효과
+                      </h5>
+                      <div className="text-base space-y-1">
                         <div>• 접근성 개선: 평균 25% 향상</div>
                         <div>• 이동시간 단축: 평균 12분 감소</div>
                         <div>• 교통비 절약: 월 평균 4.8만원</div>
@@ -296,7 +427,8 @@ export function DDFDashboard() {
                     </div>
                   </div>
                   <CardDescription>
-                    {monthNames[Number.parseInt(selectedMonth) - 1]} 데이터 (최종 업데이트: 2024-01-30 14:30)
+                    {monthNames[Number.parseInt(selectedMonth) - 1]} 데이터
+                    (최종 업데이트: 2024-01-30 14:30)
                   </CardDescription>
                 </CardContent>
               </Card>
@@ -305,29 +437,47 @@ export function DDFDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>경제성 종합 평가</CardTitle>
-                <CardDescription>DRT 시스템의 종합적 경제성 평가</CardDescription>
+                <CardDescription>
+                  DRT 시스템의 종합적 경제성 평가
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="p-4 bg-red-50 rounded-lg text-center">
-                    <h5 className="font-medium text-red-800 mb-2">💸 재정적 ROI</h5>
-                    <div className="text-3xl font-bold text-red-600">-61.0%</div>
-                    <div className="text-sm text-red-600 mt-1">5년 기준</div>
+                    <h5 className="font-medium text-red-800 mb-2">
+                      💸 재정적 ROI
+                    </h5>
+                    <div className="text-3xl font-bold text-red-600">
+                      -61.0%
+                    </div>
+                    <div className="text-base text-red-600 mt-1">5년 기준</div>
                   </div>
                   <div className="p-4 bg-green-50 rounded-lg text-center">
-                    <h5 className="font-medium text-green-800 mb-2">🌱 사회적 ROI</h5>
-                    <div className="text-3xl font-bold text-green-600">+12.8%</div>
-                    <div className="text-sm text-green-600 mt-1">사회적 편익 포함</div>
+                    <h5 className="font-medium text-green-800 mb-2">
+                      🌱 사회적 ROI
+                    </h5>
+                    <div className="text-3xl font-bold text-green-600">
+                      +12.8%
+                    </div>
+                    <div className="text-base text-green-600 mt-1">
+                      사회적 편익 포함
+                    </div>
                   </div>
                   <div className="p-4 bg-blue-50 rounded-lg text-center">
-                    <h5 className="font-medium text-blue-800 mb-2">⚖️ 종합 평가</h5>
+                    <h5 className="font-medium text-blue-800 mb-2">
+                      ⚖️ 종합 평가
+                    </h5>
                     <div className="text-3xl font-bold text-blue-600">B+</div>
-                    <div className="text-sm text-blue-600 mt-1">도입 권장</div>
+                    <div className="text-base text-blue-600 mt-1">
+                      도입 권장
+                    </div>
                   </div>
                 </div>
                 <div className="mt-6 p-4 bg-yellow-50 rounded-lg">
-                  <h5 className="font-medium text-yellow-800 mb-3">📋 정책 제언</h5>
-                  <div className="text-sm space-y-2">
+                  <h5 className="font-medium text-yellow-800 mb-3">
+                    📋 정책 제언
+                  </h5>
+                  <div className="text-base space-y-2">
                     <div>• 초기 3년간 정부 보조금 확대 필요</div>
                     <div>• 타 교통수단과의 연계 할인 도입</div>
                     <div>• 취약계층 대상 요금 할인 정책 검토</div>
@@ -335,12 +485,13 @@ export function DDFDashboard() {
                   </div>
                 </div>
                 <CardDescription>
-                  {monthNames[Number.parseInt(selectedMonth) - 1]} 데이터 (최종 업데이트: 2024-01-30 14:30)
+                  {monthNames[Number.parseInt(selectedMonth) - 1]} 데이터 (최종
+                  업데이트: 2024-01-30 14:30)
                 </CardDescription>
               </CardContent>
             </Card>
           </div>
-        )
+        );
       case "settings":
         return (
           <div className="space-y-6">
@@ -352,19 +503,29 @@ export function DDFDashboard() {
               <CardContent>
                 <div className="space-y-4">
                   <div className="p-4 bg-blue-50 rounded-lg">
-                    <h4 className="font-medium text-blue-800 mb-2 flex items-center gap-2">⚙️ 자동 업데이트 설정</h4>
+                    <h4 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
+                      ⚙️ 자동 업데이트 설정
+                    </h4>
                     <div className="flex items-center gap-2">
-                      <Switch checked={isRealTimeMode} onCheckedChange={setIsRealTimeMode} />
-                      <span className="text-sm">자동 업데이트 활성화</span>
+                      <Switch
+                        checked={isRealTimeMode}
+                        onCheckedChange={setIsRealTimeMode}
+                      />
+                      <span className="text-base">자동 업데이트 활성화</span>
                     </div>
                   </div>
 
                   <div className="p-4 bg-green-50 rounded-lg">
-                    <h4 className="font-medium text-green-800 mb-3 flex items-center gap-2">📈 데이터 범위 설정</h4>
+                    <h4 className="font-medium text-green-800 mb-3 flex items-center gap-2">
+                      📈 데이터 범위 설정
+                    </h4>
                     <div className="grid grid-cols-3 gap-4">
                       <div className="text-center">
                         <Label>지역 선택</Label>
-                        <Select value={selectedRegion} onValueChange={setSelectedRegion}>
+                        <Select
+                          value={selectedRegion}
+                          onValueChange={setSelectedRegion}
+                        >
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
@@ -380,13 +541,19 @@ export function DDFDashboard() {
                       </div>
                       <div className="text-center">
                         <Label>월 선택</Label>
-                        <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                        <Select
+                          value={selectedMonth}
+                          onValueChange={setSelectedMonth}
+                        >
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             {monthNames.map((month, index) => (
-                              <SelectItem key={index + 1} value={(index + 1).toString()}>
+                              <SelectItem
+                                key={index + 1}
+                                value={(index + 1).toString()}
+                              >
                                 {month}
                               </SelectItem>
                             ))}
@@ -397,20 +564,21 @@ export function DDFDashboard() {
                   </div>
                 </div>
                 <CardDescription>
-                  {monthNames[Number.parseInt(selectedMonth) - 1]} 데이터 (최종 업데이트: 2024-01-30 14:30)
+                  {monthNames[Number.parseInt(selectedMonth) - 1]} 데이터 (최종
+                  업데이트: 2024-01-30 14:30)
                 </CardDescription>
               </CardContent>
             </Card>
           </div>
-        )
+        );
       default:
         return (
           <Suspense fallback={<LoadingSpinner />}>
             <DashboardContent selectedMonth={selectedMonth} />
           </Suspense>
-        )
+        );
     }
-  }
+  };
 
   return (
     <SidebarProvider>
@@ -422,7 +590,9 @@ export function DDFDashboard() {
             </div>
             <div>
               <h2 className="text-lg font-semibold">DDF 대시보드</h2>
-              <p className="text-xs text-muted-foreground">DRT 적합성 분석 시스템</p>
+              <p className="text-base text-muted-foreground">
+                DRT 적합성 분석 시스템
+              </p>
             </div>
           </div>
         </SidebarHeader>
@@ -442,7 +612,9 @@ export function DDFDashboard() {
                     >
                       <item.icon className="h-4 w-4" />
                       <span>{item.label}</span>
-                      {activePage === item.id && <ChevronRight className="ml-auto h-4 w-4" />}
+                      {activePage === item.id && (
+                        <ChevronRight className="ml-auto h-4 w-4" />
+                      )}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
@@ -455,25 +627,25 @@ export function DDFDashboard() {
             <SidebarGroupLabel>최신 현황</SidebarGroupLabel>
             <SidebarGroupContent>
               <div className="space-y-3 px-2">
-                <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center justify-between text-base">
                   <span className="text-muted-foreground">교통량</span>
                   <span className="font-medium">64.2%</span>
                 </div>
-                <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center justify-between text-base">
                   <span className="text-muted-foreground">평균속도</span>
                   <span className="font-medium">36.8km/h</span>
                 </div>
-                <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center justify-between text-base">
                   <span className="text-muted-foreground">적합성 분석</span>
                   <span className="font-medium">18,500</span>
                 </div>
-                <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center justify-between text-base">
                   <span className="text-muted-foreground">취약지</span>
                   <span className="font-medium">10개 지역</span>
                 </div>
-                <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center justify-between text-base">
                   <span className="text-muted-foreground">시스템</span>
-                  <Badge variant="default" className="text-xs">
+                  <Badge variant="default" className="text-base">
                     정상
                   </Badge>
                 </div>
@@ -492,7 +664,8 @@ export function DDFDashboard() {
           <div className="flex flex-1 items-center justify-between">
             <div>
               <h1 className="text-xl font-semibold">
-                {navigationItems.find((item) => item.id === activePage)?.label || "대시보드"}
+                {navigationItems.find((item) => item.id === activePage)
+                  ?.label || "대시보드"}
               </h1>
             </div>
             <div className="flex items-center gap-3">
@@ -522,8 +695,11 @@ export function DDFDashboard() {
                 </SelectContent>
               </Select>
               <div className="flex items-center gap-2">
-                <Switch checked={isRealTimeMode} onCheckedChange={setIsRealTimeMode} />
-                <span className="text-sm">자동 업데이트</span>
+                <Switch
+                  checked={isRealTimeMode}
+                  onCheckedChange={setIsRealTimeMode}
+                />
+                <span className="text-base">자동 업데이트</span>
               </div>
               <Button variant="outline" size="icon">
                 <RefreshCw className="h-4 w-4" />
@@ -539,5 +715,5 @@ export function DDFDashboard() {
         <main className="flex-1 overflow-auto p-6">{renderPageContent()}</main>
       </SidebarInset>
     </SidebarProvider>
-  )
+  );
 }
