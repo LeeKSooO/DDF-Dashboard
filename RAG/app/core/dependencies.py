@@ -1,0 +1,135 @@
+"""
+Application dependencies setup
+"""
+
+import logging
+from typing import Generator, Optional
+from fastapi import FastAPI, Depends
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, Session
+from redis import Redis
+
+from app.core.config import settings
+from app.services.llm_service import LLMService
+from app.services.embedding_service import EmbeddingService
+from app.services.vector_store_service import VectorStoreService
+from app.services.document_loader_service import DocumentLoaderService
+
+
+# Database setup
+engine = None
+SessionLocal = None
+
+if settings.DATABASE_URL:
+    engine = create_engine(
+        settings.DATABASE_URL,
+        pool_size=settings.DATABASE_POOL_SIZE,
+        max_overflow=settings.DATABASE_MAX_OVERFLOW,
+    )
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Redis setup
+redis_client: Optional[Redis] = None
+if settings.REDIS_URL:
+    try:
+        redis_client = Redis.from_url(settings.REDIS_URL, decode_responses=True)
+    except Exception as e:
+        logging.warning(f"Redis connection failed: {e}")
+
+# Service instances (will be initialized on startup)
+llm_service: Optional[LLMService] = None
+embedding_service: Optional[EmbeddingService] = None
+vector_store_service: Optional[VectorStoreService] = None
+document_loader_service: Optional[DocumentLoaderService] = None
+
+
+def get_database() -> Generator[Session, None, None]:
+    """Get database session"""
+    if not SessionLocal:
+        raise RuntimeError("Database not configured")
+    
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def get_redis() -> Optional[Redis]:
+    """Get Redis client"""
+    return redis_client
+
+
+def get_llm_service() -> LLMService:
+    """Get LLM service instance"""
+    if not llm_service:
+        raise RuntimeError("LLM service not initialized")
+    return llm_service
+
+
+def get_embedding_service() -> EmbeddingService:
+    """Get embedding service instance"""
+    if not embedding_service:
+        raise RuntimeError("Embedding service not initialized")
+    return embedding_service
+
+
+def get_vector_store_service() -> VectorStoreService:
+    """Get vector store service instance"""
+    if not vector_store_service:
+        raise RuntimeError("Vector store service not initialized")
+    return vector_store_service
+
+
+def get_document_loader_service() -> DocumentLoaderService:
+    """Get document loader service instance"""
+    if not document_loader_service:
+        raise RuntimeError("Document loader service not initialized")
+    return document_loader_service
+
+
+async def setup_dependencies(app: FastAPI) -> None:
+    """Setup all application dependencies"""
+    global llm_service, embedding_service, vector_store_service, document_loader_service
+    
+    logging.info("🚀 Initializing application dependencies...")
+    
+    try:
+        # Initialize services
+        llm_service = LLMService()
+        embedding_service = EmbeddingService()
+        document_loader_service = DocumentLoaderService()
+        vector_store_service = VectorStoreService(embedding_service)
+        
+        # Initialize services in proper order
+        await llm_service.initialize()
+        await embedding_service.initialize() 
+        await document_loader_service.initialize()
+        await vector_store_service.initialize(document_loader_service)  # Pass document loader
+        
+        logging.info("✅ All dependencies initialized successfully")
+        
+    except Exception as e:
+        logging.error(f"❌ Failed to initialize dependencies: {e}")
+        raise e
+
+
+async def cleanup_dependencies() -> None:
+    """Cleanup application dependencies"""
+    global llm_service, embedding_service, vector_store_service, document_loader_service
+    
+    logging.info("🧹 Cleaning up application dependencies...")
+    
+    if vector_store_service:
+        await vector_store_service.cleanup()
+    if document_loader_service:
+        await document_loader_service.cleanup()
+    if embedding_service:
+        await embedding_service.cleanup()
+    if llm_service:
+        await llm_service.cleanup()
+    
+    if redis_client:
+        await redis_client.close()
+    
+    logging.info("✅ Dependencies cleanup completed")

@@ -14,10 +14,11 @@ services:
       POSTGRES_USER: ddf_user
       POSTGRES_PASSWORD: ddf_password
       POSTGRES_DB: ddf_db
-      #PGDATA: /home/postgres/pgdata/data
+      PGDATA: /home/postgres/pgdata/data
     volumes:
       - ../postgres:/home/postgres/pgdata
       - ./database/init:/docker-entrypoint-initdb.d
+      - ./database/migrations:/docker-entrypoint-initdb.d/migrations
     ports:
       - "5432:5432"
     networks:
@@ -84,8 +85,8 @@ services:
       TZ: Asia/Seoul
     ports:
       - "8080:8080"  # Inference API
-      - "8081:8081"  # Management API
-      - "8082:8082"  # Metrics API
+      #- "8081:8081"  # Management API
+      #- "8082:8082"  # Metrics API
     volumes:
       # .mar 파일이 있는 model-store와 config 파일만 마운트.
       - ../ai/torchserve/model-store:/home/model-server/model-store
@@ -123,6 +124,30 @@ services:
       - ddf-network
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+
+  # RAG API Server
+  rag:
+    build: ../RAG
+    container_name: ddf-rag
+    env_file:
+      - ../.env
+    environment:
+      BACKEND_API_URL: http://backend:8000
+      DATABASE_URL: postgresql://ddf_user:ddf_password@postgres:5432/ddf_db
+      TZ: Asia/Seoul
+    ports:
+      - "8001:8001"
+    volumes:
+      - ../RAG:/rag
+      - ../RAG/data:/rag/data  # Host 디렉토리 직접 마운트
+    depends_on:
+      backend:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    networks:
+      - ddf-network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 
   # Redis for caching (optional but recommended)
   redis:
