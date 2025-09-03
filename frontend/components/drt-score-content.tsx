@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
-import { Briefcase, Camera, Heart, Target } from "lucide-react"
+import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Briefcase, Camera, Heart, Target, TrendingUp, HelpCircle } from "lucide-react"
 import {
   ResponsiveContainer,
   BarChart,
@@ -219,7 +220,8 @@ export function DRTScoreContent({ selectedMonth, selectedRegion }: DRTScoreConte
   }
 
   return (
-    <div className="space-y-6">
+    <TooltipProvider>
+      <div className="space-y-6">
       {/* DRT 스코어 개요 */}
       <Card>
         <CardHeader>
@@ -250,6 +252,255 @@ export function DRTScoreContent({ selectedMonth, selectedRegion }: DRTScoreConte
               <p className="text-base text-purple-600 mt-1">평균 스코어 ({vulnerableData?.stations?.length || 0}개 정류장)</p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* DRT 필요성 진단 지표 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            DRT 필요성 진단 지표
+          </CardTitle>
+          <CardDescription>선택된 지역의 DRT 도입 효과성 및 필요성 분석</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {(() => {
+            // 현재 선택된 지역의 정류장 데이터 수집
+            const currentStations = (() => {
+              if (selectedRegion === "전체") {
+                // 전체 선택시 모든 모델의 정류장을 합친 데이터
+                const allStations = [
+                  ...(vulnerableData?.stations || []),
+                  ...(commuterData?.stations || []),
+                  ...(tourismData?.stations || [])
+                ];
+                
+                // 중복 제거 (station_id 기준)
+                const uniqueStations = allStations.reduce((acc, station) => {
+                  const existingStation = acc.find(s => s.station_id === station.station_id);
+                  if (!existingStation) {
+                    acc.push(station);
+                  }
+                  return acc;
+                }, [] as any[]);
+                
+                return uniqueStations;
+              } else {
+                // 단일 구 선택시 해당 구의 모든 모델 정류장
+                return [
+                  ...(vulnerableData?.stations || []),
+                  ...(commuterData?.stations || []),
+                  ...(tourismData?.stations || [])
+                ];
+              }
+            })();
+
+            if (currentStations.length === 0) {
+              return (
+                <div className="text-center text-gray-500 py-8">
+                  <TrendingUp className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-base font-medium">DRT 데이터를 불러오는 중...</p>
+                  <p className="text-base">지표 분석을 위해 잠시만 기다려주세요</p>
+                </div>
+              );
+            }
+
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* DRT 점수 집중도 */}
+                <div className="p-4 bg-red-50 rounded-lg">
+                  <h4 className="font-medium text-red-800 mb-3 flex items-center gap-2">
+                    🎯 DRT 점수 집중도
+                    <UITooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-4 w-4 text-red-600 hover:text-red-800 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <div className="space-y-2">
+                          <p className="font-semibold">DRT 점수 집중도란?</p>
+                          <p>해당 지역의 상위 5개 정류장이 전체 DRT 점수에서 차지하는 비중을 나타냅니다.</p>
+                          <div className="border-t pt-2 space-y-1">
+                            <p><strong>50% 이상:</strong> 특정 정류장으로 DRT 수요가 심하게 집중</p>
+                            <p><strong>30-50%:</strong> 중간 수준의 집중</p>
+                            <p><strong>30% 미만:</strong> DRT 수요가 고르게 분산</p>
+                          </div>
+                          <div className="border-t pt-2">
+                            <p className="text-sm text-red-600 font-medium">💡 DRT 효과성: 집중도가 높을수록 우선 투입 지역이 명확합니다.</p>
+                          </div>
+                        </div>
+                      </TooltipContent>
+                    </UITooltip>
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="text-3xl font-bold text-red-600">
+                      {(() => {
+                        if (currentStations.length === 0) return "0%";
+                        
+                        const sortedStations = [...currentStations].sort((a, b) => (b.drt_score || 0) - (a.drt_score || 0));
+                        const top5Scores = sortedStations.slice(0, 5).reduce((sum, s) => sum + (s.drt_score || 0), 0);
+                        const totalScores = currentStations.reduce((sum, s) => sum + (s.drt_score || 0), 0);
+                        
+                        return totalScores > 0 ? `${(top5Scores / totalScores * 100).toFixed(1)}%` : "0%";
+                      })()}
+                    </div>
+                    <div className="text-base text-gray-600">
+                      <div>상위 5개 정류장 DRT 점수 비중</div>
+                      <div className="mt-2">
+                        <div className="flex justify-between text-sm">
+                          <span>우선순위 분석:</span>
+                          <span className="font-medium text-red-600">
+                            {(() => {
+                              if (currentStations.length === 0) return "대기중";
+                              const sortedStations = [...currentStations].sort((a, b) => (b.drt_score || 0) - (a.drt_score || 0));
+                              const top5Scores = sortedStations.slice(0, 5).reduce((sum, s) => sum + (s.drt_score || 0), 0);
+                              const totalScores = currentStations.reduce((sum, s) => sum + (s.drt_score || 0), 0);
+                              const concentration = totalScores > 0 ? (top5Scores / totalScores * 100) : 0;
+                              return concentration > 50 ? "높은집중" : concentration > 30 ? "중간집중" : "고른분산";
+                            })()}
+                          </span>
+                        </div>
+                        <div className="text-sm text-gray-500 mt-1">
+                          *집중도가 높을수록 우선 투입 지역 명확
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* DRT 점수 편차 */}
+                <div className="p-4 bg-orange-50 rounded-lg">
+                  <h4 className="font-medium text-orange-800 mb-3 flex items-center gap-2">
+                    ⚖️ DRT 점수 편차
+                    <UITooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-4 w-4 text-orange-600 hover:text-orange-800 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <div className="space-y-2">
+                          <p className="font-semibold">DRT 점수 편차란?</p>
+                          <p>정류장 간 DRT 점수의 표준편차로 서비스 불균형 정도를 나타냅니다.</p>
+                          <div className="border-t pt-2 space-y-1">
+                            <p><strong>20 이상:</strong> 정류장 간 서비스 격차가 매우 큰 상태</p>
+                            <p><strong>10-20:</strong> 중간 수준의 격차</p>
+                            <p><strong>10 미만:</strong> 비교적 균등한 서비스 분포</p>
+                          </div>
+                          <div className="border-t pt-2">
+                            <p className="text-sm text-orange-600 font-medium">💡 정책 방향: 편차가 클수록 서비스 형평성 개선이 우선 과제입니다.</p>
+                          </div>
+                        </div>
+                      </TooltipContent>
+                    </UITooltip>
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="text-3xl font-bold text-orange-600">
+                      {(() => {
+                        if (currentStations.length < 2) return "0.0";
+                        
+                        const scores = currentStations.map(s => s.drt_score || 0);
+                        const mean = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+                        const variance = scores.reduce((sum, score) => sum + Math.pow(score - mean, 2), 0) / scores.length;
+                        const stdDev = Math.sqrt(variance);
+                        
+                        return stdDev.toFixed(1);
+                      })()}
+                    </div>
+                    <div className="text-base text-gray-600">
+                      <div>정류장 간 DRT 점수 표준편차</div>
+                      <div className="mt-2">
+                        <div className="flex justify-between text-sm">
+                          <span>서비스 균형:</span>
+                          <span className="font-medium text-orange-600">
+                            {(() => {
+                              if (currentStations.length < 2) return "측정불가";
+                              
+                              const scores = currentStations.map(s => s.drt_score || 0);
+                              const mean = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+                              const variance = scores.reduce((sum, score) => sum + Math.pow(score - mean, 2), 0) / scores.length;
+                              const stdDev = Math.sqrt(variance);
+                              
+                              return stdDev > 20 ? "불균형심화" : stdDev > 10 ? "중간불균형" : "균형양호";
+                            })()}
+                          </span>
+                        </div>
+                        <div className="text-sm text-gray-500 mt-1">
+                          *편차가 클수록 형평성 개선 필요
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 고점수-저점수 정류장 비율 */}
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <h4 className="font-medium text-blue-800 mb-3 flex items-center gap-2">
+                    🔴🟢 고점수-저점수 비율
+                    <UITooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-4 w-4 text-blue-600 hover:text-blue-800 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <div className="space-y-2">
+                          <p className="font-semibold">고점수-저점수란?</p>
+                          <p>평균 DRT 점수를 기준으로 정류장을 고점수(우선지역)와 저점수(관찰지역)로 분류한 개념입니다.</p>
+                          <div className="border-t pt-2 space-y-1">
+                            <p><strong>🔴 고점수:</strong> 평균 이상의 DRT 점수를 받은 우선 투입 지역</p>
+                            <p><strong>🟢 저점수:</strong> 평균 이하의 DRT 점수를 받은 관찰 필요 지역</p>
+                          </div>
+                          <div className="border-t pt-2">
+                            <p className="text-sm text-blue-600 font-medium">💡 투입 전략: 고점수 지역부터 우선 투입하되, 저점수 지역의 근본 원인도 분석이 필요합니다.</p>
+                          </div>
+                        </div>
+                      </TooltipContent>
+                    </UITooltip>
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="text-3xl font-bold text-blue-600">
+                      {(() => {
+                        if (currentStations.length === 0) return "0:0";
+                        
+                        const avgScore = currentStations.reduce((sum, s) => sum + (s.drt_score || 0), 0) / currentStations.length;
+                        const highScores = currentStations.filter(s => (s.drt_score || 0) >= avgScore).length;
+                        const lowScores = currentStations.filter(s => (s.drt_score || 0) < avgScore).length;
+                        
+                        return `${highScores}:${lowScores}`;
+                      })()}
+                    </div>
+                    <div className="text-base text-gray-600">
+                      <div>우선투입:관찰필요 정류장 비율</div>
+                      <div className="mt-2 space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span>🔴 우선투입:</span>
+                          <span className="font-medium text-red-600">
+                            {(() => {
+                              if (currentStations.length === 0) return "0개";
+                              const avgScore = currentStations.reduce((sum, s) => sum + (s.drt_score || 0), 0) / currentStations.length;
+                              const highScores = currentStations.filter(s => (s.drt_score || 0) >= avgScore).length;
+                              return `${highScores}개`;
+                            })()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>🟢 관찰필요:</span>
+                          <span className="font-medium text-green-600">
+                            {(() => {
+                              if (currentStations.length === 0) return "0개";
+                              const avgScore = currentStations.reduce((sum, s) => sum + (s.drt_score || 0), 0) / currentStations.length;
+                              const lowScores = currentStations.filter(s => (s.drt_score || 0) < avgScore).length;
+                              return `${lowScores}개`;
+                            })()}
+                          </span>
+                        </div>
+                        <div className="text-sm text-gray-500 mt-1">
+                          *우선투입 지역부터 단계적 서비스 확대
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </CardContent>
       </Card>
 
@@ -708,6 +959,7 @@ export function DRTScoreContent({ selectedMonth, selectedRegion }: DRTScoreConte
           </CardDescription>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </TooltipProvider>
   )
 }

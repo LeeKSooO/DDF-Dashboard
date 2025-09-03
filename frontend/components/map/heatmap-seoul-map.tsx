@@ -796,9 +796,16 @@ const HeatmapSeoulMapComponent = forwardRef<
                   </div>
                 )}
                 {selectedPattern === 'rushhour' && (
-                  <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 rounded-full bg-orange-500 border-2 border-black"></div>
-                    <span className="text-orange-700">러시아워 핫스팟 ({patternStations.length}곳)</span>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded-full" style={{ backgroundColor: '#FF6B35' }}></div>
+                      <span className="text-orange-700 text-sm">🌅 오전 러시아워 (07-09시)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded-full" style={{ backgroundColor: '#DC2626' }}></div>
+                      <span className="text-red-700 text-sm">🌆 오후 러시아워 (17-19시)</span>
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1">총 {patternStations.length}곳</div>
                   </div>
                 )}
                 {selectedPattern === 'areatype' && (
