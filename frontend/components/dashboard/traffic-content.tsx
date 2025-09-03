@@ -23,6 +23,36 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
   const [seoulData, setSeoulData] = useState<TrafficResponse | null>(null);
   const [loadingSeoul, setLoadingSeoul] = useState(true);
 
+  // 승차/하차 통계 계산
+  const getTrafficStats = (data: TrafficResponse | null) => {
+    if (!data) return null;
+    
+    const totalWeekdayRide = data.weekday_patterns.reduce((sum, pattern) => sum + pattern.avg_ride_passengers, 0);
+    const totalWeekdayAlight = data.weekday_patterns.reduce((sum, pattern) => sum + pattern.avg_alight_passengers, 0);
+    const totalWeekendRide = data.weekend_patterns.reduce((sum, pattern) => sum + pattern.avg_ride_passengers, 0);
+    const totalWeekendAlight = data.weekend_patterns.reduce((sum, pattern) => sum + pattern.avg_alight_passengers, 0);
+    
+    console.log('🚌 Traffic Stats Calculation:', {
+      totalWeekdayRide: totalWeekdayRide.toFixed(2),
+      totalWeekdayAlight: totalWeekdayAlight.toFixed(2),
+      totalWeekendRide: totalWeekendRide.toFixed(2),
+      totalWeekendAlight: totalWeekendAlight.toFixed(2),
+      rounded: {
+        totalWeekdayRide: Math.round(totalWeekdayRide),
+        totalWeekdayAlight: Math.round(totalWeekdayAlight),
+        totalWeekendRide: Math.round(totalWeekendRide),
+        totalWeekendAlight: Math.round(totalWeekendAlight)
+      }
+    });
+    
+    return {
+      totalWeekdayRide: totalWeekdayRide.toFixed(1),
+      totalWeekdayAlight: totalWeekdayAlight.toFixed(1),
+      totalWeekendRide: totalWeekendRide.toFixed(1),
+      totalWeekendAlight: totalWeekendAlight.toFixed(1)
+    };
+  };
+
   // 서울 전체 데이터 로드
   useEffect(() => {
     const loadSeoulData = async () => {
@@ -111,10 +141,10 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
                 <Users className="h-5 w-5 text-blue-500" />
-                <span className="text-base font-medium text-gray-600">주중 평균 승차</span>
+                <span className="text-base font-medium text-gray-600">주중 총 승차</span>
               </div>
               <div className="text-2xl font-bold text-gray-900 mt-2">
-                {seoulData?.total_weekday_passengers ? Math.round(seoulData.total_weekday_passengers / 2).toLocaleString() : '129'}
+                {getTrafficStats(seoulData)?.totalWeekdayRide || '-'}
               </div>
             </CardContent>
           </Card>
@@ -123,10 +153,10 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
                 <Users className="h-5 w-5 text-red-500" />
-                <span className="text-base font-medium text-gray-600">주중 평균 하차</span>
+                <span className="text-base font-medium text-gray-600">주중 총 하차</span>
               </div>
               <div className="text-2xl font-bold text-gray-900 mt-2">
-                {seoulData?.total_weekday_passengers ? Math.round(seoulData.total_weekday_passengers / 2).toLocaleString() : '129'}
+                {getTrafficStats(seoulData)?.totalWeekdayAlight || '-'}
               </div>
             </CardContent>
           </Card>
@@ -135,10 +165,10 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
                 <Users className="h-5 w-5 text-green-500" />
-                <span className="text-base font-medium text-gray-600">주말 평균 승차</span>
+                <span className="text-base font-medium text-gray-600">주말 총 승차</span>
               </div>
               <div className="text-2xl font-bold text-gray-900 mt-2">
-                {seoulData?.total_weekend_passengers ? Math.round(seoulData.total_weekend_passengers / 2).toLocaleString() : '89'}
+                {getTrafficStats(seoulData)?.totalWeekendRide || '-'}
               </div>
             </CardContent>
           </Card>
@@ -147,10 +177,10 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
                 <Users className="h-5 w-5 text-yellow-500" />
-                <span className="text-base font-medium text-gray-600">주말 평균 하차</span>
+                <span className="text-base font-medium text-gray-600">주말 총 하차</span>
               </div>
               <div className="text-2xl font-bold text-gray-900 mt-2">
-                {seoulData?.total_weekend_passengers ? Math.round(seoulData.total_weekend_passengers / 2).toLocaleString() : '89'}
+                {getTrafficStats(seoulData)?.totalWeekendAlight || '-'}
               </div>
             </CardContent>
           </Card>
@@ -412,18 +442,28 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
     const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
     // 구별 총합 데이터 (승차/하차 분리)
-    const summaryData = selectedDistricts.map((district, index) => ({
-      district,
-      weekday_boarding: Math.round((districtData[district]?.total_weekday_passengers || 0) / 2),
-      weekday_alighting: Math.round((districtData[district]?.total_weekday_passengers || 0) / 2),
-      weekend_boarding: Math.round((districtData[district]?.total_weekend_passengers || 0) / 2),
-      weekend_alighting: Math.round((districtData[district]?.total_weekend_passengers || 0) / 2),
-      weekday_total: districtData[district]?.total_weekday_passengers || 0,
-      weekend_total: districtData[district]?.total_weekend_passengers || 0,
-      color: colors[index]
-    })).sort((a, b) => {
-      const aValue = patternType === 'weekday' ? a.weekday_total : a.weekend_total;
-      const bValue = patternType === 'weekday' ? b.weekday_total : b.weekend_total;
+    const summaryData = selectedDistricts.map((district, index) => {
+      const data = districtData[district];
+      if (!data) return { district, weekday_boarding: 0, weekday_alighting: 0, weekend_boarding: 0, weekend_alighting: 0, color: colors[index] };
+      
+      const weekdayRide = data.weekday_patterns.reduce((sum, pattern) => sum + pattern.avg_ride_passengers, 0);
+      const weekdayAlight = data.weekday_patterns.reduce((sum, pattern) => sum + pattern.avg_alight_passengers, 0);
+      const weekendRide = data.weekend_patterns.reduce((sum, pattern) => sum + pattern.avg_ride_passengers, 0);
+      const weekendAlight = data.weekend_patterns.reduce((sum, pattern) => sum + pattern.avg_alight_passengers, 0);
+      
+      return {
+        district,
+        weekday_boarding: weekdayRide.toFixed(1),
+        weekday_alighting: weekdayAlight.toFixed(1),
+        weekend_boarding: weekendRide.toFixed(1),
+        weekend_alighting: weekendAlight.toFixed(1),
+        weekday_total: data.total_weekday_passengers || 0,
+        weekend_total: data.total_weekend_passengers || 0,
+        color: colors[index]
+      };
+    }).sort((a, b) => {
+      const aValue = patternType === 'weekday' ? (a.weekday_total || 0) : (a.weekend_total || 0);
+      const bValue = patternType === 'weekday' ? (b.weekday_total || 0) : (b.weekend_total || 0);
       return bValue - aValue;
     });
 

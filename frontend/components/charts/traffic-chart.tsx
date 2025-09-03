@@ -18,7 +18,8 @@ export function TrafficChart({ className }: TrafficChartProps) {
   const [error, setError] = useState<string | null>(null);
   const [regionType, setRegionType] = useState<'seoul' | 'district'>('seoul');
   const [selectedDistrict, setSelectedDistrict] = useState<string>('');
-  const [analysisMonth] = useState('2025-08-01'); // 현재 사용 가능한 데이터
+  const [analysisMonth] = useState('2025-07-01'); // 현재 사용 가능한 데이터
+  const [viewMode, setViewMode] = useState<'total' | 'separate'>('separate'); // 총 승객수 vs 승차/하차 구분
 
   // 차트 데이터 변환
   const chartData = useMemo(() => {
@@ -50,11 +51,30 @@ export function TrafficChart({ className }: TrafficChartProps) {
     const maxWeekday = Math.max(...chartData.map(d => d.weekday));
     const maxWeekend = Math.max(...chartData.map(d => d.weekend));
     
+    // 승차/하차 분리 통계 계산
+    const totalWeekdayRide = data.weekday_patterns.reduce((sum, pattern) => sum + pattern.avg_ride_passengers, 0);
+    const totalWeekdayAlight = data.weekday_patterns.reduce((sum, pattern) => sum + pattern.avg_alight_passengers, 0);
+    const totalWeekendRide = data.weekend_patterns.reduce((sum, pattern) => sum + pattern.avg_ride_passengers, 0);
+    const totalWeekendAlight = data.weekend_patterns.reduce((sum, pattern) => sum + pattern.avg_alight_passengers, 0);
+    
+    console.log('🚌 Traffic Statistics Debug:', {
+      totalWeekdayRide,
+      totalWeekdayAlight,
+      totalWeekendRide,
+      totalWeekendAlight,
+      sampleWeekdayPattern: data.weekday_patterns[8], // 8시 데이터
+      sampleWeekendPattern: data.weekend_patterns[8]  // 8시 데이터
+    });
+    
     return {
       maxWeekday,
       maxWeekend,
       totalWeekday: data.total_weekday_passengers,
       totalWeekend: data.total_weekend_passengers,
+      totalWeekdayRide,
+      totalWeekdayAlight,
+      totalWeekendRide,
+      totalWeekendAlight,
       ratio: data.weekday_weekend_ratio,
       peakHours: data.peak_hours
     };
@@ -100,7 +120,7 @@ export function TrafficChart({ className }: TrafficChartProps) {
                 className="w-3 h-3 rounded-full" 
                 style={{ backgroundColor: entry.color }}
               />
-              <span className="capitalize">{entry.dataKey === 'weekday' ? '평일' : '주말'}:</span>
+              <span className="capitalize">{entry.name}:</span>
               <span className="font-medium">{utils.formatNumber(entry.value)}명</span>
             </div>
           ))}
@@ -171,7 +191,7 @@ export function TrafficChart({ className }: TrafficChartProps) {
         </div>
 
         {/* 컨트롤 섹션 */}
-        <div className="flex gap-4 mt-4">
+        <div className="flex gap-4 mt-4 flex-wrap">
           <div className="flex items-center gap-2">
             <label className="text-base font-medium">지역 구분:</label>
             <Select value={regionType} onValueChange={(value: 'seoul' | 'district') => setRegionType(value)}>
@@ -202,6 +222,19 @@ export function TrafficChart({ className }: TrafficChartProps) {
               </Select>
             </div>
           )}
+
+          <div className="flex items-center gap-2">
+            <label className="text-base font-medium">표시 모드:</label>
+            <Select value={viewMode} onValueChange={(value: 'total' | 'separate') => setViewMode(value)}>
+              <SelectTrigger className="w-36">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="total">총 승객수</SelectItem>
+                <SelectItem value="separate">승차/하차 구분</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </CardHeader>
 
@@ -209,30 +242,61 @@ export function TrafficChart({ className }: TrafficChartProps) {
         {/* 통계 카드 */}
         {statistics && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">
-                {utils.formatNumber(statistics.totalWeekday)}
-              </div>
-              <div className="text-base text-muted-foreground">평일 총 승객</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-orange-600">
-                {utils.formatNumber(statistics.totalWeekend)}
-              </div>
-              <div className="text-base text-muted-foreground">주말 총 승객</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">
-                {(statistics.ratio * 100).toFixed(1)}%
-              </div>
-              <div className="text-base text-muted-foreground">평일/주말 비율</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">
-                {utils.formatHour(statistics.peakHours.weekday_morning_peak.hour)}
-              </div>
-              <div className="text-base text-muted-foreground">평일 피크</div>
-            </div>
+            {viewMode === 'total' ? (
+              <>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {utils.formatNumber(statistics.totalWeekday)}
+                  </div>
+                  <div className="text-base text-muted-foreground">평일 총 승객</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-orange-600">
+                    {utils.formatNumber(statistics.totalWeekend)}
+                  </div>
+                  <div className="text-base text-muted-foreground">주말 총 승객</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {(statistics.ratio * 100).toFixed(1)}%
+                  </div>
+                  <div className="text-base text-muted-foreground">평일/주말 비율</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {utils.formatHour(statistics.peakHours.weekday_morning_peak.hour)}
+                  </div>
+                  <div className="text-base text-muted-foreground">평일 피크</div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {utils.formatNumber(statistics.totalWeekdayRide)}
+                  </div>
+                  <div className="text-base text-muted-foreground">주중 평균 승차</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-400">
+                    {utils.formatNumber(statistics.totalWeekdayAlight)}
+                  </div>
+                  <div className="text-base text-muted-foreground">주중 평균 하차</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-orange-600">
+                    {utils.formatNumber(statistics.totalWeekendRide)}
+                  </div>
+                  <div className="text-base text-muted-foreground">주말 평균 승차</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-orange-400">
+                    {utils.formatNumber(statistics.totalWeekendAlight)}
+                  </div>
+                  <div className="text-base text-muted-foreground">주말 평균 하차</div>
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -272,38 +336,107 @@ export function TrafficChart({ className }: TrafficChartProps) {
               />
               <Tooltip content={<CustomTooltip />} />
               <Legend />
-              <Line 
-                type="monotone" 
-                dataKey="weekday" 
-                stroke="#2563eb" 
-                strokeWidth={3}
-                name="평일"
-                dot={{ fill: '#2563eb', strokeWidth: 2, r: 4 }}
-                activeDot={{ r: 6 }}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="weekend" 
-                stroke="#ea580c" 
-                strokeWidth={3}
-                name="주말"
-                dot={{ fill: '#ea580c', strokeWidth: 2, r: 4 }}
-                activeDot={{ r: 6 }}
-              />
+              
+              {viewMode === 'total' ? (
+                <>
+                  <Line 
+                    type="monotone" 
+                    dataKey="weekday" 
+                    stroke="#2563eb" 
+                    strokeWidth={3}
+                    name="평일 총 승객"
+                    dot={{ fill: '#2563eb', strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="weekend" 
+                    stroke="#ea580c" 
+                    strokeWidth={3}
+                    name="주말 총 승객"
+                    dot={{ fill: '#ea580c', strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </>
+              ) : (
+                <>
+                  <Line 
+                    type="monotone" 
+                    dataKey="weekdayRide" 
+                    stroke="#2563eb" 
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    name="평일 승차"
+                    dot={{ fill: '#2563eb', strokeWidth: 2, r: 3 }}
+                    activeDot={{ r: 5 }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="weekdayAlight" 
+                    stroke="#2563eb" 
+                    strokeWidth={2}
+                    name="평일 하차"
+                    dot={{ fill: '#2563eb', strokeWidth: 2, r: 3 }}
+                    activeDot={{ r: 5 }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="weekendRide" 
+                    stroke="#ea580c" 
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    name="주말 승차"
+                    dot={{ fill: '#ea580c', strokeWidth: 2, r: 3 }}
+                    activeDot={{ r: 5 }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="weekendAlight" 
+                    stroke="#ea580c" 
+                    strokeWidth={2}
+                    name="주말 하차"
+                    dot={{ fill: '#ea580c', strokeWidth: 2, r: 3 }}
+                    activeDot={{ r: 5 }}
+                  />
+                </>
+              )}
             </LineChart>
           </ResponsiveContainer>
         </div>
 
         {/* 범례 */}
-        <div className="flex justify-center mt-4 gap-6 text-base">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-1 bg-blue-600 rounded"></div>
-            <span>평일 ({utils.formatNumber(statistics?.totalWeekday || 0)}명)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-1 bg-orange-600 rounded"></div>
-            <span>주말 ({utils.formatNumber(statistics?.totalWeekend || 0)}명)</span>
-          </div>
+        <div className="flex justify-center mt-4 gap-6 text-base flex-wrap">
+          {viewMode === 'total' ? (
+            <>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-1 bg-blue-600 rounded"></div>
+                <span>평일 총 승객 ({utils.formatNumber(statistics?.totalWeekday || 0)}명)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-1 bg-orange-600 rounded"></div>
+                <span>주말 총 승객 ({utils.formatNumber(statistics?.totalWeekend || 0)}명)</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-1 bg-blue-600 rounded" style={{borderTop: '2px dashed #2563eb'}}></div>
+                <span>평일 승차</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-1 bg-blue-600 rounded"></div>
+                <span>평일 하차</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-1 bg-orange-600 rounded" style={{borderTop: '2px dashed #ea580c'}}></div>
+                <span>주말 승차</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-1 bg-orange-600 rounded"></div>
+                <span>주말 하차</span>
+              </div>
+            </>
+          )}
         </div>
       </CardContent>
     </Card>

@@ -66,13 +66,7 @@ export interface DRTScoreMapProps extends MapProps {
 
 // Chart 컴포넌트 props
 export interface TrafficChartProps {
-  data: Array<{
-    hour: number;
-    weekday: number;
-    weekend: number;
-  }>;
-  title?: string;
-  height?: number;
+  className?: string;
 }
 
 // 분석 패널 props
