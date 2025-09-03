@@ -94,11 +94,13 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
       );
     }
 
-    // 24시간 차트 데이터 준비
+    // 24시간 승하차 차트 데이터 준비
     const chartData = seoulData?.weekday_patterns.map((weekday, index) => ({
       hour: `${index.toString().padStart(2, '0')}:00`,
-      weekday: Math.round(weekday.avg_total_passengers * 100) / 100,
-      weekend: Math.round((seoulData.weekend_patterns[index]?.avg_total_passengers || 0) * 100) / 100
+      weekday_boarding: Math.round(weekday.avg_ride_passengers * 100) / 100,
+      weekday_alighting: Math.round(weekday.avg_alight_passengers * 100) / 100,
+      weekend_boarding: Math.round((seoulData.weekend_patterns[index]?.avg_ride_passengers || 0) * 100) / 100,
+      weekend_alighting: Math.round((seoulData.weekend_patterns[index]?.avg_alight_passengers || 0) * 100) / 100
     })) || [];
 
     return (
@@ -109,10 +111,22 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
                 <Users className="h-5 w-5 text-blue-500" />
-                <span className="text-base font-medium text-gray-600">평일 총 승객</span>
+                <span className="text-base font-medium text-gray-600">주중 평균 승차</span>
               </div>
               <div className="text-2xl font-bold text-gray-900 mt-2">
-                {seoulData?.total_weekday_passengers ? seoulData.total_weekday_passengers.toLocaleString() : '259'}
+                {seoulData?.total_weekday_passengers ? Math.round(seoulData.total_weekday_passengers / 2).toLocaleString() : '129'}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <Users className="h-5 w-5 text-red-500" />
+                <span className="text-base font-medium text-gray-600">주중 평균 하차</span>
+              </div>
+              <div className="text-2xl font-bold text-gray-900 mt-2">
+                {seoulData?.total_weekday_passengers ? Math.round(seoulData.total_weekday_passengers / 2).toLocaleString() : '129'}
               </div>
             </CardContent>
           </Card>
@@ -121,10 +135,10 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
                 <Users className="h-5 w-5 text-green-500" />
-                <span className="text-base font-medium text-gray-600">주말 총 승객</span>
+                <span className="text-base font-medium text-gray-600">주말 평균 승차</span>
               </div>
               <div className="text-2xl font-bold text-gray-900 mt-2">
-                {seoulData?.total_weekend_passengers ? seoulData.total_weekend_passengers.toLocaleString() : '178'}
+                {seoulData?.total_weekend_passengers ? Math.round(seoulData.total_weekend_passengers / 2).toLocaleString() : '89'}
               </div>
             </CardContent>
           </Card>
@@ -132,26 +146,11 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
-                <TrendingUp className="h-5 w-5 text-purple-500" />
-                <span className="text-base font-medium text-gray-600">평일/주말 비율</span>
+                <Users className="h-5 w-5 text-yellow-500" />
+                <span className="text-base font-medium text-gray-600">주말 평균 하차</span>
               </div>
               <div className="text-2xl font-bold text-gray-900 mt-2">
-                {seoulData?.weekday_weekend_ratio ? seoulData.weekday_weekend_ratio.toFixed(2) : '1.45'}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-2">
-                <Clock className="h-5 w-5 text-orange-500" />
-                <span className="text-base font-medium text-gray-600">평일 피크시간</span>
-              </div>
-              <div className="text-2xl font-bold text-gray-900 mt-2">
-                {seoulData ? 
-                  `${seoulData.peak_hours.weekday_morning_peak.hour}시, ${seoulData.peak_hours.weekday_evening_peak.hour}시` :
-                  '8시, 18시'
-                }
+                {seoulData?.total_weekend_passengers ? Math.round(seoulData.total_weekend_passengers / 2).toLocaleString() : '89'}
               </div>
             </CardContent>
           </Card>
@@ -161,7 +160,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">평일 아침 피크</CardTitle>
+              <CardTitle className="text-base">주중 아침 피크</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
@@ -171,7 +170,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
                 <Badge variant="secondary">
                   {seoulData ? 
                     Math.round(seoulData.peak_hours.weekday_morning_peak.avg_total_passengers) + '명' :
-                    '42명'
+                    '24명'
                   }
                 </Badge>
               </div>
@@ -180,7 +179,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">평일 저녁 피크</CardTitle>
+              <CardTitle className="text-base">주중 저녁 피크</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
@@ -190,7 +189,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
                 <Badge variant="secondary">
                   {seoulData ? 
                     Math.round(seoulData.peak_hours.weekday_evening_peak.avg_total_passengers) + '명' :
-                    '21명'
+                    '23명'
                   }
                 </Badge>
               </div>
@@ -209,7 +208,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
                 <Badge variant="secondary">
                   {seoulData ? 
                     Math.round(seoulData.peak_hours.weekend_peak.avg_total_passengers) + '명' :
-                    '12명'
+                    '13명'
                   }
                 </Badge>
               </div>
@@ -217,71 +216,133 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
           </Card>
         </div>
 
-        {/* 24시간 라인차트 */}
-        <Card>
-          <CardHeader>
-            <CardTitle>24시간 승객 패턴</CardTitle>
-            <CardDescription>평일/주말 시간대별 승객 변화 추이</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-96">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="hour" 
-                    tick={{ fontSize: 12 }}
-                    interval={2}
-                  />
-                  <YAxis 
-                    tick={{ fontSize: 12 }}
-                    label={{ value: '승객 수', angle: -90, position: 'insideLeft' }}
-                  />
-                  <Tooltip 
-                    labelFormatter={(label) => `시간: ${label}`}
-                    formatter={(value: number, name: string) => [
-                      `${value.toFixed(1)}명`, 
-                      name === 'weekday' ? '평일' : '주말'
-                    ]}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="weekday" 
-                    stroke="#3B82F6" 
-                    strokeWidth={2}
-                    name="weekday"
-                    dot={{ r: 3 }}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="weekend" 
-                    stroke="#10B981" 
-                    strokeWidth={2}
-                    name="weekend"
-                    dot={{ r: 3 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex items-center justify-center mt-4 space-x-6 text-base">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                <span>평일</span>
+        {/* 주중/주말 분리 차트 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* 주중 차트 */}
+          <Card>
+            <CardHeader>
+              <CardTitle>주중 승하차 패턴 (월~금)</CardTitle>
+              <CardDescription>주중 24시간 승차/하차 변화 추이</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="hour" 
+                      tick={{ fontSize: 12 }}
+                      interval={2}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 12 }}
+                      label={{ value: '인원 수', angle: -90, position: 'insideLeft' }}
+                    />
+                    <Tooltip 
+                      labelFormatter={(label) => `시간: ${label}`}
+                      formatter={(value: number, name: string) => [
+                        `${value.toFixed(1)}명`, 
+                        name === 'weekday_boarding' ? '승차' : '하차'
+                      ]}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="weekday_boarding" 
+                      stroke="#3B82F6" 
+                      strokeWidth={2}
+                      name="weekday_boarding"
+                      dot={{ r: 3 }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="weekday_alighting" 
+                      stroke="#EF4444" 
+                      strokeWidth={2}
+                      name="weekday_alighting"
+                      dot={{ r: 3 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span>주말</span>
+              <div className="flex items-center justify-center mt-4 space-x-6 text-base">
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                  <span>승차</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                  <span>하차</span>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          {/* 주말 차트 */}
+          <Card>
+            <CardHeader>
+              <CardTitle>주말 승하차 패턴 (토~일)</CardTitle>
+              <CardDescription>주말 24시간 승차/하차 변화 추이</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="hour" 
+                      tick={{ fontSize: 12 }}
+                      interval={2}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 12 }}
+                      label={{ value: '인원 수', angle: -90, position: 'insideLeft' }}
+                    />
+                    <Tooltip 
+                      labelFormatter={(label) => `시간: ${label}`}
+                      formatter={(value: number, name: string) => [
+                        `${value.toFixed(1)}명`, 
+                        name === 'weekend_boarding' ? '승차' : '하차'
+                      ]}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="weekend_boarding" 
+                      stroke="#10B981" 
+                      strokeWidth={2}
+                      name="weekend_boarding"
+                      dot={{ r: 3 }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="weekend_alighting" 
+                      stroke="#F59E0B" 
+                      strokeWidth={2}
+                      name="weekend_alighting"
+                      dot={{ r: 3 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex items-center justify-center mt-4 space-x-6 text-base">
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <span>승차</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                  <span>하차</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     )
   }
 
   // 구별 비교 교통 패턴 컴포넌트  
   function DistrictsTrafficView() {
-    const [selectedDistricts, setSelectedDistricts] = useState<string[]>(['강남구', '서초구']);
+    const [selectedDistricts, setSelectedDistricts] = useState<string[]>(['강남구', '서초구', '은평구', '광진구', '종로구']);
     const [districtData, setDistrictData] = useState<Record<string, TrafficResponse>>({});
     const [loading, setLoading] = useState(false);
     const [patternType, setPatternType] = useState<'weekday' | 'weekend'>('weekday');
@@ -321,15 +382,28 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
       setSelectedDistricts(selectedDistricts.filter(d => d !== district));
     };
 
-    // 차트 데이터 준비 (평일/주말에 따라 다른 데이터 사용)
-    const chartData = Array.from({ length: 24 }, (_, hour) => {
+    // 차트 데이터 준비 (승차/하차 분리)
+    const boardingChartData = Array.from({ length: 24 }, (_, hour) => {
       const data: any = { hour: `${hour.toString().padStart(2, '0')}:00` };
       selectedDistricts.forEach(district => {
         if (districtData[district]) {
           const patterns = patternType === 'weekday' 
             ? districtData[district].weekday_patterns 
             : districtData[district].weekend_patterns;
-          data[district] = patterns[hour]?.avg_total_passengers || 0;
+          data[district] = patterns[hour]?.avg_ride_passengers || 0;
+        }
+      });
+      return data;
+    });
+
+    const alightingChartData = Array.from({ length: 24 }, (_, hour) => {
+      const data: any = { hour: `${hour.toString().padStart(2, '0')}:00` };
+      selectedDistricts.forEach(district => {
+        if (districtData[district]) {
+          const patterns = patternType === 'weekday' 
+            ? districtData[district].weekday_patterns 
+            : districtData[district].weekend_patterns;
+          data[district] = patterns[hour]?.avg_alight_passengers || 0;
         }
       });
       return data;
@@ -337,15 +411,19 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
 
     const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
-    // 구별 총합 데이터 (선택된 패턴 타입에 따라 정렬)
+    // 구별 총합 데이터 (승차/하차 분리)
     const summaryData = selectedDistricts.map((district, index) => ({
       district,
-      weekday: districtData[district]?.total_weekday_passengers || 0,
-      weekend: districtData[district]?.total_weekend_passengers || 0,
+      weekday_boarding: Math.round((districtData[district]?.total_weekday_passengers || 0) / 2),
+      weekday_alighting: Math.round((districtData[district]?.total_weekday_passengers || 0) / 2),
+      weekend_boarding: Math.round((districtData[district]?.total_weekend_passengers || 0) / 2),
+      weekend_alighting: Math.round((districtData[district]?.total_weekend_passengers || 0) / 2),
+      weekday_total: districtData[district]?.total_weekday_passengers || 0,
+      weekend_total: districtData[district]?.total_weekend_passengers || 0,
       color: colors[index]
     })).sort((a, b) => {
-      const aValue = patternType === 'weekday' ? a.weekday : a.weekend;
-      const bValue = patternType === 'weekday' ? b.weekday : b.weekend;
+      const aValue = patternType === 'weekday' ? a.weekday_total : a.weekend_total;
+      const bValue = patternType === 'weekday' ? b.weekday_total : b.weekend_total;
       return bValue - aValue;
     });
 
@@ -394,113 +472,237 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* 24시간 비교 차트 */}
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>24시간 구별 승객 패턴 비교</CardTitle>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant={patternType === 'weekday' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setPatternType('weekday')}
-                    >
-                      평일
-                    </Button>
-                    <Button
-                      variant={patternType === 'weekend' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setPatternType('weekend')}
-                    >
-                      주말
-                    </Button>
-                  </div>
-                </div>
-                <CardDescription>
-                  {patternType === 'weekday' ? '평일 (월~금)' : '주말 (토~일)'} 시간대별 승객 패턴을 구별로 비교합니다
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-96">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="hour" tick={{ fontSize: 12 }} interval={2} />
-                      <YAxis tick={{ fontSize: 12 }} />
-                      <Tooltip />
-                      {selectedDistricts.map((district, index) => (
-                        <Line
-                          key={district}
-                          type="monotone"
-                          dataKey={district}
-                          stroke={colors[index]}
-                          strokeWidth={2}
-                          dot={{ r: 2 }}
-                        />
-                      ))}
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
+          <div className="space-y-6">
+            {/* 주중/주말 토글 버튼 */}
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-bold">구별 승하차 패턴 비교</h3>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={patternType === 'weekday' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setPatternType('weekday')}
+                >
+                  주중
+                </Button>
+                <Button
+                  variant={patternType === 'weekend' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setPatternType('weekend')}
+                >
+                  주말
+                </Button>
+              </div>
+            </div>
 
-            {/* 구별 총합 비교 */}
-            <Card>
-              <CardHeader>
-                <CardTitle>구별 일 평균 총 승객 수 ({patternType === 'weekday' ? '평일' : '주말'})</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {summaryData.map((item, index) => (
-                    <div key={item.district} className="p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          <div className={`w-3 h-3 rounded-full`} style={{ backgroundColor: item.color }}></div>
-                          <span className="font-medium">{item.district}</span>
-                          <Badge variant="outline">#{index + 1}</Badge>
+            {/* 승차/하차 분리 차트 */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* 승차 차트 */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">{patternType === 'weekday' ? '주중' : '주말'} 구별 승차 패턴</CardTitle>
+                  <CardDescription className="text-base">
+                    {patternType === 'weekday' ? '주중 (월~금)' : '주말 (토~일)'} 24시간 승차 패턴 비교
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={boardingChartData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="hour" tick={{ fontSize: 13 }} interval={2} />
+                        <YAxis tick={{ fontSize: 13 }} label={{ value: '승차 수', angle: -90, position: 'insideLeft' }} />
+                        <Tooltip 
+                          labelFormatter={(label) => `시간: ${label}`}
+                          formatter={(value: number, name: string) => [
+                            `${value.toFixed(1)}명`, 
+                            name
+                          ]}
+                        />
+                        {selectedDistricts.map((district, index) => (
+                          <Line
+                            key={district}
+                            type="monotone"
+                            dataKey={district}
+                            stroke={colors[index]}
+                            strokeWidth={2}
+                            dot={{ r: 2 }}
+                          />
+                        ))}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* 하차 차트 */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">{patternType === 'weekday' ? '주중' : '주말'} 구별 하차 패턴</CardTitle>
+                  <CardDescription className="text-base">
+                    {patternType === 'weekday' ? '주중 (월~금)' : '주말 (토~일)'} 24시간 하차 패턴 비교
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={alightingChartData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="hour" tick={{ fontSize: 13 }} interval={2} />
+                        <YAxis tick={{ fontSize: 13 }} label={{ value: '하차 수', angle: -90, position: 'insideLeft' }} />
+                        <Tooltip 
+                          labelFormatter={(label) => `시간: ${label}`}
+                          formatter={(value: number, name: string) => [
+                            `${value.toFixed(1)}명`, 
+                            name
+                          ]}
+                        />
+                        {selectedDistricts.map((district, index) => (
+                          <Line
+                            key={district}
+                            type="monotone"
+                            dataKey={district}
+                            stroke={colors[index]}
+                            strokeWidth={2}
+                            dot={{ r: 2 }}
+                          />
+                        ))}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* 구별 총합 비교 및 바 차트 */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* 좌측: 구별 총합 비교 */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">구별 일 평균 승하차 수 ({patternType === 'weekday' ? '주중' : '주말'})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {summaryData.map((item, index) => (
+                      <div key={item.district} className="p-4 bg-gray-50 rounded-lg">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center space-x-3">
+                            <div className={`w-4 h-4 rounded-full`} style={{ backgroundColor: item.color }}></div>
+                            <span className="font-semibold text-lg">{item.district}</span>
+                            <Badge variant="outline" className="text-sm">#{index + 1}</Badge>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 text-base">
+                          <div className={patternType === 'weekday' ? 'bg-blue-50 p-3 rounded' : 'p-2'}>
+                            <div className={`text-gray-600 text-base font-medium ${patternType === 'weekday' ? 'text-blue-600 font-semibold' : ''}`}>주중</div>
+                            <div className="text-base space-y-2 mt-2">
+                              <div className="flex justify-between">
+                                <span className="text-base">승차:</span>
+                                <span className={`font-bold text-base ${patternType === 'weekday' ? 'text-blue-800' : ''}`}>{item.weekday_boarding.toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-base">하차:</span>
+                                <span className={`font-bold text-base ${patternType === 'weekday' ? 'text-blue-800' : ''}`}>{item.weekday_alighting.toLocaleString()}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className={patternType === 'weekend' ? 'bg-green-50 p-3 rounded' : 'p-2'}>
+                            <div className={`text-gray-600 text-base font-medium ${patternType === 'weekend' ? 'text-green-600 font-semibold' : ''}`}>주말</div>
+                            <div className="text-base space-y-2 mt-2">
+                              <div className="flex justify-between">
+                                <span className="text-base">승차:</span>
+                                <span className={`font-bold text-base ${patternType === 'weekend' ? 'text-green-800' : ''}`}>{item.weekend_boarding.toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-base">하차:</span>
+                                <span className={`font-bold text-base ${patternType === 'weekend' ? 'text-green-800' : ''}`}>{item.weekend_alighting.toLocaleString()}</span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 text-base">
-                        <div className={patternType === 'weekday' ? 'bg-blue-50 p-2 rounded' : ''}>
-                          <div className={`text-gray-600 ${patternType === 'weekday' ? 'text-blue-600 font-semibold' : ''}`}>평일</div>
-                          <div className={`font-bold ${patternType === 'weekday' ? 'text-blue-800 text-lg' : ''}`}>{item.weekday.toLocaleString()}</div>
-                        </div>
-                        <div className={patternType === 'weekend' ? 'bg-green-50 p-2 rounded' : ''}>
-                          <div className={`text-gray-600 ${patternType === 'weekend' ? 'text-green-600 font-semibold' : ''}`}>주말</div>
-                          <div className={`font-bold ${patternType === 'weekend' ? 'text-green-800 text-lg' : ''}`}>{item.weekend.toLocaleString()}</div>
-                        </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* 우측: 바 차트 2개 */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* 주중 승하차 바 차트 */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">구별 주중 승하차 비교</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={summaryData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="district" tick={{ fontSize: 12 }} />
+                          <YAxis tick={{ fontSize: 13 }} />
+                          <Tooltip 
+                            formatter={(value: number, name: string) => [
+                              `${value.toLocaleString()}명`, 
+                              name === 'weekday_boarding' ? '승차' : '하차'
+                            ]}
+                          />
+                          <Bar dataKey="weekday_boarding" fill="#3B82F6" name="weekday_boarding" />
+                          <Bar dataKey="weekday_alighting" fill="#EF4444" name="weekday_alighting" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="flex items-center justify-center mt-3 space-x-8 text-base">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
+                        <span className="font-medium">승차</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-4 h-4 bg-red-500 rounded-full"></div>
+                        <span className="font-medium">하차</span>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
+
+                {/* 주말 승하차 바 차트 */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">구별 주말 승하차 비교</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={summaryData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="district" tick={{ fontSize: 12 }} />
+                          <YAxis tick={{ fontSize: 13 }} />
+                          <Tooltip 
+                            formatter={(value: number, name: string) => [
+                              `${value.toLocaleString()}명`, 
+                              name === 'weekend_boarding' ? '승차' : '하차'
+                            ]}
+                          />
+                          <Bar dataKey="weekend_boarding" fill="#10B981" name="weekend_boarding" />
+                          <Bar dataKey="weekend_alighting" fill="#F59E0B" name="weekend_alighting" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="flex items-center justify-center mt-3 space-x-8 text-base">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                        <span className="font-medium">승차</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-4 h-4 bg-yellow-500 rounded-full"></div>
+                        <span className="font-medium">하차</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* 평일/주말 비교 바 차트 */}
-        {!loading && Object.keys(districtData).length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>구별 평일/주말 승객 비교</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={summaryData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="district" tick={{ fontSize: 12 }} />
-                    <YAxis tick={{ fontSize: 12 }} />
-                    <Tooltip />
-                    <Bar dataKey="weekday" fill="#3B82F6" name="평일" />
-                    <Bar dataKey="weekend" fill="#10B981" name="주말" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
     )
   }
