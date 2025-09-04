@@ -222,6 +222,7 @@ class DRTScoreService:
             
             # 3. 시간대별 점수 데이터 구성
             hourly_scores = []
+            hourly_feature_scores = []  # 새로 추가
             all_scores = []
             peak_score = 0.0
             peak_hour = 0
@@ -230,12 +231,19 @@ class DRTScoreService:
             feature_scores_for_current = {}
             
             for row in scores_rows:
+                # hourly_scores 구성
                 hour_data = {
                     "hour": row.hour_of_day,
                     "score": float(row.total_drt_score)
                 }
                 hourly_scores.append(hour_data)
                 all_scores.append(float(row.total_drt_score))
+                
+                # hourly_feature_scores 구성 (새로 추가)
+                feature_data = {"hour": row.hour_of_day}
+                for col in feature_cols:
+                    feature_data[col] = float(getattr(row, col))
+                hourly_feature_scores.append(feature_data)
                 
                 # Peak score 추적
                 if float(row.total_drt_score) > peak_score:
@@ -276,7 +284,8 @@ class DRTScoreService:
                 peak_hour=peak_hour,
                 monthly_average=monthly_average,
                 feature_scores=feature_scores_for_current,
-                hourly_scores=hourly_scores
+                hourly_scores=hourly_scores,
+                hourly_feature_scores=hourly_feature_scores
             )
             
         except Exception as e:
@@ -299,7 +308,8 @@ class DRTScoreService:
                 peak_hour=0,
                 monthly_average=0.0,
                 feature_scores={},
-                hourly_scores=[]
+                hourly_scores=[],
+                hourly_feature_scores=[] 
             )
     
     # ==========================================
