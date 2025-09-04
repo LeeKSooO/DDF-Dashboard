@@ -23,4 +23,3 @@ export { TrafficChart } from './charts/traffic-chart';
 
 // Main dashboards
 export { DDFDashboard } from './ddf-dashboard';
-export { DRTDashboard } from './drt-dashboard';
