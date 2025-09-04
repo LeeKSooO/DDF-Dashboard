@@ -151,11 +151,14 @@ class StationDRTDetailResponse(BaseModel):
     peak_hour: int = Field(..., description="최고 점수 시간대")
     monthly_average: float = Field(..., description="월간 평균 DRT 점수")
     
-    # 세부 지표 (모델에 따라 다름)
-    feature_scores: dict = Field(..., description="세부 지표 점수 (tc_score, pdr_score 등)")
+    # 세부 지표 (모델에 따라 다름) - 현재 선택 시간대 기준
+    feature_scores: dict = Field(..., description="현재 시간대 세부 지표 점수 (tc_score, pdr_score 등)")
     
     # 시간대별 전체 점수 (차트용)
     hourly_scores: List[dict] = Field(..., description="24시간별 월 집계 점수 데이터")
+    
+    # 시간대별 feature scores (차트용) - 새로 추가
+    hourly_feature_scores: List[dict] = Field(..., description="24시간별 세부 지표 점수 데이터")
     
     class Config:
         schema_extra = {
@@ -177,8 +180,12 @@ class StationDRTDetailResponse(BaseModel):
                 "hourly_scores": [
                     {"hour": 0, "score": 45.2},
                     {"hour": 8, "score": 87.5},
-                    {"hour": 18, "score": 82.1},
-                    { ... }
+                    {"hour": 18, "score": 82.1}
+                ],
+                "hourly_feature_scores": [
+                    {"hour": 0, "tc_score": 0.45, "pdr_score": 0.38, "ru_score": 0.42, "pcw_score": 1.0},
+                    {"hour": 8, "tc_score": 0.95, "pdr_score": 0.87, "ru_score": 0.75, "pcw_score": 1.0},
+                    {"hour": 18, "tc_score": 0.88, "pdr_score": 0.82, "ru_score": 0.70, "pcw_score": 1.0}
                 ]
             }
         }
