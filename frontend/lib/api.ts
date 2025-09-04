@@ -38,6 +38,8 @@ export interface StationData {
   station_id: string;
   station_name: string;
   total_traffic: number;
+  total_ride?: number;
+  total_alight?: number;
   coordinate: {
     latitude: number;
     longitude: number;
