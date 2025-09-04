@@ -3,11 +3,8 @@
 // Pages
 export { DashboardOverviewContent } from './pages/dashboard-overview-content';
 export { DRTAnalysisContent } from './pages/drt-analysis-content';
-export { DRTScoreContent } from './pages/drt-score-content';
 export { TrafficAnalysisContent } from './pages/traffic-analysis-content';
 export { HeatmapContent } from './pages/heatmap-content';
-export { AnomalyContent } from './pages/anomaly-content';
-export { RouteAnalysisContent } from './pages/route-analysis-content';
 
 // Dashboard components
 export { DashboardContent } from './dashboard/dashboard-content';
@@ -27,4 +24,3 @@ export { TrafficChart } from './charts/traffic-chart';
 // Main dashboards
 export { DDFDashboard } from './ddf-dashboard';
 export { DRTDashboard } from './drt-dashboard';
-export { DRTPolicyDashboard } from './drt-policy-dashboard';

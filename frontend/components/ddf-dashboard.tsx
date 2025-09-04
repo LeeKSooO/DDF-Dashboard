@@ -199,6 +199,7 @@ export function DDFDashboard() {
       case "traffic-analysis":
         return "전체"; // 교통 패턴 분석도 전체로 시작
       case "traffic":
+        return "전체"; // 교통 분석도 전체로 시작
       case "drt-analysis":
       default:
         return "강남구"; // 나머지는 강남구로 시작

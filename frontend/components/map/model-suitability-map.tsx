@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, useMemo } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { apiService, DRTModelType, DRTStationData } from '@/lib/api'
 
@@ -56,15 +56,6 @@ interface StationAnalysis {
   peakHour: number
 }
 
-interface DistrictAnalysis {
-  districtName: string
-  selectedModelScore: number
-  allModelScores: Record<string, number>
-  bestModel: string
-  bestScore: number
-  suitabilityLevel: string
-  suitabilityColor: string
-}
 
 function ModelSuitabilityMapComponent({ 
   selectedModel, 
@@ -77,7 +68,7 @@ function ModelSuitabilityMapComponent({
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null)
-  const [districtScores, setDistrictScores] = useState<Record<string, Record<string, number>>>({})
+  const [districtScores] = useState<Record<string, Record<string, number>>>({})
   const [stationData, setStationData] = useState<DRTStationData[]>([])
   const [selectedStation, setSelectedStation] = useState<StationAnalysis | null>(null)
   const [stationMarkersLayer, setStationMarkersLayer] = useState<any>(null)
@@ -95,11 +86,6 @@ function ModelSuitabilityMapComponent({
   }, [])
 
   // 선택된 모델에 따른 구별 색상 계산
-  const getDistrictColor = (districtName: string) => {
-    const modelType = modelTypeMapping[selectedModel]
-    const score = districtScores[districtName]?.[modelType] || 0
-    return getSuitabilityColor(score)
-  }
 
   // Style function for districts with pastel colors
   const getFeatureStyle = (feature: any) => {
@@ -316,14 +302,14 @@ function ModelSuitabilityMapComponent({
         const geoJsonData = await response.json()
         
         // Add all district features to map
-        const layer = L.geoJSON(geoJsonData, {
+        L.geoJSON(geoJsonData, {
           style: getFeatureStyle,
-          onEachFeature: (feature, layer) => {
+          onEachFeature: (feature: any, layer: any) => {
             const districtName = feature.properties.sggnm
 
             // Mouse events
             layer.on({
-              mouseover: (e) => {
+              mouseover: (e: any) => {
                 const layer = e.target
                 layer.setStyle({
                   weight: 3,
@@ -332,11 +318,11 @@ function ModelSuitabilityMapComponent({
                 })
                 layer.bringToFront()
               },
-              mouseout: (e) => {
+              mouseout: (e: any) => {
                 const layer = e.target
                 layer.setStyle(getFeatureStyle(feature))
               },
-              click: (e) => {
+              click: (_e: any) => {
                 const districtName = feature.properties.sggnm
                 
                 // Zoom to district

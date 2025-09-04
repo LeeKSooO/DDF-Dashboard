@@ -133,14 +133,14 @@ function SeoulMapComponent({ onDistrictClick, selectedDistrict, trafficData = []
         const geoJsonData = await response.json()
         
         // Add all district features to map (already simplified)
-        const layer = L.geoJSON(geoJsonData, {
+        L.geoJSON(geoJsonData, {
           style: getFeatureStyle,
-          onEachFeature: (feature, layer) => {
+          onEachFeature: (feature: any, layer: any) => {
             const districtName = feature.properties.sggnm
 
             // Mouse events
             layer.on({
-              mouseover: (e) => {
+              mouseover: (e: any) => {
                 const layer = e.target
                 layer.setStyle({
                   weight: 3,
@@ -149,11 +149,11 @@ function SeoulMapComponent({ onDistrictClick, selectedDistrict, trafficData = []
                 })
                 layer.bringToFront()
               },
-              mouseout: (e) => {
+              mouseout: (e: any) => {
                 const layer = e.target
                 layer.setStyle(getFeatureStyle(feature))
               },
-              click: (e) => {
+              click: (_e: any) => {
                 const districtName = feature.properties.sggnm
                 const districtCode = feature.properties.sgg
                 

@@ -9,7 +9,7 @@ import {
   useImperativeHandle,
 } from "react";
 import dynamic from "next/dynamic";
-import { DistrictData, StationData } from "@/lib/api";
+import { DistrictData } from "@/lib/api";
 
 // Dynamically import Leaflet to avoid SSR issues
 const L = typeof window !== "undefined" ? require("leaflet") : null;
@@ -85,20 +85,6 @@ const HeatmapSeoulMapComponent = forwardRef<
       console.log('✅ 모든 애니메이션 중지 완료');
     };
     
-    const resetAllMarkerStyles = () => {
-      console.log('🎨 모든 마커 스타일 초기화 시작');
-      const existingMarkers = stationMarkersRef.current;
-      
-      existingMarkers.forEach((marker, stationId) => {
-        if (marker && mapInstanceRef.current?.hasLayer(marker)) {
-          // 마커를 일반 정류장 스타일로 되돌림 (패턴 색상 제거)
-          // 여기서 원래 스타일을 계산해서 되돌려야 함
-          console.log('🎨 마커 스타일 리셋:', stationId);
-        }
-      });
-      
-      console.log('✅ 모든 마커 스타일 초기화 완료');
-    };
     
     const startPatternAnimation = (stationId: string, marker: any, baseRadius: number) => {
       console.log('🎯 패턴 애니메이션 시작:', stationId, 'baseRadius:', baseRadius);
@@ -224,10 +210,6 @@ const HeatmapSeoulMapComponent = forwardRef<
       return "#6B7280"; // Gray - Very Low (1천명 미만)
     };
 
-    // Combined traffic color function
-    const getTrafficColor = (traffic: number): string => {
-      return viewMode === "station" ? getStationTrafficColor(traffic) : getDistrictTrafficColor(traffic);
-    };
 
     // TOP 5 정류장 전용 색상 (금색 그라데이션)
     const getTopStationColor = (rank: number): string => {
@@ -344,11 +326,10 @@ const HeatmapSeoulMapComponent = forwardRef<
           const geoJsonData = await response.json();
 
           // Add all district features to map
-          const layer = L.geoJSON(geoJsonData, {
+          L.geoJSON(geoJsonData, {
             style: getFeatureStyle,
-            onEachFeature: (feature, layer) => {
+            onEachFeature: (feature: any, layer: any) => {
               const districtName = feature.properties.sggnm;
-              const districtData = districtLookup[districtName];
 
               // Mouse events - 클로저 문제 방지를 위해 함수 내부에서 처리
               layer.on({
@@ -375,7 +356,7 @@ const HeatmapSeoulMapComponent = forwardRef<
                   const layer = e.target;
                   layer.setStyle(getFeatureStyle(feature));
                 },
-                click: (e) => {
+                click: (_e: any) => {
                   const districtName = feature.properties.sggnm;
                   const districtCode = feature.properties.sgg;
 
@@ -540,10 +521,8 @@ const HeatmapSeoulMapComponent = forwardRef<
           if (district.stations && district.stations.length > 0) {
             district.stations.forEach((station) => {
               // Check if coordinates exist and are valid
-              const lat =
-                station.coordinate?.lat || station.coordinate?.latitude;
-              const lng =
-                station.coordinate?.lng || station.coordinate?.longitude;
+              const lat = (station.coordinate as any)?.lat || station.coordinate?.latitude;
+              const lng = (station.coordinate as any)?.lng || station.coordinate?.longitude;
 
               if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
                 // 모든 마커를 새로 생성 (기존 마커 체크 없이)
@@ -567,7 +546,7 @@ const HeatmapSeoulMapComponent = forwardRef<
                 }
                 
                 // 우선순위별 색상 및 스타일 결정 (파스텔/반투명 스타일)
-                let fillColor, borderColor, borderWeight, fillOpacity, zIndex;
+                let fillColor, borderColor, borderWeight, fillOpacity;
                 
                 if (patternStation) {
                   // 패턴 정류장 - 부드러운 파스텔 톤으로 강조
@@ -575,21 +554,18 @@ const HeatmapSeoulMapComponent = forwardRef<
                   borderColor = patternStation.patternColor;
                   borderWeight = 2;
                   fillOpacity = 0.6; // 반투명
-                  zIndex = 3000; // 패턴 정류장이 가장 위에
                 } else if (isTop) {
                   // TOP 5 정류장 - 부드러운 골드 파스텔
                   fillColor = getTopStationColor(topStationRank);
                   borderColor = getTopStationColor(topStationRank);
                   borderWeight = 2;
                   fillOpacity = 0.7; // 약간 더 진하게
-                  zIndex = 2000;
                 } else {
                   // 일반 정류장 - 매우 부드러운 톤
                   fillColor = getStationTrafficColor(station.total_traffic);
                   borderColor = fillColor;
                   borderWeight = 1;
                   fillOpacity = 0.5; // 반투명
-                  zIndex = 1000;
                 }
 
                 // 모든 마커를 새로 생성 (깨끗한 상태에서 시작)
