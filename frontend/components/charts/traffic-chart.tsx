@@ -12,13 +12,13 @@ import { apiService, utils } from '@/lib/api';
 import { TrafficResponse, TrafficChartProps } from '@/types';
 
 
-export function TrafficChart({ className }: TrafficChartProps) {
+export function TrafficChart({ className, selectedMonth = "7" }: TrafficChartProps) {
   const [data, setData] = useState<TrafficResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [regionType, setRegionType] = useState<'seoul' | 'district'>('seoul');
   const [selectedDistrict, setSelectedDistrict] = useState<string>('');
-  const [analysisMonth] = useState('2025-07-01'); // 현재 사용 가능한 데이터
+  const analysisMonth = utils.formatSelectedMonth(selectedMonth); // 동적 월 선택
   const [viewMode, setViewMode] = useState<'total' | 'separate'>('separate'); // 총 승객수 vs 승차/하차 구분
 
   // 차트 데이터 변환
@@ -103,7 +103,7 @@ export function TrafficChart({ className }: TrafficChartProps) {
   // 초기 로드 및 옵션 변경시 재로드
   useEffect(() => {
     loadData();
-  }, [regionType, selectedDistrict]);
+  }, [regionType, selectedDistrict, selectedMonth]);
 
   // 커스텀 툴팁
   const CustomTooltip = ({ active, payload, label }: any) => {

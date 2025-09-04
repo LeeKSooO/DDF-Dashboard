@@ -42,7 +42,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { apiService } from "@/lib/api";
+import { apiService, utils } from "@/lib/api";
 
 // Month names in Korean
 const monthNames = [
@@ -101,7 +101,7 @@ export function TrafficAnalysisContent({
 
         // 첫 번째 구로 데이터 로드 (데모용)
         const targetDistrict = districtsToAnalyze[0];
-        const analysisMonth = "2025-07-01";
+        const analysisMonth = utils.formatSelectedMonth(selectedMonth);
 
         // 모든 API 병렬 호출
         const [

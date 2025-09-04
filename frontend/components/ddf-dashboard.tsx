@@ -221,7 +221,7 @@ export function DDFDashboard() {
   const navigationItems = [
     { id: "dashboard", label: "대시보드 개요", icon: Home },
     { id: "traffic", label: "교통 패턴 분석", icon: Activity },
-    { id: "heatmap", label: "지역별 교통량 분석", icon: Map },
+    { id: "heatmap", label: "교통량 분석", icon: Map },
     { id: "traffic-analysis", label: "이상 패턴 분석", icon: AlertTriangle },
     { id: "drt-analysis", label: "DRT 분석", icon: Brain },
     { id: "reports", label: "리포트", icon: FileText },

@@ -231,7 +231,7 @@ class ApiService {
   async getDRTScores(
     districtName: string = "강남구",  // Default 지역
     modelType: DRTModelType = "vulnerable",  // Default 모델
-    analysisMonth: string = "2025-07-01"
+analysisMonth: string
   ): Promise<DRTScoreResponse> {
     const params = new URLSearchParams({
       model_type: modelType,
@@ -254,7 +254,7 @@ class ApiService {
   async getStationDetail(
     stationId: string,
     modelType: DRTModelType = "vulnerable",
-    analysisMonth: string = "2025-07-01"
+analysisMonth: string
   ): Promise<DRTStationDetailResponse> {
     const params = new URLSearchParams({
       model_type: modelType,
@@ -275,7 +275,7 @@ class ApiService {
   async getMultipleDRTScores(
     districtNames: string[],
     modelType: DRTModelType,
-    analysisMonth: string = "2025-07-01"
+analysisMonth: string
   ): Promise<DRTScoreResponse[]> {
     const promises = districtNames.map((districtName) =>
       this.getDRTScores(districtName, modelType, analysisMonth)
@@ -287,7 +287,7 @@ class ApiService {
   // 서울시 전체 DRT Top 정류장 조회 (여러 구 통합)
   async getSeoulTopDRTStations(
     modelType: DRTModelType,
-    analysisMonth: string = "2025-07-01",
+analysisMonth: string,
     topN: number = 10
   ): Promise<DRTTopStation[]> {
     // 주요 구들을 조회해서 Top 정류장들을 수집
@@ -329,7 +329,7 @@ class ApiService {
   // 구별 anomaly 패턴 데이터 조회 (통합)
   async getAnomalyPatterns(
     districtName: string,
-    analysisMonth: string = "2025-07-01"
+analysisMonth: string
   ): Promise<any> {
     const url = `${API_BASE_URL}/anomaly-pattern/integration?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}`;
     
@@ -344,7 +344,7 @@ class ApiService {
   // 주말 우세 정류장 조회
   async getWeekendDominantStations(
     districtName: string,
-    analysisMonth: string = "2025-07-01",
+analysisMonth: string,
     topN: number = 5
   ): Promise<any> {
     const url = `${API_BASE_URL}/anomaly-pattern/weekend-dominant?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}&top_n=${topN}`;
@@ -354,7 +354,7 @@ class ApiService {
   // 야간 수요 정류장 조회
   async getNightDemandStations(
     districtName: string,
-    analysisMonth: string = "2025-07-01",
+analysisMonth: string,
     topN: number = 5
   ): Promise<any> {
     const url = `${API_BASE_URL}/anomaly-pattern/night-demand?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}&top_n=${topN}`;
@@ -364,7 +364,7 @@ class ApiService {
   // 러시아워 분석
   async getRushHourAnalysis(
     districtName: string,
-    analysisMonth: string = "2025-07-01"
+analysisMonth: string
   ): Promise<any> {
     const url = `${API_BASE_URL}/anomaly-pattern/rush-hour?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}`;
     return this.fetchWithErrorHandling(url);
@@ -373,7 +373,7 @@ class ApiService {
   // 점심시간 특화 정류장 조회
   async getLunchTimeStations(
     districtName: string,
-    analysisMonth: string = "2025-07-01",
+analysisMonth: string,
     topN: number = 5
   ): Promise<any> {
     const url = `${API_BASE_URL}/anomaly-pattern/lunch-time?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}&top_n=${topN}`;
@@ -383,7 +383,7 @@ class ApiService {
   // 지역 특성별 정류장 분석
   async getAreaTypeAnalysis(
     districtName: string,
-    analysisMonth: string = "2025-07-01"
+analysisMonth: string
   ): Promise<any> {
     const url = `${API_BASE_URL}/anomaly-pattern/area-type?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}`;
     return this.fetchWithErrorHandling(url);
@@ -392,7 +392,7 @@ class ApiService {
   // 저활용 정류장 분석
   async getUnderutilizedStations(
     districtName: string,
-    analysisMonth: string = "2025-07-01",
+analysisMonth: string,
     topN: number = 5
   ): Promise<any> {
     const url = `${API_BASE_URL}/anomaly-pattern/underutilized?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}&top_n=${topN}`;
@@ -402,7 +402,7 @@ class ApiService {
   // 통합 이상 패턴 분석 (6개 패턴 종합)
   async getIntegratedAnomalyAnalysis(
     districtName: string,
-    analysisMonth: string = "2025-07-01"
+analysisMonth: string
   ): Promise<any> {
     const url = `${API_BASE_URL}/anomaly-pattern/integration?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}`;
     return this.fetchWithErrorHandling(url);
@@ -437,6 +437,12 @@ export const utils = {
   // 비율 포맷팅 (소수점 1자리)
   formatRatio: (ratio: number): string => {
     return `${(ratio * 100).toFixed(1)}%`;
+  },
+
+  // 선택된 월을 API 형식으로 변환 ("7" -> "2025-07-01")
+  formatSelectedMonth: (selectedMonth: string): string => {
+    const month = String(selectedMonth).padStart(2, "0");
+    return `2025-${month}-01`;
   },
 
   // 서울시 25개 구 목록

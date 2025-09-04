@@ -23,7 +23,7 @@ import {
   Legend,
 } from "recharts";
 import { memo, useState, useEffect } from "react";
-import { apiService, DRTScoreResponse, DRTModelType, DRTStationData, DRTStationDetailResponse } from "@/lib/api";
+import { apiService, DRTScoreResponse, DRTModelType, DRTStationData, DRTStationDetailResponse, utils } from "@/lib/api";
 import { ModelSuitabilityMap } from "@/components/map/model-suitability-map";
 
 // 모델 타입 매핑
@@ -74,7 +74,7 @@ export const DemandContent = memo(function DemandContent({
         const response = await apiService.getDRTScores(
           targetRegion,
           apiModelType,
-          "2025-07-01"
+          utils.formatSelectedMonth(selectedMonth)
         );
         
         console.log("📊 DRT API response:", response);
@@ -104,7 +104,7 @@ export const DemandContent = memo(function DemandContent({
     };
 
     loadDRTData();
-  }, [selectedModel, selectedRegion]);
+  }, [selectedModel, selectedRegion, selectedMonth]);
 
   // 정류장 상세 정보 로드
   useEffect(() => {
@@ -120,7 +120,7 @@ export const DemandContent = memo(function DemandContent({
         const detail = await apiService.getStationDetail(
           selectedStation.station_id,
           apiModelType,
-          "2025-07-01"
+          utils.formatSelectedMonth(selectedMonth)
         );
         setStationDetail(detail);
       } catch (err) {
@@ -300,6 +300,7 @@ export const DemandContent = memo(function DemandContent({
             <CardContent>
               <ModelSuitabilityMap
                 selectedModel={selectedModel}
+                selectedMonth={selectedMonth}
                 initialDistrictName={selectedDistrictName}
                 onDistrictAnalysis={(districtName, analysis) => {
                   console.log("🔄 DemandContent received analysis:", { districtName, analysis });

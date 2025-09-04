@@ -32,6 +32,7 @@ import {
   HeatmapResponse,
   DistrictData,
   StationData,
+  utils,
 } from "@/lib/api";
 import {
   HeatmapSeoulMap,
@@ -95,7 +96,7 @@ export function HeatmapContent({
         setSelectedPattern(null);
         console.log("🔄 패턴 선택 초기화 - 지역 변경:", selectedRegion);
 
-        const analysisMonth = "2025-07-01";
+        const analysisMonth = utils.formatSelectedMonth(selectedMonth);
 
         // 히트맵 데이터 로드
         const heatmapResponse = await apiService.getSeoulHeatmap(
@@ -312,7 +313,7 @@ export function HeatmapContent({
           selectedDistrict
         );
 
-        const analysisMonth = "2025-07-01";
+        const analysisMonth = utils.formatSelectedMonth(selectedMonth);
 
         // 클릭된 구의 패턴 분석 데이터 로드 (기존 selectedRegion 패턴과 동일)
         const [

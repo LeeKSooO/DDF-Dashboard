@@ -55,10 +55,11 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
         setLoadingCurrent(true);
         let response: TrafficResponse;
         
+        const analysisMonth = utils.formatSelectedMonth(selectedMonth);
         if (selectedRegion === '전체') {
-          response = await apiService.getHourlyTraffic("2025-07-01", "seoul");
+          response = await apiService.getHourlyTraffic(analysisMonth, "seoul");
         } else {
-          response = await apiService.getHourlyTraffic("2025-07-01", "district", selectedRegion);
+          response = await apiService.getHourlyTraffic(analysisMonth, "district", selectedRegion);
         }
         
         setCurrentData(response);
@@ -71,7 +72,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
     };
 
     loadCurrentData();
-  }, [selectedRegion]);
+  }, [selectedRegion, selectedMonth]);
 
   return (
     <div className="space-y-6">
@@ -607,7 +608,8 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
         await Promise.all(
           districts.map(async (district) => {
             console.log('📊 API 호출:', district);
-            const data = await apiService.getHourlyTraffic("2025-07-01", "district", district);
+            const analysisMonth = utils.formatSelectedMonth(selectedMonth);
+            const data = await apiService.getHourlyTraffic(analysisMonth, "district", district);
             newData[district] = data;
             console.log('✅ API 응답 받음:', district);
           })
@@ -627,7 +629,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
         console.log('📊 구별 데이터 로드 시작:', selectedDistricts);
         loadDistrictData(selectedDistricts);
       }
-    }, [selectedDistricts]);
+    }, [selectedDistricts, selectedMonth]);
 
     const addDistrict = (district: string) => {
       if (!selectedDistricts.includes(district) && selectedDistricts.length < 5) {

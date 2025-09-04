@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
-import { apiService, DRTModelType, DRTStationData } from '@/lib/api'
+import { apiService, DRTModelType, DRTStationData, utils } from '@/lib/api'
 
 // Dynamically import Leaflet to avoid SSR issues
 const L = typeof window !== 'undefined' ? require('leaflet') : null
@@ -42,6 +42,7 @@ const getSuitabilityLevel = (score: number): string => {
 
 interface ModelSuitabilityMapProps {
   selectedModel: string
+  selectedMonth?: string
   initialDistrictName?: string
   onDistrictAnalysis?: (districtName: string, analysis: any) => void
 }
@@ -58,7 +59,8 @@ interface StationAnalysis {
 
 
 function ModelSuitabilityMapComponent({ 
-  selectedModel, 
+  selectedModel,
+  selectedMonth = "7",
   initialDistrictName,
   onDistrictAnalysis 
 }: ModelSuitabilityMapProps) {
@@ -112,7 +114,7 @@ function ModelSuitabilityMapComponent({
       const apiModelType = modelTypeMapping[selectedModel] || "vulnerable"
       console.log('🔄 API call with params:', { districtName, selectedModel, apiModelType })
       
-      const response = await apiService.getDRTScores(districtName, apiModelType, "2025-07-01")
+      const response = await apiService.getDRTScores(districtName, apiModelType, utils.formatSelectedMonth(selectedMonth))
       
       console.log('📊 Map Station DRT response:', response)
       console.log('📊 Stations count:', response.stations?.length || 0)

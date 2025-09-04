@@ -23,7 +23,7 @@ import {
   Legend,
 } from "recharts";
 import { useState, useEffect } from "react";
-import { apiService, HeatmapResponse } from "@/lib/api";
+import { apiService, HeatmapResponse, utils } from "@/lib/api";
 import { InteractiveMap } from "@/components/dashboard/interactive-map";
 
 // Month names in Korean
@@ -84,7 +84,7 @@ export function DashboardOverviewContent({
         );
 
         const heatmapResponse = await apiService.getSeoulHeatmap(
-          "2025-07-01", // 고정 날짜 사용
+          utils.formatSelectedMonth(selectedMonth),
           true // 정류장 상세 정보 포함
         );
 
