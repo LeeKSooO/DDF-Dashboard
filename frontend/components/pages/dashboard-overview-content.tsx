@@ -24,6 +24,7 @@ import {
 } from "recharts";
 import { useState, useEffect } from "react";
 import { apiService, HeatmapResponse } from "@/lib/api";
+import { InteractiveMap } from "@/components/dashboard/interactive-map";
 
 // Month names in Korean
 const monthNames = [
@@ -65,6 +66,8 @@ export function DashboardOverviewContent({
   const [heatmapData, setHeatmapData] = useState<HeatmapResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [highlightedStationId, setHighlightedStationId] = useState<string | null>(null);
+  const [openPopupStationId, setOpenPopupStationId] = useState<string | null>(null);
 
   // API 데이터 로드
   useEffect(() => {
@@ -671,129 +674,27 @@ export function DashboardOverviewContent({
         <CardContent>
           <div className="space-y-8">
             {/* 첫 번째 행: 구별 분포와 정류장 랭킹 */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 relative">
               {/* 왼쪽: 교통량 지도 */}
-              <div>
+              <div className="relative z-10">
                 <h3 className="text-lg font-medium mb-4">
                   🗺️{" "}
                   {selectedRegion === "전체"
                     ? "서울시 전체 교통량 현황"
                     : `${selectedRegion} 인기 정류장 지도`}
                 </h3>
-                <div className="relative bg-gradient-to-br from-blue-50 to-green-50 rounded-lg p-4" style={{height: "450px"}}>
-                  {selectedRegion === "전체" ? (
-                    // 전체 선택시 - 구별 교통량만 표시
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-center">
-                        <div className="text-6xl mb-4">🏙️</div>
-                        <div className="text-xl font-bold text-gray-700 mb-2">서울시 전체 현황</div>
-                        <div className="text-lg text-gray-600 mb-4">구를 선택하면 상세 지도가 표시됩니다</div>
-                        <div className="grid grid-cols-1 gap-2 max-w-md">
-                          {heatmapData?.districts
-                            .sort((a, b) => b.total_traffic - a.total_traffic)
-                            .slice(0, 5)
-                            .map((district, index) => (
-                              <div key={district.district_name} 
-                                   className="flex justify-between items-center p-2 bg-white/70 rounded">
-                                <span className="font-medium text-sm">
-                                  {index + 1}. {district.district_name}
-                                </span>
-                                <span className="text-sm font-bold text-blue-600">
-                                  {(district.total_traffic / 1000).toFixed(0)}K명
-                                </span>
-                              </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    // 구 선택시 - 해당 구의 인기 정류장 5개 지도
-                    <div className="relative h-full">
-                      {/* 지도 배경 */}
-                      <div className="absolute inset-0 bg-gradient-to-br from-emerald-100 to-blue-100 rounded-lg">
-                        <div className="absolute top-4 left-4 bg-white/90 px-3 py-2 rounded-lg shadow-md">
-                          <div className="font-bold text-lg text-gray-800">{selectedRegion}</div>
-                          <div className="text-sm text-gray-600">TOP 5 인기 정류장</div>
-                        </div>
-                        
-                        {/* 인기 정류장 마커들 (애니메이션 효과) */}
-                        <div className="relative h-full">
-                          {topStations.map((station, index) => {
-                            // 지도상 위치를 시뮬레이션 (실제로는 coordinate 사용)
-                            const positions = [
-                              { top: "25%", left: "30%", delay: "0s" },
-                              { top: "45%", left: "60%", delay: "0.2s" },
-                              { top: "70%", left: "20%", delay: "0.4s" },
-                              { top: "35%", left: "75%", delay: "0.6s" },
-                              { top: "60%", left: "45%", delay: "0.8s" }
-                            ];
-                            const pos = positions[index] || positions[0];
-                            
-                            return (
-                              <div
-                                key={station.station_id}
-                                className="absolute transform -translate-x-1/2 -translate-y-1/2 animate-bounce"
-                                style={{
-                                  top: pos.top,
-                                  left: pos.left,
-                                  animationDelay: pos.delay,
-                                  animationDuration: "2s"
-                                }}
-                              >
-                                {/* 정류장 마커 */}
-                                <div className="relative">
-                                  {/* 펄스 효과 */}
-                                  <div 
-                                    className="absolute inset-0 bg-red-400 rounded-full animate-ping"
-                                    style={{
-                                      width: `${60 - index * 8}px`,
-                                      height: `${60 - index * 8}px`,
-                                      animationDelay: pos.delay
-                                    }}
-                                  />
-                                  
-                                  {/* 메인 마커 */}
-                                  <div 
-                                    className="relative bg-gradient-to-br from-red-500 to-red-600 text-white rounded-full flex items-center justify-center font-bold text-lg shadow-lg cursor-pointer hover:scale-110 transition-transform"
-                                    style={{
-                                      width: `${60 - index * 8}px`,
-                                      height: `${60 - index * 8}px`
-                                    }}
-                                    title={`${station.station_name} - ${station.total_traffic.toLocaleString()}명`}
-                                  >
-                                    {index + 1}
-                                  </div>
-                                  
-                                  {/* 정보 툴팁 */}
-                                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 bg-black/80 text-white px-2 py-1 rounded text-xs whitespace-nowrap opacity-0 hover:opacity-100 transition-opacity z-10">
-                                    <div className="font-bold">{station.station_name}</div>
-                                    <div>{station.total_traffic.toLocaleString()}명/일</div>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        
-                        {/* 범례 */}
-                        <div className="absolute bottom-4 right-4 bg-white/90 px-3 py-2 rounded-lg shadow-md">
-                          <div className="text-xs font-bold text-gray-700 mb-1">범례</div>
-                          <div className="flex items-center gap-1 text-xs">
-                            <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                            <span>인기 정류장</span>
-                          </div>
-                          <div className="text-xs text-gray-600 mt-1">
-                            크기 = 순위 (큰 것이 1위)
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <InteractiveMap 
+                  selectedRegion={selectedRegion}
+                  topStations={topStations}
+                  highlightedStationId={highlightedStationId || undefined}
+                  onStationClick={(stationId) => setHighlightedStationId(stationId)}
+                  openPopupStationId={openPopupStationId || undefined}
+                  onPopupToggle={(stationId) => setOpenPopupStationId(stationId)}
+                />
               </div>
 
               {/* 오른쪽: 교통량 상위 정류장 (랭킹 사이트 스타일) */}
-              <div>
+              <div className="relative z-50">
                 <h3 className="text-2xl font-bold mb-6 text-center">
                   🏆 {selectedRegion === "전체" ? "전국" : selectedRegion} 인기 정류장 TOP 5
                 </h3>
@@ -851,13 +752,49 @@ export function DashboardOverviewContent({
                     return (
                       <div
                         key={station.station_id}
-                        className="relative transform transition-all duration-300 hover:scale-110"
+                        className={`relative transform transition-all duration-300 cursor-pointer z-50 ${
+                          highlightedStationId === station.station_id 
+                            ? 'hover:scale-105 scale-105 ring-4 ring-blue-300' 
+                            : 'hover:scale-102'
+                        } ${
+                          openPopupStationId === station.station_id 
+                            ? 'ring-2 ring-orange-400' 
+                            : ''
+                        }`}
                         style={{
-                          background: rankStyle.bgColor,
-                          transform: `scale(${rankStyle.scale})`,
-                          boxShadow: rankStyle.shadow,
+                          background: highlightedStationId === station.station_id 
+                            ? `linear-gradient(135deg, #FF1493, #FF1493dd)` 
+                            : openPopupStationId === station.station_id
+                            ? `linear-gradient(135deg, ${rankStyle.bgColor.replace('100%', '80%')}, #FFA500)`
+                            : rankStyle.bgColor,
+                          transform: highlightedStationId === station.station_id 
+                            ? `scale(1.05)` 
+                            : `scale(${rankStyle.scale})`,
+                          boxShadow: highlightedStationId === station.station_id 
+                            ? "0 12px 32px rgba(255, 20, 147, 0.4)" 
+                            : openPopupStationId === station.station_id
+                            ? "0 8px 24px rgba(255, 165, 0, 0.3)"
+                            : rankStyle.shadow,
                           borderRadius: "16px",
                           border: index < 3 ? "3px solid rgba(255, 255, 255, 0.3)" : "2px solid rgba(0, 0, 0, 0.1)"
+                        }}
+                        onClick={() => {
+                          if (selectedRegion !== "전체") {
+                            setHighlightedStationId(station.station_id);
+                            // 팝업 토글
+                            const isCurrentlyOpen = openPopupStationId === station.station_id;
+                            setOpenPopupStationId(isCurrentlyOpen ? null : station.station_id);
+                          }
+                        }}
+                        onMouseEnter={() => {
+                          if (selectedRegion !== "전체") {
+                            setHighlightedStationId(station.station_id);
+                          }
+                        }}
+                        onMouseLeave={() => {
+                          if (selectedRegion !== "전체") {
+                            setHighlightedStationId(null);
+                          }
                         }}
                       >
                         <div className="p-5">
@@ -941,11 +878,23 @@ export function DashboardOverviewContent({
                           </div>
                           
                           {/* 1위 특별 효과 */}
-                          {index === 0 && (
+                          {index === 0 && !openPopupStationId && (
                             <div className="absolute -top-1 -right-1">
                               <div className="animate-bounce">
                                 <div className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold">
                                   BEST
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* 팝업 열린 상태 표시 */}
+                          {openPopupStationId === station.station_id && (
+                            <div className="absolute -top-1 -right-1">
+                              <div className="animate-pulse">
+                                <div className="bg-orange-500 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                                  <span>📍</span>
+                                  <span>OPEN</span>
                                 </div>
                               </div>
                             </div>
