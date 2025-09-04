@@ -1,14 +1,6 @@
 "use client";
 
 import { useState, lazy, Suspense } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -17,7 +9,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
   Sidebar,
@@ -36,18 +27,12 @@ import {
 } from "@/components/ui/sidebar";
 import {
   RefreshCw,
-  Settings,
-  FileText,
   BarChart3,
-  Map,
-  Home,
-  Activity,
-  Brain,
   ChevronRight,
   Bell,
   Target,
-  AlertTriangle,
 } from "lucide-react";
+import Image from "next/image";
 
 // Lazy load components for better performance
 const DashboardContent = lazy(() =>
@@ -85,8 +70,7 @@ type ActivePage =
   | "heatmap"
   | "traffic-analysis"
   | "drt-analysis"
-  | "reports"
-  | "settings";
+  | "chatbot";
 
 // Month names in Korean
 const monthNames = [
@@ -188,6 +172,7 @@ export function DDFDashboard() {
   const [selectedModel, setSelectedModel] = useState("교통취약지");
   const [isRealTimeMode, setIsRealTimeMode] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState<string>("7");
+  const [chatOpen, setChatOpen] = useState<boolean>(false);
 
   // 탭별 기본 지역 설정
   const getDefaultRegionForPage = (pageId: ActivePage): string => {
@@ -213,19 +198,23 @@ export function DDFDashboard() {
 
   // 페이지 변경시 해당 페이지의 기본 지역으로 리셋
   const handlePageChange = (pageId: ActivePage) => {
+    if (pageId === "chatbot") {
+      setChatOpen(!chatOpen);
+      return;
+    }
     setActivePage(pageId);
     setSelectedRegion(getDefaultRegionForPage(pageId));
+    // 챗봇은 다른 탭으로 이동해도 유지됨
   };
 
-  // Navigation items
+  // Navigation items with custom icons
   const navigationItems = [
-    { id: "dashboard", label: "대시보드 개요", icon: Home },
-    { id: "traffic", label: "교통 패턴 분석", icon: Activity },
-    { id: "heatmap", label: "교통량 분석", icon: Map },
-    { id: "traffic-analysis", label: "이상 패턴 분석", icon: AlertTriangle },
-    { id: "drt-analysis", label: "DRT 분석", icon: Brain },
-    { id: "reports", label: "리포트", icon: FileText },
-    { id: "settings", label: "설정", icon: Settings },
+    { id: "dashboard", label: "대시보드 개요", iconPath: "/sidebar_icon/대시보드개요_사이드바.png" },
+    { id: "traffic", label: "교통 패턴 분석", iconPath: "/sidebar_icon/교통패턴분석_사이드바.png" },
+    { id: "heatmap", label: "교통량 분석", iconPath: "/sidebar_icon/교통량분석_사이드바.png" },
+    { id: "traffic-analysis", label: "이상 패턴 분석", iconPath: "/sidebar_icon/이상패턴분석_사이드바.png" },
+    { id: "drt-analysis", label: "DRT 분석", iconPath: "/sidebar_icon/DRT분석_사이드바.png" },
+    { id: "chatbot", label: "AI 교통 상담", iconPath: "/sidebar_icon/RAG채팅_사이드바.png" },
   ];
 
   // Render different page content based on active page
@@ -279,299 +268,6 @@ export function DDFDashboard() {
             />
           </Suspense>
         );
-      case "reports":
-        return (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>월간 성과 리포트</CardTitle>
-                  <CardDescription>주요 성과 지표 요약</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="p-4 bg-blue-50 rounded-lg">
-                      <h4 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
-                        📈 교통량 분석
-                      </h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <div className="text-lg font-bold text-blue-600">
-                            64.2%
-                          </div>
-                          <div className="text-base text-blue-600">
-                            평균 교통량 지수
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-lg font-bold text-green-600">
-                            +5.8%
-                          </div>
-                          <div className="text-base text-green-600">
-                            전월 대비 증가
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="p-4 bg-green-50 rounded-lg">
-                      <h4 className="font-medium text-green-800 mb-2 flex items-center gap-2">
-                        🎯 DRT 적합성 정확도
-                      </h4>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-green-600">
-                            97.2%
-                          </div>
-                          <div className="text-base text-green-600">
-                            교통취약지
-                          </div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-blue-600">
-                            94.8%
-                          </div>
-                          <div className="text-base text-blue-600">출퇴근</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-yellow-600">
-                            91.5%
-                          </div>
-                          <div className="text-base text-yellow-600">
-                            관광형
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="p-4 bg-purple-50 rounded-lg">
-                      <h4 className="font-medium text-purple-800 mb-2 flex items-center gap-2">
-                        🚌 서비스 품질
-                      </h4>
-                      <div className="space-y-2 text-base">
-                        <div className="flex justify-between">
-                          <span>평균 대기시간:</span>
-                          <span className="font-medium">6.2분</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>서비스 범위:</span>
-                          <span className="font-medium">95%</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>고객 만족도:</span>
-                          <span className="font-medium">4.2/5.0</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <CardDescription>
-                    {monthNames[Number.parseInt(selectedMonth) - 1]} 데이터
-                    (최종 업데이트: 2024-01-30 14:30)
-                  </CardDescription>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>취약지역 개선 현황</CardTitle>
-                  <CardDescription>
-                    교통취약지역 접근성 개선 효과
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {vulnerableAreas.slice(0, 5).map((area) => (
-                      <div
-                        key={area.rank}
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="text-center">
-                            <div className="text-lg font-bold">
-                              #{area.rank}
-                            </div>
-                          </div>
-                          <div>
-                            <h4 className="font-medium">{area.area}</h4>
-                            <p className="text-base text-muted-foreground">
-                              인구 {area.population.toLocaleString()}명
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-lg font-bold text-blue-600">
-                            {area.score}점
-                          </div>
-                          <Badge
-                            variant={
-                              area.priority === "최우선"
-                                ? "destructive"
-                                : area.priority === "우선"
-                                ? "secondary"
-                                : "outline"
-                            }
-                          >
-                            {area.priority}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                    <div className="mt-4 p-4 bg-green-50 rounded-lg">
-                      <h5 className="font-medium text-green-800 mb-2">
-                        📊 개선 효과
-                      </h5>
-                      <div className="text-base space-y-1">
-                        <div>• 접근성 개선: 평균 25% 향상</div>
-                        <div>• 이동시간 단축: 평균 12분 감소</div>
-                        <div>• 교통비 절약: 월 평균 4.8만원</div>
-                      </div>
-                    </div>
-                  </div>
-                  <CardDescription>
-                    {monthNames[Number.parseInt(selectedMonth) - 1]} 데이터
-                    (최종 업데이트: 2024-01-30 14:30)
-                  </CardDescription>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>경제성 종합 평가</CardTitle>
-                <CardDescription>
-                  DRT 시스템의 종합적 경제성 평가
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="p-4 bg-red-50 rounded-lg text-center">
-                    <h5 className="font-medium text-red-800 mb-2">
-                      💸 재정적 ROI
-                    </h5>
-                    <div className="text-3xl font-bold text-red-600">
-                      -61.0%
-                    </div>
-                    <div className="text-base text-red-600 mt-1">5년 기준</div>
-                  </div>
-                  <div className="p-4 bg-green-50 rounded-lg text-center">
-                    <h5 className="font-medium text-green-800 mb-2">
-                      🌱 사회적 ROI
-                    </h5>
-                    <div className="text-3xl font-bold text-green-600">
-                      +12.8%
-                    </div>
-                    <div className="text-base text-green-600 mt-1">
-                      사회적 편익 포함
-                    </div>
-                  </div>
-                  <div className="p-4 bg-blue-50 rounded-lg text-center">
-                    <h5 className="font-medium text-blue-800 mb-2">
-                      ⚖️ 종합 평가
-                    </h5>
-                    <div className="text-3xl font-bold text-blue-600">B+</div>
-                    <div className="text-base text-blue-600 mt-1">
-                      도입 권장
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-6 p-4 bg-yellow-50 rounded-lg">
-                  <h5 className="font-medium text-yellow-800 mb-3">
-                    📋 정책 제언
-                  </h5>
-                  <div className="text-base space-y-2">
-                    <div>• 초기 3년간 정부 보조금 확대 필요</div>
-                    <div>• 타 교통수단과의 연계 할인 도입</div>
-                    <div>• 취약계층 대상 요금 할인 정책 검토</div>
-                    <div>• 단계적 서비스 지역 확대 전략 수립</div>
-                  </div>
-                </div>
-                <CardDescription>
-                  {monthNames[Number.parseInt(selectedMonth) - 1]} 데이터 (최종
-                  업데이트: 2024-01-30 14:30)
-                </CardDescription>
-              </CardContent>
-            </Card>
-          </div>
-        );
-      case "settings":
-        return (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>설정</CardTitle>
-                <CardDescription>시스템 설정</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="p-4 bg-blue-50 rounded-lg">
-                    <h4 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
-                      ⚙️ 자동 업데이트 설정
-                    </h4>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={isRealTimeMode}
-                        onCheckedChange={setIsRealTimeMode}
-                      />
-                      <span className="text-base">자동 업데이트 활성화</span>
-                    </div>
-                  </div>
-
-                  <div className="p-4 bg-green-50 rounded-lg">
-                    <h4 className="font-medium text-green-800 mb-3 flex items-center gap-2">
-                      📈 데이터 범위 설정
-                    </h4>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="text-center">
-                        <Label>지역 선택</Label>
-                        <Select
-                          value={selectedRegion}
-                          onValueChange={setSelectedRegion}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="전체">전체 지역</SelectItem>
-                            {seoulDistricts.map((district) => (
-                              <SelectItem key={district} value={district}>
-                                {district}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="text-center">
-                        <Label>월 선택</Label>
-                        <Select
-                          value={selectedMonth}
-                          onValueChange={setSelectedMonth}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {monthNames.map((month, index) => (
-                              <SelectItem
-                                key={index + 1}
-                                value={(index + 1).toString()}
-                              >
-                                {month}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <CardDescription>
-                  {monthNames[Number.parseInt(selectedMonth) - 1]} 데이터 (최종
-                  업데이트: 2024-01-30 14:30)
-                </CardDescription>
-              </CardContent>
-            </Card>
-          </div>
-        );
       default:
         return (
           <Suspense fallback={<LoadingSpinner />}>
@@ -584,37 +280,43 @@ export function DDFDashboard() {
   return (
     <SidebarProvider>
       <Sidebar className="border-r">
-        <SidebarHeader className="border-b px-6 py-4">
+        <SidebarHeader className="border-b px-4 py-4">
           <div className="flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <BarChart3 className="h-4 w-4" />
             </div>
-            <div>
-              <h2 className="text-lg font-semibold">DDF 대시보드</h2>
-              <p className="text-base text-muted-foreground">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg font-bold truncate text-gray-900">DDF 대시보드</h2>
+              <p className="text-sm text-gray-700 truncate font-semibold">
                 DRT 적합성 분석 시스템
               </p>
             </div>
           </div>
         </SidebarHeader>
 
-        <SidebarContent className="px-4 py-4">
+        <SidebarContent className="px-3 py-6">
           {/* Navigation Menu */}
           <SidebarGroup>
-            <SidebarGroupLabel>메뉴</SidebarGroupLabel>
+            <SidebarGroupLabel className="text-lg font-bold mb-4 text-gray-900">메뉴</SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu>
+              <SidebarMenu className="space-y-3">
                 {navigationItems.map((item) => (
                   <SidebarMenuItem key={item.id}>
                     <SidebarMenuButton
                       onClick={() => handlePageChange(item.id as ActivePage)}
-                      isActive={activePage === item.id}
-                      className="w-full justify-start py-4 px-4 text-lg font-medium"
+                      isActive={item.id === "chatbot" ? chatOpen : activePage === item.id}
+                      className="w-full justify-start py-4 px-4 text-base font-bold h-auto min-h-[3.5rem] whitespace-normal text-gray-800"
                     >
-                      <item.icon className="h-6 w-6" />
-                      <span className="text-lg">{item.label}</span>
-                      {activePage === item.id && (
-                        <ChevronRight className="ml-auto h-5 w-5" />
+                      <Image 
+                        src={item.iconPath} 
+                        alt={item.label}
+                        width={24}
+                        height={24}
+                        className="w-6 h-6 flex-shrink-0"
+                      />
+                      <span className="text-base flex-1 leading-relaxed font-bold">{item.label}</span>
+                      {(item.id === "chatbot" ? chatOpen : activePage === item.id) && (
+                        <ChevronRight className="ml-auto h-5 w-5 flex-shrink-0" />
                       )}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -628,7 +330,107 @@ export function DDFDashboard() {
         <SidebarRail />
       </Sidebar>
 
-      <SidebarInset>
+      {/* 확장 가능한 챗봇 패널 - Fixed Position */}
+      <div className={`
+        fixed top-0 right-0 h-screen bg-gradient-to-br from-blue-50 to-indigo-100 border-l shadow-lg z-50 transition-all duration-300 overflow-hidden
+        ${chatOpen ? 'w-80 translate-x-0' : 'w-80 translate-x-full'}
+      `}>
+        {chatOpen && (
+          <div className="flex flex-col h-full">
+            {/* 채팅 헤더 */}
+            <div className="flex-shrink-0 bg-white shadow-sm border-b p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Image 
+                    src="/sidebar_icon/RAG채팅_사이드바.png" 
+                    alt="AI 교통 상담"
+                    width={24}
+                    height={24}
+                    className="w-6 h-6"
+                  />
+                  <div>
+                    <h3 className="font-semibold text-gray-900">AI 교통 상담</h3>
+                    <p className="text-xs text-gray-600">
+                      서울시 교통 데이터 분석
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setChatOpen(false)}
+                  className="p-1 hover:bg-gray-100 rounded"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            
+            {/* 채팅 영역 */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {/* 시작 메시지 */}
+                <div className="flex justify-start">
+                  <div className="max-w-xs px-3 py-2 rounded-lg bg-white shadow-sm">
+                    <div className="flex items-start gap-2">
+                      <Image 
+                        src="/sidebar_icon/RAG채팅_사이드바.png" 
+                        alt="AI"
+                        width={16}
+                        height={16}
+                        className="w-4 h-4 mt-0.5 flex-shrink-0"
+                      />
+                      <div>
+                        <p className="text-xs text-gray-800">
+                          안녕하세요! 서울시 교통 분석 AI입니다. 
+                          궁금한 점을 자유롭게 질문해보세요.
+                        </p>
+                        <div className="mt-2 space-y-1">
+                          <div className="text-xs text-gray-500">💡 예시:</div>
+                          <div className="space-y-1 text-xs">
+                            <div className="bg-blue-50 px-2 py-1 rounded cursor-pointer hover:bg-blue-100 transition-colors">
+                              강남구 7월 교통량?
+                            </div>
+                            <div className="bg-blue-50 px-2 py-1 rounded cursor-pointer hover:bg-blue-100 transition-colors">
+                              DRT 필요 지역은?
+                            </div>
+                            <div className="bg-blue-50 px-2 py-1 rounded cursor-pointer hover:bg-blue-100 transition-colors">
+                              이상 패턴 특징?
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* 입력 영역 */}
+              <div className="flex-shrink-0 bg-white border-t p-3">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="질문을 입력하세요..."
+                    className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    disabled
+                  />
+                  <button 
+                    className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    disabled
+                  >
+                    전송
+                  </button>
+                </div>
+                <div className="mt-1 text-xs text-gray-500 text-center">
+                  🚧 구현 중입니다
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <SidebarInset className={`${chatOpen ? 'mr-80' : ''} transition-all duration-300`}>
         {/* Header */}
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-6">
           <SidebarTrigger className="-ml-1" />

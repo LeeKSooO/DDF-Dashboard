@@ -22,9 +22,26 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
-import { useState, useEffect } from "react";
-import { apiService, HeatmapResponse, utils } from "@/lib/api";
-import { InteractiveMap } from "@/components/dashboard/interactive-map";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { apiService, HeatmapResponse, DistrictData, utils } from "@/lib/api";
+import dynamic from "next/dynamic";
+import { SparkBar } from "@/components/charts/SparkBar";
+
+// InteractiveMap을 동적으로 로드하여 SSR 문제 방지
+const InteractiveMap = dynamic(
+  () => import("@/components/dashboard/interactive-map.client").then((mod) => mod.InteractiveMapClient),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-[1000px] bg-gradient-to-br from-blue-50 to-green-50 rounded-lg flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+          <p className="text-gray-600">지도 로딩 중...</p>
+        </div>
+      </div>
+    )
+  }
+);
 
 // Month names in Korean
 const monthNames = [
@@ -64,10 +81,35 @@ export function DashboardOverviewContent({
   onNavigateToTab,
 }: DashboardOverviewContentProps) {
   const [heatmapData, setHeatmapData] = useState<HeatmapResponse | null>(null);
+  const [districtData, setDistrictData] = useState<DistrictData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [highlightedStationId, setHighlightedStationId] = useState<string | null>(null);
   const [openPopupStationId, setOpenPopupStationId] = useState<string | null>(null);
+
+  // 부모-자식 상태 루프 차단을 위한 useCallback + identity guards
+  const handleStationClick = useCallback((id: string) => {
+    setHighlightedStationId(prev => (prev === id ? prev : id));
+  }, []);
+
+  const handlePopupToggle = useCallback((id: string | null) => {
+    setOpenPopupStationId(prev => (prev === id ? prev : id));
+  }, []);
+
+  // 카드 클릭 핸들러
+  const handleCardClick = useCallback((stationId: string) => {
+    handleStationClick(stationId);
+    // 팝업 토글
+    setOpenPopupStationId(prev => prev === stationId ? null : stationId);
+  }, [handleStationClick]);
+
+  const handleMouseEnter = useCallback((stationId: string) => {
+    handleStationClick(stationId);
+  }, [handleStationClick]);
+
+  const handleMouseLeave = useCallback(() => {
+    setHighlightedStationId(null);
+  }, []);
 
   // API 데이터 로드
   useEffect(() => {
@@ -90,6 +132,17 @@ export function DashboardOverviewContent({
 
         console.log("📊 Heatmap API response:", heatmapResponse);
         setHeatmapData(heatmapResponse);
+
+        // 특정 구 선택 시 실제 좌표가 있는 구별 데이터 추가 로드
+        if (selectedRegion !== "전체") {
+          const districtResponse = await apiService.getDistrictHeatmap(
+            selectedRegion,
+            utils.formatSelectedMonth(selectedMonth)
+          );
+          setDistrictData(districtResponse);
+        } else {
+          setDistrictData(null);
+        }
       } catch (err) {
         console.error("🚨 Dashboard API error:", err);
         setError(
@@ -109,16 +162,68 @@ export function DashboardOverviewContent({
       selectedRegion === "전체" ? true : d.district_name === selectedRegion
     ) || [];
 
-  // TOP 5 정류장 (선택된 지역에 따라 달라짐)
-  const topStations =
-    selectedRegion === "전체"
-      ? heatmapData?.districts
-          .flatMap((d) => d.stations || [])
+  // TOP 5 정류장 (선택된 지역에 따라 달라짐) - useMemo로 참조 안정화
+  const topStations = useMemo(() => {
+    if (!heatmapData) return [];
+    
+    if (selectedRegion === "전체") {
+      const allStations = heatmapData.districts
+        .flatMap((d) => d.stations || [])
+        .sort((a, b) => b.total_traffic - a.total_traffic)
+        .slice(0, 5);
+      
+      console.log("🔍 Seoul TOP 5 stations:", allStations.map(s => ({
+        name: s.station_name,
+        id: s.station_id,
+        coordinate: s.coordinate,
+        traffic: s.total_traffic
+      })));
+      
+      // 전체 지역에서도 좌표 형식 변환 (만약 lat/lng 형식이라면)
+      return allStations.map(station => {
+        if (station.coordinate && typeof (station.coordinate as any).lat === 'number') {
+          // lat/lng 형식인 경우 latitude/longitude로 변환
+          return {
+            ...station,
+            coordinate: {
+              latitude: (station.coordinate as any).lat,
+              longitude: (station.coordinate as any).lng
+            }
+          };
+        }
+        // 이미 latitude/longitude 형식이거나 좌표가 없는 경우 그대로 반환
+        return station;
+      });
+    } else {
+      // 구별 데이터가 있으면 실제 좌표가 포함된 정류장 데이터 사용
+      if (districtData && districtData.stations) {
+        console.log("🗺️ Converting district station coordinates from lat/lng to latitude/longitude");
+        return districtData.stations
+          .map(station => ({
+            ...station,
+            coordinate: {
+              latitude: (station.coordinate as any).lat,
+              longitude: (station.coordinate as any).lng
+            }
+          }))
           .sort((a, b) => b.total_traffic - a.total_traffic)
-          .slice(0, 5) || []
-      : filteredDistricts[0]?.stations
-          ?.sort((a, b) => b.total_traffic - a.total_traffic)
-          .slice(0, 5) || [];
+          .slice(0, 5);
+      }
+      // fallback to original data
+      return filteredDistricts[0]?.stations
+        ?.sort((a, b) => b.total_traffic - a.total_traffic)
+        .slice(0, 5) || [];
+    }
+  }, [heatmapData, districtData, selectedRegion, filteredDistricts]);
+
+  // TOP 5 정류장에 대한 표시 이름 생성 - useMemo로 파생값 계산
+  const stationDisplayNames = useMemo(() => {
+    if (topStations && topStations.length > 0) {
+      return utils.getStationDisplayNames(topStations);
+    }
+    return new Map<string, string>();
+  }, [topStations]);
+
 
   // 구 평균 교통량 계산
   const districtAverageTraffic = heatmapData?.districts.length
@@ -126,21 +231,6 @@ export function DashboardOverviewContent({
       heatmapData.districts.length
     : 0;
 
-  // 정류장 증강 배수 계산 (해당 구 평균 대비)
-  const getStationAmplificationRatio = (
-    stationTraffic: number,
-    districtName: string
-  ) => {
-    const district = heatmapData?.districts.find(
-      (d) => d.district_name === districtName
-    );
-    if (!district || !district.stations?.length) return 0;
-
-    const districtStationAvg =
-      district.stations.reduce((sum, s) => sum + s.total_traffic, 0) /
-      district.stations.length;
-    return districtStationAvg > 0 ? stationTraffic / districtStationAvg : 0;
-  };
 
   // 선택된 지역에 따른 동적 KPI 계산
   const getCurrentData = () => {
@@ -182,16 +272,31 @@ export function DashboardOverviewContent({
 
   const currentData = getCurrentData();
 
-  // KPI 계산 (동적으로 변경)
-  const kpiData = [
+  // KPI 계산에 필요한 기본 값들을 메모이제이션
+  const basicMetrics = useMemo(() => ({
+    totalTraffic: currentData.totalTraffic,
+    stationCount: currentData.stationCount,
+    totalRide: currentData.totalRide,
+    totalAlight: currentData.totalAlight,
+    regionName: currentData.regionName,
+    maxDistrictTraffic: heatmapData?.statistics.max_district_traffic || 0,
+    maxDistrictName: heatmapData?.districts.find(
+      (d) => d.total_traffic === heatmapData?.statistics.max_district_traffic
+    )?.district_name || "최고 수치",
+    districtAvg: districtAverageTraffic
+  }), [currentData.totalTraffic, currentData.stationCount, currentData.totalRide, currentData.totalAlight, currentData.regionName, heatmapData?.statistics.max_district_traffic, districtAverageTraffic, heatmapData?.districts]);
+
+  // KPI 계산 (동적으로 변경) - useMemo로 메모이제이션하여 무한 렌더링 방지
+  const kpiData = useMemo(() => [
     // 1. 총 교통량
     {
+      key: "totalTraffic",
       title:
         selectedRegion === "전체" ? "총 교통량" : `${selectedRegion} 교통량`,
-      value: Math.round(currentData.totalTraffic / 1000000).toFixed(1) + "M",
-      subtitle: currentData.regionName,
+      value: Math.round(basicMetrics.totalTraffic / 1000000).toFixed(1) + "M",
+      subtitle: basicMetrics.regionName,
       income:
-        Math.round(currentData.totalTraffic / 1000).toLocaleString() + "K",
+        Math.round(basicMetrics.totalTraffic / 1000).toLocaleString() + "K",
       color: "#3B82F6", // 파란색 (총 교통량)
       icon: <Image src="/icon/총교통량.png" alt="총 교통량" width={20} height={20} />,
     },
@@ -450,64 +555,56 @@ export function DashboardOverviewContent({
       color: "#E11D48", // 빨간색 (불평등)
       icon: <Image src="/icon/불평등.png" alt="교통 불평등 지수" width={20} height={20} />,
     },
-  ];
+  ], [selectedRegion, basicMetrics, filteredDistricts]);
 
-  // 탭 네비게이션 카드들 (기존 카드 뒤에 추가)
-  const navigationCards = [
+  // 탭 네비게이션 카드들 (기존 카드 뒤에 추가) - useMemo로 메모이제이션
+  const navigationCards = useMemo(() => [
     {
+      key: "traffic",
       title: "교통 패턴 분석",
       value: "24시간",
       subtitle: "주중/주말 패턴",
       income: `피크: 8시, 18시`,
       color: "#8B5CF6",
-      icon: "📊",
       tabId: "traffic",
       description: "시간대별 교통 흐름 분석",
+      icon: <Image src="/navigation_icon/교통패턴분석.png" alt="교통 패턴 분석" width={20} height={20} />,
     },
     {
-      title: "지역별 교통량 분석",
+      key: "heatmap",
+      title: "교통량 분석",
       value: selectedRegion === "전체" ? "25개구" : "정류장별",
       subtitle: "교통량 분포 분석",
       income: "이상 패턴 6가지 분석",
       color: "#F97316",
-      icon: "🗺️",
       tabId: "heatmap",
       description: "지역별 교통량 히트맵",
+      icon: <Image src="/navigation_icon/교통량분석.png" alt="교통량 분석" width={20} height={20} />,
     },
     {
+      key: "traffic-analysis",
       title: "이상 패턴 분석",
       value: "6가지",
       subtitle: "특수 패턴 랭킹",
       income: "야간/주말/지역별 등",
       color: "#DC2626",
-      icon: "⚡",
       tabId: "traffic-analysis",
       description: "교통 패턴 & 최적화",
+      icon: <Image src="/navigation_icon/이상패턴분석.png" alt="이상 패턴 분석" width={20} height={20} />,
     },
     {
+      key: "drt-analysis",
       title: "DRT 적합성",
       value: selectedRegion === "전체" ? "3모델" : "스코어",
       subtitle: "수요응답형 교통",
       income: "교통취약지/출퇴근/관광",
       color: "#059669",
-      icon: "🎯",
       tabId: "drt-analysis",
       description: "DRT 적합도 분석",
+      icon: <Image src="/navigation_icon/DRT분석.png" alt="DRT 분석" width={20} height={20} />,
     },
-    {
-      title: "성과 & 리포트",
-      value: "월간",
-      subtitle: "종합 성과 분석",
-      income: "ROI, 정책 제언",
-      color: "#7C2D12",
-      icon: "📈",
-      tabId: "reports",
-      description: "성과 및 경제성 평가",
-    },
-  ];
+  ], [selectedRegion]);
 
-  // 사용하지 않는 함수 제거
-  // const getStationAmplificationRatio = () => {}; // 제거됨
 
   // 로딩 상태
   if (loading) {
@@ -545,21 +642,23 @@ export function DashboardOverviewContent({
       <div className="space-y-6">
         {/* 기본 정보 카드들 */}
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            📋 기본 현황
-          </h2>
+          <div className="flex items-center gap-2 mb-4">
+            <Image src="/icon/기본현황.png" alt="기본 현황" width={24} height={24} />
+            <h2 className="text-lg font-semibold text-gray-900">
+              기본 현황
+            </h2>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {kpiData.map((kpi, index) => (
+            {kpiData.map((kpi) => (
               <Card
-                key={index}
-                className="relative overflow-hidden"
-                style={{ backgroundColor: kpi.color + "20" }}
+                key={kpi.key}
+                className="relative overflow-hidden bg-gray-50"
               >
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-lg">{kpi.icon}</span>
+                        {kpi.icon || <span className="text-lg">📊</span>}
                         <span className="text-base font-bold text-gray-700">
                           {kpi.title}
                         </span>
@@ -582,20 +681,7 @@ export function DashboardOverviewContent({
                     </div>
 
                     {/* 오른쪽 미니 차트 영역 (참고 이미지 스타일) */}
-                    <div className="w-16 h-12 opacity-60">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
-                          data={[
-                            { value: 10 },
-                            { value: 15 },
-                            { value: 12 },
-                            { value: 18 },
-                          ]}
-                        >
-                          <Bar dataKey="value" fill={kpi.color} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
+                    <SparkBar fill={kpi.color} />
                   </div>
                 </CardContent>
               </Card>
@@ -605,13 +691,16 @@ export function DashboardOverviewContent({
 
         {/* 탭 네비게이션 카드들 */}
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            🎯 상세 분석 바로가기
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            {navigationCards.map((card, index) => (
+          <div className="flex items-center gap-2 mb-4">
+            <Image src="/icon/상세분석바로가기.png" alt="상세 분석 바로가기" width={24} height={24} />
+            <h2 className="text-lg font-semibold text-gray-900">
+              상세 분석 바로가기
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {navigationCards.map((card) => (
               <Card
-                key={`nav-${index}`}
+                key={card.key}
                 className="relative overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-200 transform hover:scale-105"
                 style={{ backgroundColor: card.color + "20" }}
                 onClick={() => onNavigateToTab?.(card.tabId)}
@@ -620,7 +709,7 @@ export function DashboardOverviewContent({
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-lg">{card.icon}</span>
+                        {card.icon || <span className="text-lg">🎯</span>}
                         <span className="text-base font-bold text-gray-700">
                           {card.title}
                         </span>
@@ -687,17 +776,21 @@ export function DashboardOverviewContent({
                   selectedRegion={selectedRegion}
                   topStations={topStations}
                   highlightedStationId={highlightedStationId || undefined}
-                  onStationClick={(stationId) => setHighlightedStationId(stationId)}
+                  onStationClick={handleStationClick}
                   openPopupStationId={openPopupStationId || undefined}
-                  onPopupToggle={(stationId) => setOpenPopupStationId(stationId)}
+                  onPopupToggle={handlePopupToggle}
+                  stationDisplayNames={stationDisplayNames}
                 />
               </div>
 
               {/* 오른쪽: 교통량 상위 정류장 (랭킹 사이트 스타일) */}
               <div className="relative z-50">
-                <h3 className="text-2xl font-bold mb-6 text-center">
-                  🏆 {selectedRegion === "전체" ? "전국" : selectedRegion} 인기 정류장 TOP 5
-                </h3>
+                <div className="flex items-center justify-center gap-3 mb-6">
+                  <Image src="/icon/인기정류장.png" alt="인기 정류장" width={28} height={28} />
+                  <h3 className="text-2xl font-bold">
+                    {selectedRegion === "전체" ? "전국" : selectedRegion} 인기 정류장 TOP 5
+                  </h3>
+                </div>
                 <div className="space-y-4">
                   {topStations.map((station, index) => {
                     const stationDistrict =
@@ -778,24 +871,9 @@ export function DashboardOverviewContent({
                           borderRadius: "16px",
                           border: index < 3 ? "3px solid rgba(255, 255, 255, 0.3)" : "2px solid rgba(0, 0, 0, 0.1)"
                         }}
-                        onClick={() => {
-                          if (selectedRegion !== "전체") {
-                            setHighlightedStationId(station.station_id);
-                            // 팝업 토글
-                            const isCurrentlyOpen = openPopupStationId === station.station_id;
-                            setOpenPopupStationId(isCurrentlyOpen ? null : station.station_id);
-                          }
-                        }}
-                        onMouseEnter={() => {
-                          if (selectedRegion !== "전체") {
-                            setHighlightedStationId(station.station_id);
-                          }
-                        }}
-                        onMouseLeave={() => {
-                          if (selectedRegion !== "전체") {
-                            setHighlightedStationId(null);
-                          }
-                        }}
+                        onClick={() => handleCardClick(station.station_id)}
+                        onMouseEnter={() => handleMouseEnter(station.station_id)}
+                        onMouseLeave={handleMouseLeave}
                       >
                         <div className="p-5">
                           <div className="flex items-center justify-between">
@@ -820,7 +898,13 @@ export function DashboardOverviewContent({
                                   className="text-xl font-bold mb-1 leading-tight"
                                   style={{ color: rankStyle.textColor }}
                                 >
-                                  {station.station_name}
+                                  {stationDisplayNames.get(station.station_id) || station.station_name}
+                                </div>
+                                <div 
+                                  className="text-xs opacity-60 mb-1"
+                                  style={{ color: rankStyle.textColor }}
+                                >
+                                  ID: {station.station_id}
                                 </div>
                                 <div 
                                   className="text-lg font-medium opacity-80"

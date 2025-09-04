@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 
 // 서울시 각 구의 중심 좌표
 const DISTRICT_CENTERS: Record<string, [number, number]> = {
@@ -137,14 +137,19 @@ interface InteractiveMapProps {
     total_traffic: number;
     total_ride?: number;
     total_alight?: number;
+    coordinate?: {
+      latitude: number;
+      longitude: number;
+    };
   }>;
   highlightedStationId?: string;
   onStationClick?: (stationId: string) => void;
   openPopupStationId?: string;
   onPopupToggle?: (stationId: string | null) => void;
+  stationDisplayNames?: Map<string, string>;
 }
 
-export function InteractiveMap({ selectedRegion, topStations, highlightedStationId, onStationClick, openPopupStationId, onPopupToggle }: InteractiveMapProps) {
+export function InteractiveMapClient({ selectedRegion, topStations, highlightedStationId, onStationClick, openPopupStationId, onPopupToggle, stationDisplayNames }: InteractiveMapProps) {
   const [isClient, setIsClient] = useState(false);
   const markerRefs = useRef<{ [key: string]: L.Marker }>({});
 
@@ -162,7 +167,7 @@ export function InteractiveMap({ selectedRegion, topStations, highlightedStation
 
   if (!isClient) {
     return (
-      <div className="w-full h-[700px] bg-gradient-to-br from-blue-50 to-green-50 rounded-lg flex items-center justify-center">
+      <div className="w-full h-[1000px] bg-gradient-to-br from-blue-50 to-green-50 rounded-lg flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
           <p className="text-gray-600">지도 로딩 중...</p>
@@ -181,7 +186,7 @@ export function InteractiveMap({ selectedRegion, topStations, highlightedStation
   ];
 
   return (
-    <div className="w-full h-[700px] rounded-lg overflow-hidden shadow-lg">
+    <div className="w-full h-[1000px] rounded-lg overflow-hidden shadow-lg">
       <style jsx global>{`
         @keyframes bounce {
           0%, 20%, 50%, 80%, 100% {
@@ -235,22 +240,53 @@ export function InteractiveMap({ selectedRegion, topStations, highlightedStation
         
         <MapUpdater selectedRegion={selectedRegion} />
         
-        {selectedRegion !== "전체" && topStations.map((station, index) => {
-          // 구의 중심점 주변에 정류장들을 배치 (실제로는 좌표 데이터가 있어야 함)
-          const districtCenter = DISTRICT_CENTERS[selectedRegion] || SEOUL_CENTER;
+        {topStations.length > 0 && (() => {
+          // 유효성 체크 유틸
+          function toValidLatLng(station: { coordinate?: { latitude?: number; longitude?: number } })
+            : [number, number] | null {
+            const lat = station.coordinate?.latitude;
+            const lng = station.coordinate?.longitude;
+            if (typeof lat === "number" && typeof lng === "number" && !Number.isNaN(lat) && !Number.isNaN(lng)) {
+              return [lat, lng];
+            }
+            return null;
+          }
           
-          // 임시로 구 중심점 주변에 랜덤하게 배치
-          const positions = [
-            [districtCenter[0] + 0.008, districtCenter[1] - 0.012],
-            [districtCenter[0] - 0.006, districtCenter[1] + 0.010],
-            [districtCenter[0] + 0.012, districtCenter[1] + 0.008],
-            [districtCenter[0] - 0.010, districtCenter[1] - 0.008],
-            [districtCenter[0] + 0.005, districtCenter[1] + 0.015],
-          ];
-          
-          const position = positions[index] || districtCenter;
+          return topStations.map((station, index) => {
+            // 1) 우선 좌표 시도
+            let position = toValidLatLng(station);
+
+
+            // 2) 좌표 없으면 fallback
+            if (!position) {
+              if (selectedRegion === "전체") {
+                // 전체 선택시 서울시 전체 범위에 분산 배치
+                const fallbackPositions: [number, number][] = [
+                  [37.5665, 127.0780], // 강남 지역
+                  [37.5563, 126.9723], // 마포 지역  
+                  [37.5146, 127.1056], // 송파 지역
+                  [37.6063, 127.0925], // 중랑 지역
+                  [37.4955, 126.8872], // 구로 지역
+                ];
+                position = fallbackPositions[index] ?? SEOUL_CENTER;
+              } else {
+                // 특정 구 선택시 해당 구 중심 기반 fallback
+                const districtCenter = DISTRICT_CENTERS[selectedRegion] || SEOUL_CENTER;
+                const fallbackPositions: [number, number][] = [
+                  [districtCenter[0] + 0.008, districtCenter[1] - 0.012],
+                  [districtCenter[0] - 0.006, districtCenter[1] + 0.010],
+                  [districtCenter[0] + 0.012, districtCenter[1] + 0.008],
+                  [districtCenter[0] - 0.010, districtCenter[1] - 0.008],
+                  [districtCenter[0] + 0.005, districtCenter[1] + 0.015],
+                ];
+                position = fallbackPositions[index] ?? districtCenter;
+              }
+            }
+
+            // 3) 그래도 없으면 스킵
+            if (!position) return null;
+            
           const isHighlighted = highlightedStationId === station.station_id;
-          const isPopupOpen = openPopupStationId === station.station_id;
 
           // 하이라이트된 마커는 더 큰 아이콘 사용
           const iconColor = isHighlighted ? "#FF1493" : markerColors[index]; // 하이라이트시 핫핑크
@@ -259,7 +295,7 @@ export function InteractiveMap({ selectedRegion, topStations, highlightedStation
           return (
             <Marker
               key={station.station_id}
-              position={position as [number, number]}
+              position={position}
               icon={createCustomIcon(index, iconColor, isHighlighted ? iconSize : undefined)}
               ref={(ref) => {
                 if (ref) {
@@ -290,9 +326,14 @@ export function InteractiveMap({ selectedRegion, topStations, highlightedStation
                     <span className="text-2xl">
                       {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `${index + 1}위`}
                     </span>
-                    <h3 className="font-bold text-lg text-gray-800">
-                      {station.station_name}
-                    </h3>
+                    <div>
+                      <h3 className="font-bold text-lg text-gray-800">
+                        {stationDisplayNames?.get(station.station_id) || station.station_name}
+                      </h3>
+                      <p className="text-xs text-gray-500 mt-1">
+                        ID: {station.station_id}
+                      </p>
+                    </div>
                   </div>
                   
                   <div className="space-y-2 text-sm">
@@ -331,7 +372,8 @@ export function InteractiveMap({ selectedRegion, topStations, highlightedStation
               </Popup>
             </Marker>
           );
-        })}
+          });
+        })()}
       </MapContainer>
     </div>
   );

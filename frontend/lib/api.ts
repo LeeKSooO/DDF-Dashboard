@@ -473,4 +473,37 @@ export const utils = {
     "중구",
     "중랑구",
   ],
+
+  // 중복된 정류장명에만 ID를 붙이는 함수
+  getStationDisplayNames: <T extends { station_name: string; station_id: string }>(
+    stations: T[]
+  ): Map<string, string> => {
+    const nameCount = new Map<string, number>();
+    const stationIdsByName = new Map<string, string[]>();
+    
+    // 정류장 이름별로 카운트 및 ID 수집
+    stations.forEach(station => {
+      const count = nameCount.get(station.station_name) || 0;
+      nameCount.set(station.station_name, count + 1);
+      
+      const ids = stationIdsByName.get(station.station_name) || [];
+      ids.push(station.station_id);
+      stationIdsByName.set(station.station_name, ids);
+    });
+    
+    // 표시할 이름 생성
+    const displayNames = new Map<string, string>();
+    stations.forEach(station => {
+      if (nameCount.get(station.station_name)! > 1) {
+        // 중복된 이름인 경우 ID의 마지막 6자리 추가
+        const shortId = station.station_id.slice(-6);
+        displayNames.set(station.station_id, `${station.station_name} (${shortId})`);
+      } else {
+        // 유일한 이름인 경우 그대로 사용
+        displayNames.set(station.station_id, station.station_name);
+      }
+    });
+    
+    return displayNames;
+  },
 };
