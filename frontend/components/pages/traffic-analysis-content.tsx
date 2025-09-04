@@ -528,7 +528,7 @@ export function TrafficAnalysisContent({
                           variant="destructive"
                           className="text-base px-3 py-1"
                         >
-                          효율성 {item.efficiency_score}%
+                          노선당 {item.efficiency_score.toFixed(1)}명
                         </Badge>
                       </div>
                       <AlertDescription>
