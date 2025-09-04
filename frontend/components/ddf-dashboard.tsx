@@ -608,12 +608,12 @@ export function DDFDashboard() {
                     <SidebarMenuButton
                       onClick={() => handlePageChange(item.id as ActivePage)}
                       isActive={activePage === item.id}
-                      className="w-full justify-start"
+                      className="w-full justify-start py-4 px-4 text-lg font-medium"
                     >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.label}</span>
+                      <item.icon className="h-6 w-6" />
+                      <span className="text-lg">{item.label}</span>
                       {activePage === item.id && (
-                        <ChevronRight className="ml-auto h-4 w-4" />
+                        <ChevronRight className="ml-auto h-5 w-5" />
                       )}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -622,36 +622,6 @@ export function DDFDashboard() {
             </SidebarGroupContent>
           </SidebarGroup>
 
-          {/* Quick Stats */}
-          <SidebarGroup>
-            <SidebarGroupLabel>최신 현황</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <div className="space-y-3 px-2">
-                <div className="flex items-center justify-between text-base">
-                  <span className="text-muted-foreground">교통량</span>
-                  <span className="font-medium">64.2%</span>
-                </div>
-                <div className="flex items-center justify-between text-base">
-                  <span className="text-muted-foreground">평균속도</span>
-                  <span className="font-medium">36.8km/h</span>
-                </div>
-                <div className="flex items-center justify-between text-base">
-                  <span className="text-muted-foreground">적합성 분석</span>
-                  <span className="font-medium">18,500</span>
-                </div>
-                <div className="flex items-center justify-between text-base">
-                  <span className="text-muted-foreground">취약지</span>
-                  <span className="font-medium">10개 지역</span>
-                </div>
-                <div className="flex items-center justify-between text-base">
-                  <span className="text-muted-foreground">시스템</span>
-                  <Badge variant="default" className="text-base">
-                    정상
-                  </Badge>
-                </div>
-              </div>
-            </SidebarGroupContent>
-          </SidebarGroup>
         </SidebarContent>
 
         <SidebarRail />

@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { MapPin, Users, Activity, Zap } from "lucide-react";
+import Image from "next/image";
 import {
   PieChart,
   Pie,
@@ -189,7 +190,7 @@ export function DashboardOverviewContent({
       income:
         Math.round(currentData.totalTraffic / 1000).toLocaleString() + "K",
       color: "#3B82F6", // 파란색 (총 교통량)
-      icon: "🚌",
+      icon: <Image src="/icon/총교통량.png" alt="총 교통량" width={20} height={20} />,
     },
     // 2. 평균 구별 교통량
     {
@@ -208,14 +209,13 @@ export function DashboardOverviewContent({
       subtitle: selectedRegion === "전체" ? "25개 구 평균" : "정류장당 평균",
       income:
         selectedRegion === "전체"
-          ? Math.round(districtAverageTraffic / 100) + "00명"
+          ? Math.round(districtAverageTraffic).toLocaleString() + "명"
           : Math.round(
               currentData.totalTraffic /
-                Math.max(currentData.stationCount, 1) /
-                100
-            ) + "00명",
+                Math.max(currentData.stationCount, 1)
+            ).toLocaleString() + "명",
       color: "#10B981", // 초록색 (평균)
-      icon: "📊",
+      icon: <Image src="/icon/평균구별교통량.png" alt="평균 구별 교통량" width={20} height={20} />,
     },
     // 3. 최대 교통량 구
     {
@@ -243,17 +243,13 @@ export function DashboardOverviewContent({
           : "정류장 최고 수치",
       income:
         selectedRegion === "전체"
-          ? Math.round(
-              (heatmapData?.statistics.max_district_traffic || 0) / 100
-            ) + "00명"
-          : Math.round(
-              (filteredDistricts[0]?.stations?.reduce(
-                (max, s) => (s.total_traffic > max ? s.total_traffic : max),
-                0
-              ) || 0) / 100
-            ) + "00명",
+          ? (heatmapData?.statistics.max_district_traffic || 0).toLocaleString() + "명"
+          : (filteredDistricts[0]?.stations?.reduce(
+              (max, s) => (s.total_traffic > max ? s.total_traffic : max),
+              0
+            ) || 0).toLocaleString() + "명",
       color: "#F59E0B", // 주황색 (최대)
-      icon: "🔥",
+      icon: <Image src="/icon/최대교통량.png" alt="최대 교통량" width={20} height={20} />,
     },
     // 4. 최소 교통량 구 (기존 8번)
     {
@@ -281,17 +277,13 @@ export function DashboardOverviewContent({
           : "정류장 최저 수치",
       income:
         selectedRegion === "전체"
-          ? Math.round(
-              (heatmapData?.statistics.min_district_traffic || 0) / 100
-            ) + "00명"
-          : Math.round(
-              (filteredDistricts[0]?.stations?.reduce(
-                (min, s) => (s.total_traffic < min ? s.total_traffic : min),
-                Number.MAX_SAFE_INTEGER
-              ) || 0) / 100
-            ) + "00명",
+          ? (heatmapData?.statistics.min_district_traffic || 0).toLocaleString() + "명"
+          : (filteredDistricts[0]?.stations?.reduce(
+              (min, s) => (s.total_traffic < min ? s.total_traffic : min),
+              Number.MAX_SAFE_INTEGER
+            ) || 0).toLocaleString() + "명",
       color: "#FB7185",
-      icon: "📉",
+      icon: <Image src="/icon/최소교통량.png" alt="최소 교통량" width={20} height={20} priority unoptimized />,
     },
     // 5. 총 정류장 수 (기존 4번)
     {
@@ -306,7 +298,7 @@ export function DashboardOverviewContent({
       subtitle: selectedRegion === "전체" ? "버스정류장" : "버스정류장",
       income: currentData.stationCount.toLocaleString() + "개",
       color: "#8B5CF6", // 보라색 (정류장 수)
-      icon: "🚏",
+      icon: <Image src="/icon/총정류장.png" alt="총 정류장 수" width={20} height={20} />,
     },
     // 6. 승하차 비율 (기존 7번)
     {
@@ -322,7 +314,7 @@ export function DashboardOverviewContent({
         currentData.totalAlight / 1000
       ).toLocaleString()}K`,
       color: "#EC4899", // 핑크색 (승하차 비율)
-      icon: "⚖️",
+      icon: <Image src="/icon/승하차비율.png" alt="승하차 비율" width={20} height={20} />,
     },
     // 7. 교통 집중도 (기존 5번)
     {
@@ -393,7 +385,7 @@ export function DashboardOverviewContent({
         }
       })(),
       color: "#06B6D4", // 청록색 (집중도)
-      icon: "🎯",
+      icon: <Image src="/icon/교통집중도.png" alt="교통 집중도" width={20} height={20} />,
     },
     // 8. 교통 불평등 지수 (기존 6번)
     {
@@ -453,7 +445,7 @@ export function DashboardOverviewContent({
           : "DRT 필요성 낮음";
       })(),
       color: "#E11D48", // 빨간색 (불평등)
-      icon: "📊",
+      icon: <Image src="/icon/불평등.png" alt="교통 불평등 지수" width={20} height={20} />,
     },
   ];
 
@@ -511,31 +503,8 @@ export function DashboardOverviewContent({
     },
   ];
 
-  // 구별/정류장별 교통량 분포 데이터 (파이 차트용)
-  const pieChartData =
-    selectedRegion === "전체"
-      ? (heatmapData?.districts || [])
-          .sort((a, b) => b.total_traffic - a.total_traffic)
-          .slice(0, 5)
-          .map((district, index) => ({
-            name: district.district_name,
-            value: Math.round(district.total_traffic / 1000),
-            color: kpiColors[index % kpiColors.length],
-          }))
-      : topStations.map((station, index) => ({
-          name: station.station_name,
-          value: Math.round(station.total_traffic / 1000),
-          color: kpiColors[index % kpiColors.length],
-        }));
-
-  // 디버깅을 위한 로그
-  console.log("🔍 Pie chart debug:", {
-    selectedRegion,
-    filteredDistricts: filteredDistricts.length,
-    allDistricts: heatmapData?.districts?.length || 0,
-    pieChartData: pieChartData.length,
-    pieChartDataSample: pieChartData.slice(0, 3),
-  });
+  // 사용하지 않는 함수 제거
+  // const getStationAmplificationRatio = () => {}; // 제거됨
 
   // 로딩 상태
   if (loading) {
@@ -703,84 +672,132 @@ export function DashboardOverviewContent({
           <div className="space-y-8">
             {/* 첫 번째 행: 구별 분포와 정류장 랭킹 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* 왼쪽: TOP 5 교통량 분포 */}
+              {/* 왼쪽: 교통량 지도 */}
               <div>
                 <h3 className="text-lg font-medium mb-4">
-                  📊{" "}
+                  🗺️{" "}
                   {selectedRegion === "전체"
-                    ? "상위 5개 구 이용현황"
-                    : `${selectedRegion} 상위 5개 정류장`}
+                    ? "서울시 전체 교통량 현황"
+                    : `${selectedRegion} 인기 정류장 지도`}
                 </h3>
-                <ResponsiveContainer width="100%" height={450}>
-                  <PieChart>
-                    <Pie
-                      data={pieChartData}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={180}
-                      innerRadius={50}
-                      dataKey="value"
-                      labelLine={false}
-                      label={({
-                        name,
-                        percent,
-                        cx,
-                        cy,
-                        midAngle,
-                        innerRadius,
-                        outerRadius,
-                      }) => {
-                        const RADIAN = Math.PI / 180;
-                        const radius =
-                          (innerRadius || 0) +
-                          ((outerRadius || 0) - (innerRadius || 0)) * 0.5;
-                        const x =
-                          (cx || 0) +
-                          radius * Math.cos(-((midAngle || 0) * RADIAN));
-                        const y =
-                          (cy || 0) +
-                          radius * Math.sin(-((midAngle || 0) * RADIAN));
-                        const displayName =
-                          selectedRegion === "전체"
-                            ? name.split(" ")[0]
-                            : name.split(" ")[0];
-
-                        return (
-                          <text
-                            x={x}
-                            y={y}
-                            fill="black"
-                            textAnchor={x > (cx || 0) ? "start" : "end"}
-                            dominantBaseline="central"
-                            fontSize="14"
-                            fontWeight="bold"
-                          >
-                            {`${displayName}`}
-                            <tspan x={x} dy="1.2em" fontSize="12">
-                              {`${((percent || 0) * 100).toFixed(0)}%`}
-                            </tspan>
-                          </text>
-                        );
-                      }}
-                    >
-                      {pieChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => [`${value}K명`, "교통량"]} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div className="relative bg-gradient-to-br from-blue-50 to-green-50 rounded-lg p-4" style={{height: "450px"}}>
+                  {selectedRegion === "전체" ? (
+                    // 전체 선택시 - 구별 교통량만 표시
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <div className="text-6xl mb-4">🏙️</div>
+                        <div className="text-xl font-bold text-gray-700 mb-2">서울시 전체 현황</div>
+                        <div className="text-lg text-gray-600 mb-4">구를 선택하면 상세 지도가 표시됩니다</div>
+                        <div className="grid grid-cols-1 gap-2 max-w-md">
+                          {heatmapData?.districts
+                            .sort((a, b) => b.total_traffic - a.total_traffic)
+                            .slice(0, 5)
+                            .map((district, index) => (
+                              <div key={district.district_name} 
+                                   className="flex justify-between items-center p-2 bg-white/70 rounded">
+                                <span className="font-medium text-sm">
+                                  {index + 1}. {district.district_name}
+                                </span>
+                                <span className="text-sm font-bold text-blue-600">
+                                  {(district.total_traffic / 1000).toFixed(0)}K명
+                                </span>
+                              </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    // 구 선택시 - 해당 구의 인기 정류장 5개 지도
+                    <div className="relative h-full">
+                      {/* 지도 배경 */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-emerald-100 to-blue-100 rounded-lg">
+                        <div className="absolute top-4 left-4 bg-white/90 px-3 py-2 rounded-lg shadow-md">
+                          <div className="font-bold text-lg text-gray-800">{selectedRegion}</div>
+                          <div className="text-sm text-gray-600">TOP 5 인기 정류장</div>
+                        </div>
+                        
+                        {/* 인기 정류장 마커들 (애니메이션 효과) */}
+                        <div className="relative h-full">
+                          {topStations.map((station, index) => {
+                            // 지도상 위치를 시뮬레이션 (실제로는 coordinate 사용)
+                            const positions = [
+                              { top: "25%", left: "30%", delay: "0s" },
+                              { top: "45%", left: "60%", delay: "0.2s" },
+                              { top: "70%", left: "20%", delay: "0.4s" },
+                              { top: "35%", left: "75%", delay: "0.6s" },
+                              { top: "60%", left: "45%", delay: "0.8s" }
+                            ];
+                            const pos = positions[index] || positions[0];
+                            
+                            return (
+                              <div
+                                key={station.station_id}
+                                className="absolute transform -translate-x-1/2 -translate-y-1/2 animate-bounce"
+                                style={{
+                                  top: pos.top,
+                                  left: pos.left,
+                                  animationDelay: pos.delay,
+                                  animationDuration: "2s"
+                                }}
+                              >
+                                {/* 정류장 마커 */}
+                                <div className="relative">
+                                  {/* 펄스 효과 */}
+                                  <div 
+                                    className="absolute inset-0 bg-red-400 rounded-full animate-ping"
+                                    style={{
+                                      width: `${60 - index * 8}px`,
+                                      height: `${60 - index * 8}px`,
+                                      animationDelay: pos.delay
+                                    }}
+                                  />
+                                  
+                                  {/* 메인 마커 */}
+                                  <div 
+                                    className="relative bg-gradient-to-br from-red-500 to-red-600 text-white rounded-full flex items-center justify-center font-bold text-lg shadow-lg cursor-pointer hover:scale-110 transition-transform"
+                                    style={{
+                                      width: `${60 - index * 8}px`,
+                                      height: `${60 - index * 8}px`
+                                    }}
+                                    title={`${station.station_name} - ${station.total_traffic.toLocaleString()}명`}
+                                  >
+                                    {index + 1}
+                                  </div>
+                                  
+                                  {/* 정보 툴팁 */}
+                                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 bg-black/80 text-white px-2 py-1 rounded text-xs whitespace-nowrap opacity-0 hover:opacity-100 transition-opacity z-10">
+                                    <div className="font-bold">{station.station_name}</div>
+                                    <div>{station.total_traffic.toLocaleString()}명/일</div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        
+                        {/* 범례 */}
+                        <div className="absolute bottom-4 right-4 bg-white/90 px-3 py-2 rounded-lg shadow-md">
+                          <div className="text-xs font-bold text-gray-700 mb-1">범례</div>
+                          <div className="flex items-center gap-1 text-xs">
+                            <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                            <span>인기 정류장</span>
+                          </div>
+                          <div className="text-xs text-gray-600 mt-1">
+                            크기 = 순위 (큰 것이 1위)
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* 오른쪽: 교통량 상위 정류장 */}
+              {/* 오른쪽: 교통량 상위 정류장 (랭킹 사이트 스타일) */}
               <div>
-                <h3 className="text-lg font-medium mb-4">
-                  🚏{" "}
-                  {selectedRegion === "전체"
-                    ? "인기 정류장 TOP 5"
-                    : `${selectedRegion} 인기 정류장 TOP 5`}
+                <h3 className="text-2xl font-bold mb-6 text-center">
+                  🏆 {selectedRegion === "전체" ? "전국" : selectedRegion} 인기 정류장 TOP 5
                 </h3>
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {topStations.map((station, index) => {
                     const stationDistrict =
                       selectedRegion === "전체"
@@ -790,54 +807,149 @@ export function DashboardOverviewContent({
                             )
                           )
                         : filteredDistricts[0];
-                    const amplificationRatio = getStationAmplificationRatio(
-                      station.total_traffic,
-                      stationDistrict?.district_name || ""
-                    );
+                    
+                    // 랭킹별 스타일
+                    const getRankStyle = (rank: number) => {
+                      switch (rank) {
+                        case 0: // 1위
+                          return {
+                            bgColor: "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)", // 골드
+                            textColor: "#8B4513",
+                            medal: "🥇",
+                            scale: "1.05",
+                            shadow: "0 8px 20px rgba(255, 215, 0, 0.3)"
+                          };
+                        case 1: // 2위
+                          return {
+                            bgColor: "linear-gradient(135deg, #C0C0C0 0%, #A8A8A8 100%)", // 실버
+                            textColor: "#4A4A4A",
+                            medal: "🥈",
+                            scale: "1.02",
+                            shadow: "0 6px 15px rgba(192, 192, 192, 0.3)"
+                          };
+                        case 2: // 3위
+                          return {
+                            bgColor: "linear-gradient(135deg, #CD7F32 0%, #B87333 100%)", // 브론즈
+                            textColor: "#2C1810",
+                            medal: "🥉",
+                            scale: "1.01",
+                            shadow: "0 4px 12px rgba(205, 127, 50, 0.3)"
+                          };
+                        default:
+                          return {
+                            bgColor: "linear-gradient(135deg, #F3F4F6 0%, #E5E7EB 100%)",
+                            textColor: "#374151",
+                            medal: `${rank + 1}️⃣`,
+                            scale: "1.0",
+                            shadow: "0 2px 8px rgba(0, 0, 0, 0.1)"
+                          };
+                      }
+                    };
+                    
+                    const rankStyle = getRankStyle(index);
 
                     return (
                       <div
                         key={station.station_id}
-                        className="flex items-center justify-between p-3 rounded-lg"
+                        className="relative transform transition-all duration-300 hover:scale-110"
                         style={{
-                          backgroundColor:
-                            kpiColors[index % kpiColors.length] + "20",
+                          background: rankStyle.bgColor,
+                          transform: `scale(${rankStyle.scale})`,
+                          boxShadow: rankStyle.shadow,
+                          borderRadius: "16px",
+                          border: index < 3 ? "3px solid rgba(255, 255, 255, 0.3)" : "2px solid rgba(0, 0, 0, 0.1)"
                         }}
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="text-center">
-                            <div
-                              className="text-base font-bold"
-                              style={{
-                                color: kpiColors[index % kpiColors.length],
-                              }}
-                            >
-                              #{index + 1}
+                        <div className="p-5">
+                          <div className="flex items-center justify-between">
+                            {/* 왼쪽: 순위와 정보 */}
+                            <div className="flex items-center gap-4 flex-1">
+                              {/* 메달/순위 */}
+                              <div className="text-center">
+                                <div className="text-4xl mb-1">
+                                  {rankStyle.medal}
+                                </div>
+                                <div 
+                                  className="text-3xl font-black tracking-wider"
+                                  style={{ color: rankStyle.textColor }}
+                                >
+                                  #{index + 1}
+                                </div>
+                              </div>
+                              
+                              {/* 정류장 정보 */}
+                              <div className="flex-1">
+                                <div 
+                                  className="text-xl font-bold mb-1 leading-tight"
+                                  style={{ color: rankStyle.textColor }}
+                                >
+                                  {station.station_name}
+                                </div>
+                                <div 
+                                  className="text-lg font-medium opacity-80"
+                                  style={{ color: rankStyle.textColor }}
+                                >
+                                  📍 {selectedRegion === "전체"
+                                    ? stationDistrict?.district_name
+                                    : selectedRegion}
+                                </div>
+                                <div 
+                                  className="text-base mt-2 font-semibold"
+                                  style={{ color: rankStyle.textColor }}
+                                >
+                                  일일 이용객: {station.total_traffic.toLocaleString()}명
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* 오른쪽: 수치 정보 */}
+                            <div className="text-right ml-4">
+                              <div 
+                                className="text-3xl font-black mb-2"
+                                style={{ color: rankStyle.textColor }}
+                              >
+                                {station.total_traffic > 10000 
+                                  ? `${(station.total_traffic / 1000).toFixed(0)}K`
+                                  : station.total_traffic.toLocaleString()
+                                }
+                              </div>
+                              <div 
+                                className="text-lg font-bold px-3 py-1 rounded-full"
+                                style={{ 
+                                  color: rankStyle.textColor,
+                                  backgroundColor: "rgba(255, 255, 255, 0.3)"
+                                }}
+                              >
+                                {index === 0 ? "🔥 최고" : 
+                                 index === 1 ? "⚡ 우수" : 
+                                 index === 2 ? "✨ 양호" : 
+                                 `TOP ${index + 1}`}
+                              </div>
+                              <div 
+                                className="text-base mt-1 font-medium opacity-90"
+                                style={{ color: rankStyle.textColor }}
+                              >
+                                승차: {(station.total_ride || 0).toLocaleString()}
+                              </div>
+                              <div 
+                                className="text-base font-medium opacity-90"
+                                style={{ color: rankStyle.textColor }}
+                              >
+                                하차: {(station.total_alight || 0).toLocaleString()}
+                              </div>
                             </div>
                           </div>
-                          <div>
-                            <div className="font-medium">
-                              {station.station_name}
+                          
+                          {/* 1위 특별 효과 */}
+                          {index === 0 && (
+                            <div className="absolute -top-1 -right-1">
+                              <div className="animate-bounce">
+                                <div className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+                                  BEST
+                                </div>
+                              </div>
                             </div>
-                            <div className="text-base text-gray-600">
-                              {selectedRegion === "전체"
-                                ? stationDistrict?.district_name
-                                : selectedRegion}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div
-                            className="text-lg font-bold"
-                            style={{
-                              color: kpiColors[index % kpiColors.length],
-                            }}
-                          >
-                            {amplificationRatio.toFixed(1)}X
-                          </div>
-                          <div className="text-base text-gray-600">
-                            구 내 점유율
-                          </div>
+                          )}
                         </div>
                       </div>
                     );
