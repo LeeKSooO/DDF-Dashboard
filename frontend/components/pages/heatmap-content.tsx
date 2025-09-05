@@ -475,7 +475,7 @@ export function HeatmapContent({
                             );
                             setViewMode("station");
                           }}
-                          className={`w-full py-3 px-4 text-sm font-medium rounded transition-all ${
+                          className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
                             selectedPattern === "weekend"
                               ? "bg-blue-600 text-white"
                               : "bg-white text-gray-700 hover:bg-blue-50 border border-gray-200"
@@ -506,7 +506,7 @@ export function HeatmapContent({
                             );
                             setViewMode("station");
                           }}
-                          className={`w-full py-3 px-4 text-sm font-medium rounded transition-all ${
+                          className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
                             selectedPattern === "night"
                               ? "bg-purple-600 text-white"
                               : "bg-white text-gray-700 hover:bg-purple-50 border border-gray-200"
@@ -539,7 +539,7 @@ export function HeatmapContent({
                             );
                             setViewMode("station");
                           }}
-                          className={`w-full py-3 px-4 text-sm font-medium rounded transition-all ${
+                          className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
                             selectedPattern === "underutilized"
                               ? "bg-red-600 text-white"
                               : "bg-white text-gray-700 hover:bg-red-50 border border-gray-200"
@@ -570,7 +570,7 @@ export function HeatmapContent({
                             );
                             setViewMode("station");
                           }}
-                          className={`w-full py-3 px-4 text-sm font-medium rounded transition-all ${
+                          className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
                             selectedPattern === "lunchtime"
                               ? "bg-green-600 text-white"
                               : "bg-white text-gray-700 hover:bg-green-50 border border-gray-200"
@@ -601,7 +601,7 @@ export function HeatmapContent({
                             );
                             setViewMode("station");
                           }}
-                          className={`w-full py-3 px-4 text-sm font-medium rounded transition-all ${
+                          className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
                             selectedPattern === "rushhour"
                               ? "bg-orange-600 text-white"
                               : "bg-white text-gray-700 hover:bg-orange-50 border border-gray-200"
@@ -632,7 +632,7 @@ export function HeatmapContent({
                             );
                             setViewMode("station");
                           }}
-                          className={`w-full py-3 px-4 text-sm font-medium rounded transition-all ${
+                          className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
                             selectedPattern === "areatype"
                               ? "bg-sky-600 text-white"
                               : "bg-white text-gray-700 hover:bg-sky-50 border border-gray-200"
@@ -833,12 +833,12 @@ export function HeatmapContent({
                   if (selectedPattern && patternStations.length > 0) {
                     // 패턴 선택시: 해당 패턴의 정류장들
                     if (selectedPattern === "rushhour") {
-                      // 러시아워는 오전/오후로 구분해서 표시 (각각 3개씩)
+                      // 러시아워는 오전/오후로 구분해서 표시 (각각 5개씩)
                       const morningStations = patternStations
                         .filter(
                           (station: any) => station.rushType === "morning"
                         )
-                        .slice(0, 3)
+                        .slice(0, 5)
                         .map((station: any) => ({
                           ...station,
                           displayValue:
@@ -854,7 +854,7 @@ export function HeatmapContent({
                         .filter(
                           (station: any) => station.rushType === "evening"
                         )
-                        .slice(0, 3)
+.slice(0, 5)
                         .map((station: any) => ({
                           ...station,
                           displayValue:
@@ -869,6 +869,44 @@ export function HeatmapContent({
                       displayStations = [
                         ...morningStations,
                         ...eveningStations,
+                      ];
+                    } else if (selectedPattern === "areatype") {
+                      // 지역 특성은 주거지역/업무지역으로 구분해서 표시 (각각 5개씩)
+                      const residentialStations = patternStations
+                        .filter(
+                          (station: any) => station.areaType === "residential"
+                        )
+                        .slice(0, 5)
+                        .map((station: any) => ({
+                          ...station,
+                          displayValue:
+                            station.patternInfo ||
+                            `${
+                              station.total_traffic?.toLocaleString() || "N/A"
+                            }명`,
+                          color: "text-sky-600",
+                          sectionLabel: "🏠 주거지역",
+                        }));
+
+                      const businessStations = patternStations
+                        .filter(
+                          (station: any) => station.areaType === "business"
+                        )
+                        .slice(0, 5)
+                        .map((station: any) => ({
+                          ...station,
+                          displayValue:
+                            station.patternInfo ||
+                            `${
+                              station.total_traffic?.toLocaleString() || "N/A"
+                            }명`,
+                          color: "text-purple-600",
+                          sectionLabel: "🏢 업무지역",
+                        }));
+
+                      displayStations = [
+                        ...residentialStations,
+                        ...businessStations,
                       ];
                     } else {
                       // 다른 패턴들은 기존 방식
@@ -932,33 +970,38 @@ export function HeatmapContent({
                                   (station: any) =>
                                     station.sectionLabel === "🌅 오전"
                                 )
-                                .map((station: any, index: number) => (
-                                  <div
-                                    key={station.station_id}
-                                    className="flex items-center justify-between p-2 bg-orange-50 rounded"
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      <div className="text-base font-bold text-orange-600">
-                                        #{index + 1}
-                                      </div>
-                                      <div className="min-w-0 flex-1">
-                                        <div className="font-medium text-base truncate">
-                                          {station.station_name}
+                                .map((station: any, index: number) => {
+                                  const stationFormat = formatStationName(station, displayStations.filter((s: any) => s.sectionLabel === station.sectionLabel));
+                                  return (
+                                    <div
+                                      key={station.station_id}
+                                      className="flex items-center justify-between p-2 bg-orange-50 rounded"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <div className="text-base font-bold text-orange-600">
+                                          #{index + 1}
                                         </div>
-                                        <div className="text-sm text-gray-600 truncate">
-                                          {station.district_name ||
-                                            selectedDistrict ||
-                                            "위치정보"}
+                                        <div className="min-w-0 flex-1">
+                                          <div className="font-medium text-base truncate">
+                                            {stationFormat.displayName}
+                                          </div>
+                                          <div className="text-sm text-gray-600 truncate">
+                                            {stationFormat.showFullId ? (
+                                              <>ID: {stationFormat.fullId} • {stationFormat.districtInfo}</>
+                                            ) : (
+                                              stationFormat.districtInfo
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div className="text-right">
+                                        <div className="font-medium text-base text-orange-600">
+                                          {station.displayValue}
                                         </div>
                                       </div>
                                     </div>
-                                    <div className="text-right">
-                                      <div className="font-medium text-base text-orange-600">
-                                        {station.displayValue}
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
+                                  );
+                                })}
                             </div>
                           </div>
                         )}
@@ -977,33 +1020,141 @@ export function HeatmapContent({
                                   (station: any) =>
                                     station.sectionLabel === "🌆 오후"
                                 )
-                                .map((station: any, index: number) => (
-                                  <div
-                                    key={station.station_id}
-                                    className="flex items-center justify-between p-2 bg-red-50 rounded"
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      <div className="text-base font-bold text-red-600">
-                                        #{index + 1}
-                                      </div>
-                                      <div className="min-w-0 flex-1">
-                                        <div className="font-medium text-base truncate">
-                                          {station.station_name}
+                                .map((station: any, index: number) => {
+                                  const stationFormat = formatStationName(station, displayStations.filter((s: any) => s.sectionLabel === station.sectionLabel));
+                                  return (
+                                    <div
+                                      key={station.station_id}
+                                      className="flex items-center justify-between p-2 bg-red-50 rounded"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <div className="text-base font-bold text-red-600">
+                                          #{index + 1}
                                         </div>
-                                        <div className="text-sm text-gray-600 truncate">
-                                          {station.district_name ||
-                                            selectedDistrict ||
-                                            "위치정보"}
+                                        <div className="min-w-0 flex-1">
+                                          <div className="font-medium text-base truncate">
+                                            {stationFormat.displayName}
+                                          </div>
+                                          <div className="text-sm text-gray-600 truncate">
+                                            {stationFormat.showFullId ? (
+                                              <>ID: {stationFormat.fullId} • {stationFormat.districtInfo}</>
+                                            ) : (
+                                              stationFormat.districtInfo
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div className="text-right">
+                                        <div className="font-medium text-base text-red-600">
+                                          {station.displayValue}
                                         </div>
                                       </div>
                                     </div>
-                                    <div className="text-right">
-                                      <div className="font-medium text-base text-red-600">
-                                        {station.displayValue}
+                                  );
+                                })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : selectedPattern === "areatype" ? (
+                      // 지역 특성은 주거지역/업무지역 섹션으로 구분 표시
+                      <div className="space-y-4">
+                        {/* 주거지역 섹션 */}
+                        {displayStations.filter(
+                          (station: any) => station.sectionLabel === "🏠 주거지역"
+                        ).length > 0 && (
+                          <div>
+                            <h5 className="text-sm font-medium text-sky-600 mb-2 flex items-center gap-1">
+                              🏠 주거지역 (오전 출근 집중)
+                            </h5>
+                            <div className="space-y-2">
+                              {displayStations
+                                .filter(
+                                  (station: any) =>
+                                    station.sectionLabel === "🏠 주거지역"
+                                )
+                                .map((station: any, index: number) => {
+                                  const stationFormat = formatStationName(station, displayStations.filter((s: any) => s.sectionLabel === station.sectionLabel));
+                                  return (
+                                    <div
+                                      key={station.station_id}
+                                      className="flex items-center justify-between p-2 bg-sky-50 rounded"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <div className="text-base font-bold text-sky-600">
+                                          #{index + 1}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                          <div className="font-medium text-base truncate">
+                                            {stationFormat.displayName}
+                                          </div>
+                                          <div className="text-sm text-gray-600 truncate">
+                                            {stationFormat.showFullId ? (
+                                              <>ID: {stationFormat.fullId} • {stationFormat.districtInfo}</>
+                                            ) : (
+                                              stationFormat.districtInfo
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div className="text-right">
+                                        <div className="font-medium text-base text-sky-600">
+                                          {station.displayValue}
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                ))}
+                                  );
+                                })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 업무지역 섹션 */}
+                        {displayStations.filter(
+                          (station: any) => station.sectionLabel === "🏢 업무지역"
+                        ).length > 0 && (
+                          <div>
+                            <h5 className="text-sm font-medium text-purple-600 mb-2 flex items-center gap-1">
+                              🏢 업무지역 (오전 출근 하차)
+                            </h5>
+                            <div className="space-y-2">
+                              {displayStations
+                                .filter(
+                                  (station: any) =>
+                                    station.sectionLabel === "🏢 업무지역"
+                                )
+                                .map((station: any, index: number) => {
+                                  const stationFormat = formatStationName(station, displayStations.filter((s: any) => s.sectionLabel === station.sectionLabel));
+                                  return (
+                                    <div
+                                      key={station.station_id}
+                                      className="flex items-center justify-between p-2 bg-purple-50 rounded"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <div className="text-base font-bold text-purple-600">
+                                          #{index + 1}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                          <div className="font-medium text-base truncate">
+                                            {stationFormat.displayName}
+                                          </div>
+                                          <div className="text-sm text-gray-600 truncate">
+                                            {stationFormat.showFullId ? (
+                                              <>ID: {stationFormat.fullId} • {stationFormat.districtInfo}</>
+                                            ) : (
+                                              stationFormat.districtInfo
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div className="text-right">
+                                        <div className="font-medium text-base text-purple-600">
+                                          {station.displayValue}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
                             </div>
                           </div>
                         )}
@@ -1118,23 +1269,23 @@ export function HeatmapContent({
 
                     {selectedPattern === "night" && nightData && (
                       <>
-                        <div className="flex justify-between p-3 bg-purple-50 rounded">
-                          <span className="text-sm">심야 고수요:</span>
-                          <span className="font-medium text-purple-600 text-sm">
+                        <div className="flex justify-between p-4 bg-purple-50 rounded">
+                          <span className="text-lg font-medium">심야 고수요:</span>
+                          <span className="font-bold text-purple-600 text-lg">
                             {nightData.data?.length || 0}개
                           </span>
                         </div>
-                        <div className="flex justify-between p-3 bg-purple-50 rounded">
-                          <span className="text-sm">최고 심야 승차:</span>
-                          <span className="font-medium text-purple-600 text-sm">
+                        <div className="flex justify-between p-4 bg-purple-50 rounded">
+                          <span className="text-base">최고 심야 승차:</span>
+                          <span className="font-bold text-purple-600 text-base">
                             {nightData.data?.[0]?.total_night_ride?.toLocaleString() ||
                               "N/A"}
                             명
                           </span>
                         </div>
-                        <div className="flex justify-between p-3 bg-purple-50 rounded">
-                          <span className="text-sm">운영 필요도:</span>
-                          <span className="font-medium text-purple-600 text-sm">
+                        <div className="flex justify-between p-4 bg-purple-50 rounded">
+                          <span className="text-base">운영 필요도:</span>
+                          <span className="font-bold text-purple-600 text-base">
                             높음
                           </span>
                         </div>
@@ -1144,23 +1295,23 @@ export function HeatmapContent({
                     {selectedPattern === "underutilized" &&
                       underutilizedData && (
                         <>
-                          <div className="flex justify-between p-3 bg-red-50 rounded">
-                            <span className="text-sm">저활용 정류장:</span>
-                            <span className="font-medium text-red-600 text-sm">
+                          <div className="flex justify-between p-4 bg-red-50 rounded">
+                            <span className="text-lg font-medium">저활용 정류장:</span>
+                            <span className="font-bold text-red-600 text-lg">
                               {underutilizedData.data?.length || 0}개
                             </span>
                           </div>
-                          <div className="flex justify-between p-3 bg-red-50 rounded">
-                            <span className="text-sm">평균 효율성:</span>
-                            <span className="font-medium text-red-600 text-sm">
+                          <div className="flex justify-between p-4 bg-red-50 rounded">
+                            <span className="text-base">평균 효율성:</span>
+                            <span className="font-bold text-red-600 text-base">
                               {underutilizedData.data?.[0]?.efficiency_score ||
                                 "N/A"}
                               %
                             </span>
                           </div>
-                          <div className="flex justify-between p-3 bg-red-50 rounded">
-                            <span className="text-sm">개선 필요도:</span>
-                            <span className="font-medium text-red-600 text-sm">
+                          <div className="flex justify-between p-4 bg-red-50 rounded">
+                            <span className="text-base">개선 필요도:</span>
+                            <span className="font-bold text-red-600 text-base">
                               높음
                             </span>
                           </div>
@@ -1169,23 +1320,23 @@ export function HeatmapContent({
 
                     {selectedPattern === "lunchtime" && lunchTimeData && (
                       <>
-                        <div className="flex justify-between p-3 bg-green-50 rounded">
-                          <span className="text-sm">점심시간 특화:</span>
-                          <span className="font-medium text-green-600 text-sm">
+                        <div className="flex justify-between p-4 bg-green-50 rounded">
+                          <span className="text-lg font-medium">점심시간 특화:</span>
+                          <span className="font-bold text-green-600 text-lg">
                             {lunchTimeData.data?.length || 0}개
                           </span>
                         </div>
-                        <div className="flex justify-between p-3 bg-green-50 rounded">
-                          <span className="text-sm">최고 점심 하차:</span>
-                          <span className="font-medium text-green-600 text-sm">
+                        <div className="flex justify-between p-4 bg-green-50 rounded">
+                          <span className="text-base">최고 점심 하차:</span>
+                          <span className="font-bold text-green-600 text-base">
                             {lunchTimeData.data?.[0]?.total_lunch_alight?.toLocaleString() ||
                               "N/A"}
                             명
                           </span>
                         </div>
-                        <div className="flex justify-between p-3 bg-green-50 rounded">
-                          <span className="text-sm">상업지역 집중:</span>
-                          <span className="font-medium text-green-600 text-sm">
+                        <div className="flex justify-between p-4 bg-green-50 rounded">
+                          <span className="text-base">상업지역 집중:</span>
+                          <span className="font-bold text-green-600 text-base">
                             높음
                           </span>
                         </div>
@@ -1194,21 +1345,21 @@ export function HeatmapContent({
 
                     {selectedPattern === "rushhour" && rushHourData && (
                       <>
-                        <div className="flex justify-between p-3 bg-orange-50 rounded">
-                          <span className="text-sm">🌅 오전 러시아워:</span>
-                          <span className="font-medium text-orange-600 text-sm">
+                        <div className="flex justify-between p-4 bg-orange-50 rounded">
+                          <span className="text-lg font-medium">🌅 오전 러시아워:</span>
+                          <span className="font-bold text-orange-600 text-lg">
                             {rushHourData.data?.morning_rush?.length || 0}개
                           </span>
                         </div>
-                        <div className="flex justify-between p-3 bg-red-50 rounded">
-                          <span className="text-sm">🌆 오후 러시아워:</span>
-                          <span className="font-medium text-red-600 text-sm">
+                        <div className="flex justify-between p-4 bg-red-50 rounded">
+                          <span className="text-lg font-medium">🌆 오후 러시아워:</span>
+                          <span className="font-bold text-red-600 text-lg">
                             {rushHourData.data?.evening_rush?.length || 0}개
                           </span>
                         </div>
-                        <div className="flex justify-between p-3 bg-gray-50 rounded">
-                          <span className="text-sm">혼잡도 수준:</span>
-                          <span className="font-medium text-gray-600 text-sm">
+                        <div className="flex justify-between p-4 bg-gray-50 rounded">
+                          <span className="text-base">혼잡도 수준:</span>
+                          <span className="font-bold text-gray-600 text-base">
                             매우높음
                           </span>
                         </div>
@@ -1217,24 +1368,24 @@ export function HeatmapContent({
 
                     {selectedPattern === "areatype" && areaTypeData && (
                       <>
-                        <div className="flex justify-between p-3 bg-sky-50 rounded">
-                          <span className="text-sm">주거지역:</span>
-                          <span className="font-medium text-sky-600 text-sm">
+                        <div className="flex justify-between p-4 bg-sky-50 rounded">
+                          <span className="text-lg font-medium">주거지역:</span>
+                          <span className="font-bold text-sky-600 text-lg">
                             {areaTypeData.data?.residential_stations?.length ||
                               0}
                             개
                           </span>
                         </div>
-                        <div className="flex justify-between p-3 bg-purple-50 rounded">
-                          <span className="text-sm">업무지역:</span>
-                          <span className="font-medium text-purple-600 text-sm">
+                        <div className="flex justify-between p-4 bg-purple-50 rounded">
+                          <span className="text-base">업무지역:</span>
+                          <span className="font-bold text-purple-600 text-base">
                             {areaTypeData.data?.business_stations?.length || 0}
                             개
                           </span>
                         </div>
-                        <div className="flex justify-between p-3 bg-blue-50 rounded">
-                          <span className="text-sm">특성화도:</span>
-                          <span className="font-medium text-blue-600 text-sm">
+                        <div className="flex justify-between p-4 bg-blue-50 rounded">
+                          <span className="text-base">특성화도:</span>
+                          <span className="font-bold text-blue-600 text-base">
                             높음
                           </span>
                         </div>
@@ -1249,23 +1400,23 @@ export function HeatmapContent({
                     );
                     return districtData ? (
                       <>
-                        <div className="flex justify-between p-3 bg-blue-50 rounded">
-                          <span className="text-sm">총 정류장 수:</span>
-                          <span className="font-medium text-blue-600 text-sm">
+                        <div className="flex justify-between p-4 bg-blue-50 rounded">
+                          <span className="text-lg font-medium">총 정류장 수:</span>
+                          <span className="font-bold text-blue-600 text-lg">
                             {districtData.stations?.length || 0}개
                           </span>
                         </div>
-                        <div className="flex justify-between p-3 bg-green-50 rounded">
-                          <span className="text-sm">
+                        <div className="flex justify-between p-4 bg-green-50 rounded">
+                          <span className="text-base">
                             {selectedDistrict} 교통량:
                           </span>
-                          <span className="font-medium text-green-600 text-sm">
+                          <span className="font-bold text-green-600 text-base">
                             {districtData.total_traffic.toLocaleString()}명
                           </span>
                         </div>
-                        <div className="flex justify-between p-3 bg-purple-50 rounded">
-                          <span className="text-sm">승하차 비율:</span>
-                          <span className="font-medium text-purple-600 text-sm">
+                        <div className="flex justify-between p-4 bg-purple-50 rounded">
+                          <span className="text-base">승하차 비율:</span>
+                          <span className="font-bold text-purple-600 text-base">
                             {districtData.total_alight &&
                             districtData.total_ride
                               ? (
@@ -1277,7 +1428,7 @@ export function HeatmapContent({
                         </div>
                       </>
                     ) : (
-                      <div className="text-center py-4 text-gray-500 text-sm">
+                      <div className="text-center py-4 text-gray-500 text-base">
                         데이터 로딩 중...
                       </div>
                     );
@@ -1285,16 +1436,16 @@ export function HeatmapContent({
                 ) : (
                   // 전체 통계
                   <>
-                    <div className="flex justify-between p-2 bg-gray-50 rounded">
-                      <span className="text-sm">총 교통량:</span>
-                      <span className="font-medium text-sm">
+                    <div className="flex justify-between p-4 bg-gray-50 rounded">
+                      <span className="text-lg font-medium">총 교통량:</span>
+                      <span className="font-bold text-lg">
                         {heatmapData?.statistics.total_seoul_traffic.toLocaleString()}
                         명
                       </span>
                     </div>
-                    <div className="flex justify-between p-2 bg-blue-50 rounded">
-                      <span className="text-sm">평균 승하차비율:</span>
-                      <span className="font-medium text-blue-600 text-sm">
+                    <div className="flex justify-between p-4 bg-blue-50 rounded">
+                      <span className="text-base">평균 승하차비율:</span>
+                      <span className="font-bold text-blue-600 text-base">
                         {(() => {
                           const totalRide = filteredDistricts.reduce(
                             (sum, d) => sum + (d.total_ride || 0),
@@ -1310,9 +1461,9 @@ export function HeatmapContent({
                         })()}
                       </span>
                     </div>
-                    <div className="flex justify-between p-2 bg-gray-50 rounded">
-                      <span className="text-sm">최대 구 교통량:</span>
-                      <span className="font-medium text-sm">
+                    <div className="flex justify-between p-4 bg-gray-50 rounded">
+                      <span className="text-base">최대 구 교통량:</span>
+                      <span className="font-bold text-base">
                         {heatmapData?.statistics.max_district_traffic.toLocaleString()}
                         명
                       </span>
