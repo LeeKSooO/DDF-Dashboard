@@ -37,6 +37,26 @@ backend/ddf_model/
 *.mar
 
 # ===========================================
+# Infrastructure
+# ===========================================
+infrastructure/restore_streaming.log
+infrastructure/database/data/
+infrastructure/monitoring/logs/
+infrastructure/.DS_Store
+infrastructure/database/.DS_Store
+
+# ===========================================
+# RAG Service
+# ===========================================
+RAG/.env
+RAG/chroma/
+RAG/data/documents/*.pdf
+RAG/logs/
+RAG/.last_install
+RAG/etl/__pycache__/
+RAG/app/__pycache__/
+
+# ===========================================
 # Python (Backend)
 # ===========================================
 __pycache__/
@@ -134,6 +154,26 @@ scripts/test_*.py
 .eslintcache
 
 # ===========================================
+# Kubernetes
+# ===========================================
+# Secret files (should use sealed-secrets or external secret management)
+k8s/*/secret.yaml
+k8s/**/*secret*.yaml
+k8s/**/secrets/
+
+# Helm values with sensitive data
+k8s/**/values-local.yaml
+k8s/**/values-dev.yaml
+k8s/**/values-prod.yaml
+
+# Generated manifests
+k8s/**/*.generated.yaml
+k8s/**/.rendered/
+
+# Temporary kustomization files
+k8s/**/kustomization-tmp.yaml
+
+# ===========================================
 # Project-specific exclusions
 # ===========================================
 # Legacy files and temporary data
@@ -162,3 +202,52 @@ backend/logs/*.log
 
 # Config files that might contain sensitive info
 *.properties
+
+# ===========================================
+# Database Backups
+# ===========================================
+*.sql
+*.dump
+*.backup
+*_backup.sql
+*_dump.sql
+database/backups/
+backups/
+
+# ===========================================
+# Next.js
+# ===========================================
+frontend/.next/
+frontend/out/
+frontend/.vercel
+frontend/*.tsbuildinfo
+frontend/next-env.d.ts
+
+# ===========================================
+# Infrastructure
+# ===========================================
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfvars
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# AWS credentials
+.aws/
+aws-credentials
+
+# Kubernetes contexts/configs
+.kube/
+kubeconfig
+*.kubeconfig
+
+
+
+
+# regacy
+rag-legacy
+legacy
