@@ -111,7 +111,7 @@ export interface DRTStationDetailResponse {
   peak_score: number;
   peak_hour: number;
   monthly_average: number;
-  feature_scores: any; // 모델별로 다른 구조: vulnerable(var_t_score, sed_t_score, mdi_t_score, avs_score), commuter(tc_score, pdr_score, ru_score, pcw_score), tourism(tc_t_score, tdr_t_score, ru_t_score, pcw_score)
+  feature_scores: FeatureScores;
   hourly_scores: Array<{
     hour: number;
     score: number;
@@ -138,6 +138,30 @@ export interface DRTScoreResponse {
 }
 
 export type DRTModelType = "commuter" | "tourism" | "vulnerable";
+
+// Feature scores 타입 정의 (모델별로 다른 구조)
+export interface VulnerableFeatureScores {
+  var_t_score: number;
+  sed_t_score: number;
+  mdi_t_score: number;
+  avs_score: number;
+}
+
+export interface CommuterFeatureScores {
+  tc_score: number;
+  pdr_score: number;
+  ru_score: number;
+  pcw_score: number;
+}
+
+export interface TourismFeatureScores {
+  tc_t_score: number;
+  tdr_t_score: number;
+  ru_t_score: number;
+  pcw_score: number;
+}
+
+export type FeatureScores = VulnerableFeatureScores | CommuterFeatureScores | TourismFeatureScores;
 
 // API 함수들
 class ApiService {

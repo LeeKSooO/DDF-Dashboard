@@ -214,8 +214,8 @@ export function TrafficAnalysisContent({
 
       requestAnimationFrame(animate);
     },
-    []
-  ); // 의존성 배열에서 animatedNumbers 제거
+    [animatedNumbers]
+  );
 
   // 애니메이션 트리거 - 한 번만 실행되도록 useRef로 관리
   const animationTriggered = useRef(false);

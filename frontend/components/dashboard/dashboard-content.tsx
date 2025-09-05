@@ -1,7 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { TrendingUp, TrendingDown, BarChart3, Zap, Users, MapPin, Activity, Clock } from "lucide-react"
+import { TrendingUp, BarChart3, Users, Activity, Clock } from "lucide-react"
 import {
   LineChart,
   Line,

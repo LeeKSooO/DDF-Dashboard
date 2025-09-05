@@ -9,7 +9,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import {
   Sidebar,
   SidebarContent,
@@ -26,11 +25,8 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import {
-  RefreshCw,
   BarChart3,
   ChevronRight,
-  Bell,
-  Target,
   ChevronDown,
   MapPin,
   Link2,
@@ -120,48 +116,6 @@ const seoulDistricts = [
   "중랑구",
 ];
 
-const vulnerableAreas = [
-  {
-    rank: 1,
-    area: "금천구 시흥동",
-    score: 92,
-    population: 15000,
-    accessibility: "매우낮음",
-    priority: "최우선",
-  },
-  {
-    rank: 2,
-    area: "강서구 가양동",
-    score: 88,
-    population: 22000,
-    accessibility: "낮음",
-    priority: "최우선",
-  },
-  {
-    rank: 3,
-    area: "구로구 항동",
-    score: 85,
-    population: 18000,
-    accessibility: "낮음",
-    priority: "우선",
-  },
-  {
-    rank: 4,
-    area: "영등포구 신길동",
-    score: 82,
-    population: 25000,
-    accessibility: "보통",
-    priority: "우선",
-  },
-  {
-    rank: 5,
-    area: "동작구 상도동",
-    score: 78,
-    population: 20000,
-    accessibility: "보통",
-    priority: "검토",
-  },
-];
 
 // Loading component
 const LoadingSpinner = () => (
@@ -173,7 +127,6 @@ const LoadingSpinner = () => (
 export function DDFDashboard() {
   const [activePage, setActivePage] = useState<ActivePage>("dashboard");
   const [selectedModel, setSelectedModel] = useState("교통취약지");
-  const [isRealTimeMode, setIsRealTimeMode] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState<string>("7");
   const [chatOpen, setChatOpen] = useState<boolean>(false);
 

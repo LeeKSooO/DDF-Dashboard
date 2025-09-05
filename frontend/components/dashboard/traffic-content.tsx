@@ -723,7 +723,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
         }
         setLastSelectedRegion(selectedRegion);
       }
-    }, [selectedRegion, lastSelectedRegion]);
+    }, [lastSelectedRegion]);
 
     const loadDistrictData = async (districts: string[]) => {
       console.log('🚀 데이터 로드 시작:', districts);
@@ -755,7 +755,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
         console.log('📊 구별 데이터 로드 시작:', selectedDistricts);
         loadDistrictData(selectedDistricts);
       }
-    }, [selectedDistricts, selectedMonth]);
+    }, [selectedDistricts]);
 
     const addDistrict = (district: string) => {
       if (!selectedDistricts.includes(district) && selectedDistricts.length < 5) {

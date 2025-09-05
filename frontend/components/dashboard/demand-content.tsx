@@ -9,7 +9,8 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Search, Brain, HelpCircle } from "lucide-react";
+import { Search, HelpCircle } from "lucide-react";
+import Image from "next/image";
 import {
   Tooltip,
   TooltipContent,
@@ -123,7 +124,7 @@ export const DemandContent = memo(function DemandContent({
               utils.formatSelectedMonth(selectedMonth)
             );
             console.log("✅ API supports '전체' region");
-          } catch (error) {
+          } catch {
             // "전체"를 지원하지 않으면 강남구를 기본값으로 사용
             console.log("⚠️ API doesn't support '전체', falling back to 강남구");
             targetRegion = "강남구";
@@ -242,7 +243,7 @@ export const DemandContent = memo(function DemandContent({
     };
 
     loadDRTData();
-  }, [selectedModel, selectedRegion, selectedMonth, selectedDistrictName]);
+  }, [selectedModel, selectedRegion, selectedMonth, selectedDistrictName, isInitialLoad, selectedStation]);
 
 
   // 상단 헤더에 현재 선택된 구 알리기 (DRT 분석 탭 전용)
@@ -318,7 +319,7 @@ export const DemandContent = memo(function DemandContent({
     };
     
     loadStationDetail();
-  }, [selectedStation?.station_id, selectedModel, selectedMonth]); // station_id로 변경하여 더 정확한 추적
+  }, [selectedStation, selectedModel, selectedMonth]);
 
   // 검색 기능 (선택된 구의 정류장만 검색)
   useEffect(() => {
@@ -470,9 +471,11 @@ export const DemandContent = memo(function DemandContent({
           <Card className="h-fit shadow-lg border-0 bg-gradient-to-br from-gray-50 to-slate-100">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base font-bold text-gray-800">
-                <img 
+                <Image 
                   src="/sidebar_icon/DRT분석_사이드바.png" 
                   alt="DRT 분석" 
+                  width={20}
+                  height={20}
                   className="h-5 w-5"
                 />
                 DRT 모델
@@ -809,9 +812,11 @@ export const DemandContent = memo(function DemandContent({
             ) : (
               <div className="flex items-center justify-center h-64 text-gray-400">
                 <div className="text-center">
-                  <img 
+                  <Image 
                     src="/drt_icon/정류장피크특성분석_drt분석.png" 
                     alt="정류장 피크 특성 분석" 
+                    width={64}
+                    height={64}
                     className="h-16 w-16 mx-auto mb-3 opacity-60"
                   />
                   <div className="text-lg">지도에서 정류장을 클릭하면</div>
@@ -948,9 +953,11 @@ export const DemandContent = memo(function DemandContent({
             ) : (
               <div className="flex items-center justify-center h-64 text-gray-400">
                 <div className="text-center">
-                  <img 
+                  <Image 
                     src="/drt_icon/시간대별DRT점수_drt분석.png" 
                     alt="시간대별 DRT 점수" 
+                    width={64}
+                    height={64}
                     className="h-16 w-16 mx-auto mb-3 opacity-60"
                   />
                   <div className="text-lg">지도에서 정류장을 클릭하면</div>
@@ -966,9 +973,11 @@ export const DemandContent = memo(function DemandContent({
           <CardHeader className="pb-4">
             <CardTitle className="text-3xl">
               <div className="flex items-center justify-center gap-2">
-                <img 
+                <Image 
                   src="/icon/인기정류장.png" 
                   alt="인기정류장" 
+                  width={28}
+                  height={28}
                   className="h-7 w-7"
                 />
                 <span>TOP 5</span>

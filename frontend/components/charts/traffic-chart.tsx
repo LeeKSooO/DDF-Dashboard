@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -81,7 +81,7 @@ export function TrafficChart({ className, selectedMonth = "7" }: TrafficChartPro
   }, [data, chartData]);
 
   // 데이터 로드
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
     
@@ -98,23 +98,36 @@ export function TrafficChart({ className, selectedMonth = "7" }: TrafficChartPro
     } finally {
       setLoading(false);
     }
-  };
+  }, [analysisMonth, regionType, selectedDistrict]);
 
   // 초기 로드 및 옵션 변경시 재로드
   useEffect(() => {
     loadData();
-  }, [regionType, selectedDistrict, selectedMonth]);
+  }, [loadData]);
 
   // 커스텀 툴팁
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  interface TooltipPayload {
+    value: number;
+    name: string;
+    color: string;
+    dataKey: string;
+  }
+
+  interface TooltipProps {
+    active?: boolean;
+    payload?: TooltipPayload[];
+    label?: string;
+  }
+
+  const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
     if (active && payload && payload.length) {
-      const hour = parseInt(label);
+      const hour = parseInt(label || '0');
       return (
         <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-4">
           <p className="font-semibold text-gray-800 mb-2">
             {utils.formatHour(hour)} ({hour}시)
           </p>
-          {payload.map((entry: any, index: number) => (
+          {payload.map((entry, index) => (
             <div key={index} className="flex items-center gap-2 text-base">
               <div 
                 className="w-3 h-3 rounded-full" 
