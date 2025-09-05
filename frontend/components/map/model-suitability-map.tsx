@@ -46,6 +46,7 @@ interface ModelSuitabilityMapProps {
   initialDistrictName?: string
   onDistrictAnalysis?: (districtName: string, analysis: any) => void
   height?: string
+  focusStation?: { lat: number; lng: number; stationName: string } | null
 }
 
 interface StationAnalysis {
@@ -64,7 +65,8 @@ function ModelSuitabilityMapComponent({
   selectedMonth = "7",
   initialDistrictName,
   onDistrictAnalysis,
-  height = "600px"
+  height = "600px",
+  focusStation
 }: ModelSuitabilityMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
@@ -408,6 +410,56 @@ function ModelSuitabilityMapComponent({
     console.log('🔄 Updating station data for model change:', selectedModel, 'in district:', selectedDistrict)
     loadStationData(selectedDistrict)
   }, [selectedModel, isClient, selectedDistrict])
+
+  // Focus on specific station when requested
+  useEffect(() => {
+    if (!isClient || !L || !mapInstanceRef.current || !focusStation) return
+
+    console.log('🎯 Focusing map on station:', focusStation.stationName, 'at coordinates:', focusStation.lat, focusStation.lng)
+    
+    // Smoothly pan and zoom to the station
+    mapInstanceRef.current.setView([focusStation.lat, focusStation.lng], 16, {
+      animate: true,
+      duration: 1.0, // 1 second animation
+      easeLinearity: 0.25
+    })
+    
+    // Add a temporary pulsing marker for better visual feedback
+    const pulsingIcon = L.divIcon({
+      html: `<div style="
+        background-color: #3B82F6;
+        border: 3px solid white;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
+        animation: pulse 2s infinite;
+      "></div>
+      <style>
+        @keyframes pulse {
+          0% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.5); opacity: 0.7; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+      </style>`,
+      className: 'pulsing-marker',
+      iconSize: [20, 20],
+      iconAnchor: [10, 10]
+    })
+    
+    const tempMarker = L.marker([focusStation.lat, focusStation.lng], { icon: pulsingIcon })
+      .addTo(mapInstanceRef.current)
+      .bindPopup(`🎯 ${focusStation.stationName}<br/><small>검색에서 선택됨</small>`)
+      .openPopup()
+    
+    // Remove temporary marker after 4 seconds
+    setTimeout(() => {
+      if (mapInstanceRef.current && tempMarker) {
+        mapInstanceRef.current.removeLayer(tempMarker)
+      }
+    }, 4000)
+    
+  }, [focusStation, isClient])
   
   // Update district styles when needed
   useEffect(() => {

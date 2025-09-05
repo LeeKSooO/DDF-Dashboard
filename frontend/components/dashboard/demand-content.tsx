@@ -67,8 +67,7 @@ export const DemandContent = memo(function DemandContent({
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [searchResults, setSearchResults] = useState<DRTStationData[]>([]);
-  const [allStationsData, setAllStationsData] = useState<DRTStationData[]>([]);
-
+  const [focusStation, setFocusStation] = useState<{ lat: number; lng: number; stationName: string } | null>(null);
   // 구별 DRT 데이터 로드
   useEffect(() => {
     const loadDRTData = async () => {
@@ -101,6 +100,11 @@ export const DemandContent = memo(function DemandContent({
             );
           }
         } else {
+          // 지도에서 선택된 구가 있으면 그것을 우선 사용
+          if (selectedDistrictName) {
+            targetRegion = selectedDistrictName;
+          }
+          
           console.log("🌍 Requesting DRT data for specific region:", targetRegion);
           try {
             response = await apiService.getDRTScores(
@@ -203,33 +207,8 @@ export const DemandContent = memo(function DemandContent({
     };
 
     loadDRTData();
-  }, [selectedModel, selectedRegion, selectedMonth]);
+  }, [selectedModel, selectedRegion, selectedMonth, selectedDistrictName]);
 
-  // 전체 정류장 데이터 로드 (검색용)
-  useEffect(() => {
-    const loadAllStationsData = async () => {
-      try {
-        console.log("🔍 Loading all stations data for search");
-        const apiModelType = modelTypeMapping[selectedModel] || "vulnerable";
-        
-        // "전체" 구역으로 API 호출 시도
-        const response = await apiService.getDRTScores(
-          "전체", 
-          apiModelType, 
-          utils.formatSelectedMonth(selectedMonth)
-        );
-        
-        console.log("📊 All stations loaded for search:", response.stations?.length || 0);
-        setAllStationsData(response.stations || []);
-      } catch (err) {
-        console.log("⚠️ Failed to load all stations data, using current district data for search");
-        // 전체 데이터를 가져올 수 없으면 현재 구 데이터 사용
-        setAllStationsData(drtData?.stations || []);
-      }
-    };
-
-    loadAllStationsData();
-  }, [selectedModel, selectedMonth]);
 
   // 상단 헤더에 현재 선택된 구 알리기 (DRT 분석 탭 전용)
   useEffect(() => {
@@ -279,15 +258,15 @@ export const DemandContent = memo(function DemandContent({
     loadStationDetail();
   }, [selectedStation?.station_id, selectedModel, selectedMonth]); // station_id로 변경하여 더 정확한 추적
 
-  // 검색 기능
+  // 검색 기능 (선택된 구의 정류장만 검색)
   useEffect(() => {
     if (!searchQuery.trim()) {
       setSearchResults([]);
       return;
     }
 
-    // 전체 데이터가 있으면 사용, 없으면 현재 구 데이터 사용
-    const searchData = allStationsData.length > 0 ? allStationsData : (drtData?.stations || []);
+    // 현재 선택된 구의 정류장 데이터에서만 검색
+    const searchData = drtData?.stations || [];
     
     if (searchData.length === 0) {
       setSearchResults([]);
@@ -300,17 +279,30 @@ export const DemandContent = memo(function DemandContent({
       station.station_id.toLowerCase().includes(query)
     );
     
-    console.log("🔍 Search results for:", searchQuery, "Found:", filtered.length, "Search scope:", allStationsData.length > 0 ? "전체" : "현재 구");
-    setSearchResults(filtered.slice(0, 8)); // 전체 검색이므로 최대 8개까지 표시
-  }, [searchQuery, allStationsData, drtData?.stations]);
+    console.log("🔍 Search results for:", searchQuery, "Found:", filtered.length, "Search scope:", selectedDistrictName || "현재 구");
+    setSearchResults(filtered.slice(0, 5)); // 구 내 검색이므로 최대 5개까지 표시
+  }, [searchQuery, drtData?.stations, selectedDistrictName]);
 
   // 검색 결과에서 정류장 선택
   const handleSearchResultSelect = (station: DRTStationData) => {
-    console.log("🚏 Selected station from search:", station.station_name);
+    console.log("🚏 Selected station from search:", station.station_name, "at coordinates:", station.coordinate);
+    
+    // 정류장 선택
     setSelectedStation(station);
     setStationDetail(null); // 상세 정보 새로 로드
+    
+    // 지도 이동 트리거
+    setFocusStation({
+      lat: station.coordinate.lat,
+      lng: station.coordinate.lng,
+      stationName: station.station_name
+    });
+    
+    // 검색 UI 초기화
     setSearchQuery(""); // 검색창 초기화
     setSearchResults([]); // 검색 결과 닫기
+    
+    console.log("🎯 Triggering map focus to:", station.station_name);
   };
 
   // 정류장별 특성 점수 계산 (실제 API feature_scores 기반)
@@ -341,12 +333,6 @@ export const DemandContent = memo(function DemandContent({
             description: "구간별 승하차수 부족도 (역전 지수)",
             level: feature_scores.mdi_t_score > 0.7 ? "높음" : feature_scores.mdi_t_score > 0.5 ? "보통" : "낮음"
           },
-          { 
-            label: "지역 취약성 점수 (AVS)", 
-            score: (feature_scores.avs_score * 100).toFixed(1),
-            description: "POI 카테고리별 취약성 점수",
-            level: feature_scores.avs_score > 0.8 ? "높음" : feature_scores.avs_score > 0.6 ? "보통" : "낮음"
-          },
         ]
       };
     } else if (selectedModel === "출퇴근") {
@@ -371,12 +357,6 @@ export const DemandContent = memo(function DemandContent({
             description: "시간별 구간 승하차수/1000",
             level: feature_scores.ru_score > 0.05 ? "높음" : feature_scores.ru_score > 0.02 ? "보통" : "낮음"
           },
-          { 
-            label: "POI 카테고리 가중치 (PCW)", 
-            score: (feature_scores.pcw_score * 100).toFixed(1),
-            description: "인구밀집지역·발달상권 가중치",
-            level: feature_scores.pcw_score >= 1.0 ? "최우수" : feature_scores.pcw_score >= 0.8 ? "우수" : "보통"
-          },
         ]
       };
     } else {
@@ -400,12 +380,6 @@ export const DemandContent = memo(function DemandContent({
             score: (feature_scores.ru_t_score * 100).toFixed(1),
             description: "t시 구간별 승객 밀도 (관광시간 60%)",
             level: feature_scores.ru_t_score > 0.15 ? "높음" : feature_scores.ru_t_score > 0.1 ? "보통" : "낮음"
-          },
-          { 
-            label: "POI 관광 가중치 (PCW)", 
-            score: (feature_scores.pcw_score * 100).toFixed(1),
-            description: "관광특구>고궁>상권>공원 가중치",
-            level: feature_scores.pcw_score >= 1.0 ? "관광특구급" : feature_scores.pcw_score >= 0.8 ? "문화유적급" : "일반급"
           },
         ]
       };
@@ -520,7 +494,7 @@ export const DemandContent = memo(function DemandContent({
                     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
                       <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 text-xs text-gray-600">
                         {searchResults.length}개 정류장 발견 
-                        {allStationsData.length > 0 ? " (전체 검색)" : " (현재 구)"}
+                        ({selectedDistrictName || "현재 구"} 내 검색)
                       </div>
                       {searchResults.map((station) => (
                         <button
@@ -533,12 +507,8 @@ export const DemandContent = memo(function DemandContent({
                             <span>ID: {station.station_id}</span>
                             <span>•</span>
                             <span>DRT: {station.drt_score.toFixed(1)}점</span>
-                            {allStationsData.length > 0 && (
-                              <>
-                                <span>•</span>
-                                <span className="text-blue-600">{selectedDistrictName}</span>
-                              </>
-                            )}
+                            <span>•</span>
+                            <span className="text-blue-600">{selectedDistrictName}</span>
                           </div>
                         </button>
                       ))}
@@ -554,11 +524,49 @@ export const DemandContent = memo(function DemandContent({
                   selectedMonth={selectedMonth}
                   initialDistrictName={selectedDistrictName}
                   height="680px"
-                onDistrictAnalysis={(districtName, analysis) => {
+                  focusStation={focusStation}
+                onDistrictAnalysis={async (districtName, analysis) => {
                   console.log("🔄 DemandContent received analysis:", { districtName, analysis });
                   
-                  // 구 이름 업데이트
-                  setSelectedDistrictName(districtName);
+                  // 구가 변경된 경우에만 새 데이터 로딩
+                  if (selectedDistrictName !== districtName) {
+                    console.log("🗺️ District changed from", selectedDistrictName, "to", districtName, "- loading new data");
+                    
+                    // 구 이름 먼저 업데이트
+                    setSelectedDistrictName(districtName);
+                    
+                    // 새 구의 DRT 데이터 로딩
+                    try {
+                      const apiModelType = modelTypeMapping[selectedModel] || "vulnerable";
+                      console.log("📡 Loading DRT data for new district:", districtName);
+                      
+                      const response = await apiService.getDRTScores(
+                        districtName,
+                        apiModelType,
+                        utils.formatSelectedMonth(selectedMonth)
+                      );
+                      
+                      console.log("✅ New district data loaded:", districtName, "- stations:", response?.stations?.length || 0);
+                      setDrtData(response);
+                      
+                      // 기존 정류장 선택 초기화 (다른 구의 정류장이므로)
+                      setSelectedStation(null);
+                      setStationDetail(null);
+                      
+                      // 검색 쿼리도 초기화 (다른 구로 변경되었으므로)
+                      setSearchQuery("");
+                      setSearchResults([]);
+                      
+                      // 지도 포커스도 초기화
+                      setFocusStation(null);
+                      
+                    } catch (error) {
+                      console.error("🚨 Failed to load data for district:", districtName, error);
+                      // 실패 시 기존 로직 유지
+                    }
+                  } else {
+                    console.log("🔄 Same district selected, no data reload needed");
+                  }
                   
                   // 정류장 선택 처리
                   if (analysis.stationName && analysis.stationData) {
@@ -607,16 +615,25 @@ export const DemandContent = memo(function DemandContent({
         {/* 모델별 특성 분석 (정류장 기준) */}
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle>정류장 특성 분석</CardTitle>
+            <CardTitle>정류장 피크 특성 분석</CardTitle>
             <CardDescription>
               {selectedStation 
                 ? `${selectedStation.station_name} 정류장의 ${selectedModel} 모델 특성`
-                : "정류장을 선택하여 특성을 분석하세요"}
+                : "정류장을 선택하여 피크 특성을 분석하세요"}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {selectedStation ? (
               <div className="space-y-4">
+                {/* 선택된 정류장 이름 강조 표시 */}
+                <div className="text-center py-3 px-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                  <div className="text-2xl font-bold text-blue-800 mb-1">
+                    🚏 {selectedStation.station_name}
+                  </div>
+                  <div className="text-sm text-blue-600 font-medium">
+                    {selectedModel} 모델 피크 특성 분석
+                  </div>
+                </div>
                 {loadingStationDetail ? (
                   <div className="flex items-center justify-center h-64">
                     <div className="text-center">
@@ -646,9 +663,9 @@ export const DemandContent = memo(function DemandContent({
                                   {item.score}점
                                 </div>
                                 <Badge variant={
-                                  item.level.includes("매우 높음") || item.level.includes("최우수") || item.level.includes("관광특구급") ? "default" : 
-                                  item.level.includes("높음") || item.level.includes("우수") || item.level.includes("문화유적급") ? "secondary" : 
-                                  item.level.includes("보통") || item.level.includes("일반급") ? "outline" : 
+                                  item.level.includes("매우 높음") || item.level.includes("최우수") || item.level.includes("최대치") ? "default" : 
+                                  item.level.includes("높음") || item.level.includes("우수") ? "secondary" : 
+                                  item.level.includes("보통") ? "outline" : 
                                   "secondary"
                                 }>
                                   {item.level}
@@ -698,7 +715,7 @@ export const DemandContent = memo(function DemandContent({
                 <div className="text-center">
                   <div className="text-4xl mb-3">📊</div>
                   <div className="text-lg">지도에서 정류장을 클릭하면</div>
-                  <div className="text-lg">해당 정류장의 특성을 분석합니다</div>
+                  <div className="text-lg">해당 정류장의 피크 특성을 분석합니다</div>
                 </div>
               </div>
             )}
@@ -809,14 +826,14 @@ export const DemandContent = memo(function DemandContent({
         <Card className="lg:col-span-1">
           <CardHeader className="pb-4">
             <CardTitle className="text-2xl flex items-center gap-2">
-              🏆 {selectedModel} DRT TOP 5 정류장
+              🏆 {selectedDistrictName ? `${selectedDistrictName} ` : ""}{selectedModel} DRT TOP 5
             </CardTitle>
             <CardDescription className="text-lg">
               <div className="flex items-center justify-between">
-                <span>{selectedModel} 모델 기준 상위 정류장 분석</span>
-                {selectedRegion !== "전체" && selectedDistrictName !== selectedRegion && (
-                  <span className="text-orange-600 text-base font-medium">
-                    ({selectedDistrictName} 데이터)
+                <span>{selectedDistrictName ? `${selectedDistrictName} 지역 ` : ""}{selectedModel} 모델 기준 상위 정류장</span>
+                {selectedDistrictName && (
+                  <span className="text-blue-600 text-base font-medium">
+                    {drtData?.stations?.length || 0}개 정류장 중
                   </span>
                 )}
               </div>
@@ -850,7 +867,7 @@ export const DemandContent = memo(function DemandContent({
                   <div className="text-2xl mb-2">
                     {selectedModel === '교통취약지' ? '💜' : selectedModel === '출퇴근' ? '🏢' : '📸'}
                   </div>
-                  <div className="text-base">{selectedModel} 데이터 로딩 중...</div>
+                  <div className="text-base">{selectedDistrictName ? `${selectedDistrictName} ` : ""}{selectedModel} 데이터 로딩 중...</div>
                 </div>
               )}
             </div>
