@@ -345,6 +345,7 @@ export function DashboardOverviewContent({
       },
       // 2. 평균 구별 교통량
       {
+        key: "averageTraffic",
         title:
           selectedRegion === "전체"
             ? "평균 구별 교통량"
@@ -376,6 +377,7 @@ export function DashboardOverviewContent({
       },
       // 3. 최대 교통량 구
       {
+        key: "maxTraffic",
         title:
           selectedRegion === "전체"
             ? "최대 교통량 구"
@@ -422,6 +424,7 @@ export function DashboardOverviewContent({
       },
       // 4. 최소 교통량 구 (기존 8번)
       {
+        key: "minTraffic",
         title:
           selectedRegion === "전체"
             ? "최소 교통량 구"
@@ -470,6 +473,7 @@ export function DashboardOverviewContent({
       },
       // 5. 총 정류장 수 (기존 4번)
       {
+        key: "totalStations",
         title:
           selectedRegion === "전체"
             ? "총 정류장 수"
@@ -492,6 +496,7 @@ export function DashboardOverviewContent({
       },
       // 6. 승하차 비율 (기존 7번)
       {
+        key: "boardingRatio",
         title: "승하차 비율",
         value:
           currentData.totalAlight > 0
@@ -515,6 +520,7 @@ export function DashboardOverviewContent({
       },
       // 7. 교통 집중도 (기존 5번)
       {
+        key: "concentrationIndex",
         title: "교통 집중도",
         value:
           (() => {
@@ -593,6 +599,7 @@ export function DashboardOverviewContent({
       },
       // 8. 교통 불평등 지수 (기존 6번)
       {
+        key: "inequalityIndex",
         title: "교통 불평등 지수",
         value:
           (() => {
