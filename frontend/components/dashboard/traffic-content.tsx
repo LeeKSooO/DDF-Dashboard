@@ -4,10 +4,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Users, Calendar, MapPin, X } from "lucide-react"
+import { Users, Calendar, MapPin, X, HelpCircle } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from "recharts"
 import { memo, useState, useEffect } from "react"
 import { apiService, TrafficResponse, utils } from "@/lib/api"
+import {
+  Tooltip as UITooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 interface TrafficContentProps {
   selectedMonth: string
@@ -15,6 +20,17 @@ interface TrafficContentProps {
 }
 
 type TabType = 'seoul' | 'districts';
+
+// 교통 패턴 KPI 툴팁 정보
+const trafficKpiTooltips = {
+  weekdayRide: "주중(월~금) 평균 승차 인원입니다. 출근시간대 패턴을 파악할 수 있는 지표로, 주거지역은 아침에 높고 업무지역은 저녁에 높게 나타납니다.",
+  weekdayAlight: "주중(월~금) 평균 하차 인원입니다. 퇴근시간대 패턴을 파악할 수 있는 지표로, 업무지역은 아침에 높고 주거지역은 저녁에 높게 나타납니다.",
+  weekendRide: "주말(토~일) 평균 승차 인원입니다. 여가활동 패턴을 반영하며, 일반적으로 주중보다 낮고 오후 시간대에 집중되는 특징을 보입니다.",
+  weekendAlight: "주말(토~일) 평균 하차 인원입니다. 쇼핑몰, 공원, 관광지 등 여가시설 접근성을 나타내며, 주중과 다른 시간대별 분포를 보입니다.",
+  weekdayMorningPeak: "주중 아침 시간대의 최대 이용량입니다. 출근 러시아워를 나타내며, 주거지역에서는 승차가, 업무지역에서는 하차가 많이 발생합니다.",
+  weekdayEveningPeak: "주중 저녁 시간대의 최대 이용량입니다. 퇴근 러시아워를 나타내며, 아침과 반대로 업무지역에서는 승차가, 주거지역에서는 하차가 많이 발생합니다.",
+  weekendPeak: "주말 최대 이용량입니다. 주중과 달리 오후~저녁 시간대에 피크를 보이며, 여가활동과 쇼핑 패턴을 반영합니다."
+};
 
 export const TrafficContent = memo(function TrafficContent({ selectedMonth, selectedRegion }: TrafficContentProps) {
   console.log('🚀 TrafficContent initialized with:', { selectedMonth, selectedRegion });
@@ -118,6 +134,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
     </div>
   )
 
+
   // 현재 선택된 지역 교통 패턴 컴포넌트
   function CurrentTrafficView() {
     if (loadingCurrent) {
@@ -148,9 +165,24 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
             <CardContent className="p-6">
               <div className="flex items-center space-x-3">
                 <Users className="h-7 w-7 text-blue-500" />
-                <div>
-                  <span className="text-lg font-semibold text-gray-600">{regionDisplayName} 주중 승차</span>
-                  <span className="text-base text-gray-500 ml-2">(정류장 평균)</span>
+                <div className="flex items-center gap-2">
+                  <div>
+                    <span className="text-lg font-semibold text-gray-600">{regionDisplayName} 주중 승차</span>
+                    <span className="text-base text-gray-500 ml-2">(정류장 평균)</span>
+                  </div>
+                  <UITooltip>
+                    <TooltipTrigger asChild>
+                      <button className="text-gray-400 hover:text-gray-600 transition-colors">
+                        <HelpCircle size={14} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent 
+                      side="top" 
+                      className="max-w-xs bg-gray-800 text-white text-sm p-3 rounded-lg shadow-lg"
+                    >
+                      {trafficKpiTooltips.weekdayRide}
+                    </TooltipContent>
+                  </UITooltip>
                 </div>
               </div>
               <div className="text-4xl font-bold text-gray-900 mt-4">
@@ -164,9 +196,24 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
             <CardContent className="p-6">
               <div className="flex items-center space-x-3">
                 <Users className="h-7 w-7 text-red-500" />
-                <div>
-                  <span className="text-lg font-semibold text-gray-600">{regionDisplayName} 주중 하차</span>
-                  <span className="text-base text-gray-500 ml-2">(정류장 평균)</span>
+                <div className="flex items-center gap-2">
+                  <div>
+                    <span className="text-lg font-semibold text-gray-600">{regionDisplayName} 주중 하차</span>
+                    <span className="text-base text-gray-500 ml-2">(정류장 평균)</span>
+                  </div>
+                  <UITooltip>
+                    <TooltipTrigger asChild>
+                      <button className="text-gray-400 hover:text-gray-600 transition-colors">
+                        <HelpCircle size={14} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent 
+                      side="top" 
+                      className="max-w-xs bg-gray-800 text-white text-sm p-3 rounded-lg shadow-lg"
+                    >
+                      {trafficKpiTooltips.weekdayAlight}
+                    </TooltipContent>
+                  </UITooltip>
                 </div>
               </div>
               <div className="text-4xl font-bold text-gray-900 mt-4">
@@ -180,9 +227,24 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
             <CardContent className="p-6">
               <div className="flex items-center space-x-3">
                 <Users className="h-7 w-7 text-green-500" />
-                <div>
-                  <span className="text-lg font-semibold text-gray-600">{regionDisplayName} 주말 승차</span>
-                  <span className="text-base text-gray-500 ml-2">(정류장 평균)</span>
+                <div className="flex items-center gap-2">
+                  <div>
+                    <span className="text-lg font-semibold text-gray-600">{regionDisplayName} 주말 승차</span>
+                    <span className="text-base text-gray-500 ml-2">(정류장 평균)</span>
+                  </div>
+                  <UITooltip>
+                    <TooltipTrigger asChild>
+                      <button className="text-gray-400 hover:text-gray-600 transition-colors">
+                        <HelpCircle size={14} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent 
+                      side="top" 
+                      className="max-w-xs bg-gray-800 text-white text-sm p-3 rounded-lg shadow-lg"
+                    >
+                      {trafficKpiTooltips.weekendRide}
+                    </TooltipContent>
+                  </UITooltip>
                 </div>
               </div>
               <div className="text-4xl font-bold text-gray-900 mt-4">
@@ -196,9 +258,24 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
             <CardContent className="p-6">
               <div className="flex items-center space-x-3">
                 <Users className="h-7 w-7 text-yellow-500" />
-                <div>
-                  <span className="text-lg font-semibold text-gray-600">{regionDisplayName} 주말 하차</span>
-                  <span className="text-base text-gray-500 ml-2">(정류장 평균)</span>
+                <div className="flex items-center gap-2">
+                  <div>
+                    <span className="text-lg font-semibold text-gray-600">{regionDisplayName} 주말 하차</span>
+                    <span className="text-base text-gray-500 ml-2">(정류장 평균)</span>
+                  </div>
+                  <UITooltip>
+                    <TooltipTrigger asChild>
+                      <button className="text-gray-400 hover:text-gray-600 transition-colors">
+                        <HelpCircle size={14} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent 
+                      side="top" 
+                      className="max-w-xs bg-gray-800 text-white text-sm p-3 rounded-lg shadow-lg"
+                    >
+                      {trafficKpiTooltips.weekendAlight}
+                    </TooltipContent>
+                  </UITooltip>
                 </div>
               </div>
               <div className="text-4xl font-bold text-gray-900 mt-4">
@@ -213,7 +290,22 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="bg-gray-100">
             <CardHeader className="pb-1">
-              <CardTitle className="text-2xl font-bold">주중 아침 피크</CardTitle>
+              <CardTitle className="text-2xl font-bold flex items-center gap-2">
+                주중 아침 피크
+                <UITooltip>
+                  <TooltipTrigger asChild>
+                    <button className="text-gray-400 hover:text-gray-600 transition-colors">
+                      <HelpCircle size={16} />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent 
+                    side="top" 
+                    className="max-w-xs bg-gray-800 text-white text-sm p-3 rounded-lg shadow-lg"
+                  >
+                    {trafficKpiTooltips.weekdayMorningPeak}
+                  </TooltipContent>
+                </UITooltip>
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-2">
               <div className="flex items-center justify-between">
@@ -292,7 +384,22 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
 
           <Card className="bg-gray-100">
             <CardHeader className="pb-1">
-              <CardTitle className="text-2xl font-bold">주중 저녁 피크</CardTitle>
+              <CardTitle className="text-2xl font-bold flex items-center gap-2">
+                주중 저녁 피크
+                <UITooltip>
+                  <TooltipTrigger asChild>
+                    <button className="text-gray-400 hover:text-gray-600 transition-colors">
+                      <HelpCircle size={16} />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent 
+                    side="top" 
+                    className="max-w-xs bg-gray-800 text-white text-sm p-3 rounded-lg shadow-lg"
+                  >
+                    {trafficKpiTooltips.weekdayEveningPeak}
+                  </TooltipContent>
+                </UITooltip>
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-2">
               <div className="flex items-center justify-between">
@@ -371,7 +478,22 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
 
           <Card className="bg-gray-100">
             <CardHeader className="pb-1">
-              <CardTitle className="text-2xl font-bold">주말 피크</CardTitle>
+              <CardTitle className="text-2xl font-bold flex items-center gap-2">
+                주말 피크
+                <UITooltip>
+                  <TooltipTrigger asChild>
+                    <button className="text-gray-400 hover:text-gray-600 transition-colors">
+                      <HelpCircle size={16} />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent 
+                    side="top" 
+                    className="max-w-xs bg-gray-800 text-white text-sm p-3 rounded-lg shadow-lg"
+                  >
+                    {trafficKpiTooltips.weekendPeak}
+                  </TooltipContent>
+                </UITooltip>
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-2">
               <div className="flex items-center justify-between">

@@ -8,12 +8,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, Navigation, Activity, Globe } from "lucide-react";
+import { MapPin, Navigation, Activity, Globe, HelpCircle } from "lucide-react";
 import {
-  Tooltip,
-  TooltipContent,
+  Tooltip as HelpTooltip,
+  TooltipContent as HelpTooltipContent,
   TooltipProvider,
-  TooltipTrigger,
+  TooltipTrigger as HelpTooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useState, useEffect, useRef } from "react";
 import {
@@ -466,8 +466,8 @@ export function HeatmapContent({
                 <div className="space-y-3">
                   <TooltipProvider>
                     {/* 주말 우세 정류장 */}
-                    <Tooltip>
-                      <TooltipTrigger asChild>
+                    <HelpTooltip>
+                      <HelpTooltipTrigger asChild>
                         <button
                           onClick={() => {
                             setSelectedPattern(
@@ -486,19 +486,19 @@ export function HeatmapContent({
                             <span>주말</span>
                           </div>
                         </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="right">
+                      </HelpTooltipTrigger>
+                      <HelpTooltipContent side="right">
                         <div className="text-xs">
                           <p className="font-semibold">주말 우세 정류장</p>
                           <p className="text-gray-400">주말 고수요 관광지/레저 정류장</p>
                           <p className="mt-1">{weekendData?.data?.length || 0}개 정류장 발견</p>
                         </div>
-                      </TooltipContent>
-                    </Tooltip>
+                      </HelpTooltipContent>
+                    </HelpTooltip>
 
                     {/* 심야 고수요 */}
-                    <Tooltip>
-                      <TooltipTrigger asChild>
+                    <HelpTooltip>
+                      <HelpTooltipTrigger asChild>
                         <button
                           onClick={() => {
                             setSelectedPattern(
@@ -517,19 +517,19 @@ export function HeatmapContent({
                             <span>심야</span>
                           </div>
                         </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="right">
+                      </HelpTooltipTrigger>
+                      <HelpTooltipContent side="right">
                         <div className="text-xs">
                           <p className="font-semibold">심야시간 고수요</p>
                           <p className="text-gray-400">24시간 활성화된 상업지역 정류장</p>
                           <p className="mt-1">{nightData?.data?.length || 0}개 정류장 발견</p>
                         </div>
-                      </TooltipContent>
-                    </Tooltip>
+                      </HelpTooltipContent>
+                    </HelpTooltip>
 
                     {/* 저활용 정류장 */}
-                    <Tooltip>
-                      <TooltipTrigger asChild>
+                    <HelpTooltip>
+                      <HelpTooltipTrigger asChild>
                         <button
                           onClick={() => {
                             setSelectedPattern(
@@ -550,19 +550,19 @@ export function HeatmapContent({
                             <span>저활용</span>
                           </div>
                         </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="right">
+                      </HelpTooltipTrigger>
+                      <HelpTooltipContent side="right">
                         <div className="text-xs">
                           <p className="font-semibold">저활용 정류장</p>
                           <p className="text-gray-400">운영 최적화 대상 정류장</p>
                           <p className="mt-1">{underutilizedData?.data?.length || 0}개 정류장 발견</p>
                         </div>
-                      </TooltipContent>
-                    </Tooltip>
+                      </HelpTooltipContent>
+                    </HelpTooltip>
 
                     {/* 점심시간 특화 */}
-                    <Tooltip>
-                      <TooltipTrigger asChild>
+                    <HelpTooltip>
+                      <HelpTooltipTrigger asChild>
                         <button
                           onClick={() => {
                             setSelectedPattern(
@@ -581,19 +581,19 @@ export function HeatmapContent({
                             <span>점심</span>
                           </div>
                         </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="right">
+                      </HelpTooltipTrigger>
+                      <HelpTooltipContent side="right">
                         <div className="text-xs">
                           <p className="font-semibold">점심시간 특화</p>
                           <p className="text-gray-400">음식점가/상업지구 점심 정류장</p>
                           <p className="mt-1">{lunchTimeData?.data?.length || 0}개 정류장 발견</p>
                         </div>
-                      </TooltipContent>
-                    </Tooltip>
+                      </HelpTooltipContent>
+                    </HelpTooltip>
 
                     {/* 러시아워 핫스팟 */}
-                    <Tooltip>
-                      <TooltipTrigger asChild>
+                    <HelpTooltip>
+                      <HelpTooltipTrigger asChild>
                         <button
                           onClick={() => {
                             setSelectedPattern(
@@ -612,19 +612,19 @@ export function HeatmapContent({
                             <span>러시</span>
                           </div>
                         </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="right">
+                      </HelpTooltipTrigger>
+                      <HelpTooltipContent side="right">
                         <div className="text-xs">
                           <p className="font-semibold">러시아워 고수요</p>
                           <p className="text-gray-400">출퇴근 시간대 집중 정류장</p>
                           <p className="mt-1">{(rushHourData?.data?.morning_rush?.length || 0) + (rushHourData?.data?.evening_rush?.length || 0)}개 정류장 발견</p>
                         </div>
-                      </TooltipContent>
-                    </Tooltip>
+                      </HelpTooltipContent>
+                    </HelpTooltip>
 
                     {/* 지역 특성 분석 */}
-                    <Tooltip>
-                      <TooltipTrigger asChild>
+                    <HelpTooltip>
+                      <HelpTooltipTrigger asChild>
                         <button
                           onClick={() => {
                             setSelectedPattern(
@@ -643,15 +643,15 @@ export function HeatmapContent({
                             <span>지역</span>
                           </div>
                         </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="right">
+                      </HelpTooltipTrigger>
+                      <HelpTooltipContent side="right">
                         <div className="text-xs">
                           <p className="font-semibold">지역 특성별</p>
                           <p className="text-gray-400">주거지역 vs 업무지역 정류장 구분</p>
                           <p className="mt-1">{(areaTypeData?.data?.residential_stations?.length || 0) + (areaTypeData?.data?.business_stations?.length || 0)}개 정류장 발견</p>
                         </div>
-                      </TooltipContent>
-                    </Tooltip>
+                      </HelpTooltipContent>
+                    </HelpTooltip>
                   </TooltipProvider>
                 </div>
               )}
@@ -687,8 +687,8 @@ export function HeatmapContent({
                 <TooltipProvider>
                   <div className="flex items-center gap-2">
                     <div className="flex gap-2">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
+                      <HelpTooltip>
+                        <HelpTooltipTrigger asChild>
                           <Button
                             variant={viewMode === "district" ? "default" : "outline"}
                             size="sm"
@@ -697,13 +697,13 @@ export function HeatmapContent({
                           >
                             구별
                           </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
+                        </HelpTooltipTrigger>
+                        <HelpTooltipContent>
                           <p>25개 자치구별 교통량 집계</p>
-                        </TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
+                        </HelpTooltipContent>
+                      </HelpTooltip>
+                      <HelpTooltip>
+                        <HelpTooltipTrigger asChild>
                           <Button
                             variant={viewMode === "station" ? "default" : "outline"}
                             size="sm"
@@ -712,14 +712,14 @@ export function HeatmapContent({
                           >
                             정류장
                           </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
+                        </HelpTooltipTrigger>
+                        <HelpTooltipContent>
                           <p>개별 정류장별 교통량 표시</p>
-                        </TooltipContent>
-                      </Tooltip>
+                        </HelpTooltipContent>
+                      </HelpTooltip>
                     </div>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
+                    <HelpTooltip>
+                      <HelpTooltipTrigger asChild>
                         <Button 
                           variant="outline" 
                           size="sm" 
@@ -728,14 +728,14 @@ export function HeatmapContent({
                         >
                           <Navigation className="h-4 w-4" />
                         </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
+                      </HelpTooltipTrigger>
+                      <HelpTooltipContent>
                         <p>서울시 전체 보기로 지도 중심 이동</p>
-                      </TooltipContent>
-                    </Tooltip>
+                      </HelpTooltipContent>
+                    </HelpTooltip>
                     {((viewMode === "station" && selectedDistrict) || (viewMode === "district" && (selectedRegion !== "전체" || selectedDistrict))) && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
+                      <HelpTooltip>
+                        <HelpTooltipTrigger asChild>
                           <Button
                             variant="outline"
                             size="sm"
@@ -755,11 +755,11 @@ export function HeatmapContent({
                           >
                             <Globe className="h-4 w-4" />
                           </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
+                        </HelpTooltipTrigger>
+                        <HelpTooltipContent>
                           <p>{viewMode === "station" ? "전체 정류장 보기" : "전체 구 보기"}</p>
-                        </TooltipContent>
-                      </Tooltip>
+                        </HelpTooltipContent>
+                      </HelpTooltip>
                     )}
                   </div>
                 </TooltipProvider>
@@ -823,6 +823,37 @@ export function HeatmapContent({
                 ) : (
                   "서울시 주요 정류장 (월별)"
                 )}
+                <HelpTooltip>
+                  <HelpTooltipTrigger asChild>
+                    <button className="text-gray-400 hover:text-gray-600 transition-colors">
+                      <HelpCircle size={16} />
+                    </button>
+                  </HelpTooltipTrigger>
+                  <HelpTooltipContent 
+                    side="top" 
+                    className="max-w-xs bg-gray-800 text-white text-sm p-3 rounded-lg shadow-lg"
+                  >
+                    {(() => {
+                      if (selectedPattern === "weekend") {
+                        return "주말에 평일보다 높은 교통량을 보이는 정류장들입니다. 관광지, 쇼핑몰, 공원 등 여가시설 접근 정류장이 주를 이룹니다.";
+                      } else if (selectedPattern === "night") {
+                        return "심야시간(22:00~05:00)에도 높은 승차 수요를 보이는 정류장들입니다. 유흥가, 24시간 시설, 교통허브 근처가 대부분입니다.";
+                      } else if (selectedPattern === "underutilized") {
+                        return "이용률이 저조한 정류장들로 운영 효율성이 낮습니다. 노선 개선이나 정류장 통폐합 검토가 필요한 지역입니다.";
+                      } else if (selectedPattern === "lunchtime") {
+                        return "점심시간(11:00~14:00)에 특히 높은 하차 수요를 보이는 정류장들입니다. 업무지구, 상업지역, 대학가가 주를 이룹니다.";
+                      } else if (selectedPattern === "rushhour") {
+                        return "출퇴근 시간대에 매우 높은 교통 집중을 보이는 정류장들입니다. 오전(07-09시)과 오후(17-19시)로 구분하여 보여줍니다.";
+                      } else if (selectedPattern === "areatype") {
+                        return "지역 특성에 따라 구분된 정류장들입니다. 주거지역은 오전 승차가, 업무지역은 오전 하차가 많은 특징을 보입니다.";
+                      } else if (selectedDistrict) {
+                        return `${selectedDistrict}에서 가장 이용량이 많은 상위 정류장들입니다. 해당 구의 주요 교통 허브와 집중 지역을 파악할 수 있습니다.`;
+                      } else {
+                        return "서울시 전체에서 교통량이 가장 많은 상위 정류장들입니다. 서울의 주요 교통 허브와 핫스팟을 보여줍니다.";
+                      }
+                    })()}
+                  </HelpTooltipContent>
+                </HelpTooltip>
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
@@ -1235,6 +1266,37 @@ export function HeatmapContent({
                   : selectedDistrict
                   ? `${selectedDistrict} 통계`
                   : "핵심 통계"}
+                <HelpTooltip>
+                  <HelpTooltipTrigger asChild>
+                    <button className="text-gray-400 hover:text-gray-600 transition-colors">
+                      <HelpCircle size={16} />
+                    </button>
+                  </HelpTooltipTrigger>
+                  <HelpTooltipContent 
+                    side="top" 
+                    className="max-w-xs bg-gray-800 text-white text-sm p-3 rounded-lg shadow-lg"
+                  >
+                    {(() => {
+                      if (selectedPattern === "weekend") {
+                        return "주말 우세 패턴의 통계 정보입니다. 주말 특화 정류장 수와 최고 교통량, 평일 대비 증가율을 확인할 수 있습니다.";
+                      } else if (selectedPattern === "night") {
+                        return "심야 고수요 패턴의 통계 정보입니다. 심야시간 운영이 필요한 정류장 현황과 최고 승차량을 보여줍니다.";
+                      } else if (selectedPattern === "underutilized") {
+                        return "저활용 정류장의 통계 정보입니다. 운영 효율성이 낮은 정류장 수와 평균 효율성, 개선 필요도를 확인할 수 있습니다.";
+                      } else if (selectedPattern === "lunchtime") {
+                        return "점심시간 특화 패턴의 통계 정보입니다. 점심시간 특화 정류장 수와 최고 하차량, 상업지역 집중도를 보여줍니다.";
+                      } else if (selectedPattern === "rushhour") {
+                        return "러시아워 패턴의 상세 통계입니다. 오전/오후 평균 교통량, 비율, 최고 교통량 등 동적으로 계산된 지표들을 확인할 수 있습니다.";
+                      } else if (selectedPattern === "areatype") {
+                        return "지역 특성 패턴의 상세 통계입니다. 주거/업무지역 평균 교통량, 교통 방향성 지수, 지역구분 명확도 등을 확인할 수 있습니다.";
+                      } else if (selectedDistrict) {
+                        return `${selectedDistrict}의 교통 현황을 요약한 통계입니다. 총 정류장 수, 교통량, 승하차 비율 등 구 단위 핵심 지표를 제공합니다.`;
+                      } else {
+                        return "서울시 전체의 교통 현황을 요약한 핵심 통계입니다. 총 교통량, 평균 승하차 비율, 최대 구 교통량 등을 확인할 수 있습니다.";
+                      }
+                    })()}
+                  </HelpTooltipContent>
+                </HelpTooltip>
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
@@ -1346,21 +1408,56 @@ export function HeatmapContent({
                     {selectedPattern === "rushhour" && rushHourData && (
                       <>
                         <div className="flex justify-between p-4 bg-orange-50 rounded">
-                          <span className="text-lg font-medium">🌅 오전 러시아워:</span>
+                          <span className="text-lg font-medium">평균 오전 교통량:</span>
                           <span className="font-bold text-orange-600 text-lg">
-                            {rushHourData.data?.morning_rush?.length || 0}개
+                            {(() => {
+                              const morningTotal = rushHourData.data?.morning_rush?.reduce(
+                                (sum: number, item: any) => sum + (item.total_morning_rush || 0), 0
+                              ) || 0;
+                              const morningCount = rushHourData.data?.morning_rush?.length || 1;
+                              return Math.round(morningTotal / morningCount).toLocaleString();
+                            })()}명
                           </span>
                         </div>
                         <div className="flex justify-between p-4 bg-red-50 rounded">
-                          <span className="text-lg font-medium">🌆 오후 러시아워:</span>
+                          <span className="text-lg font-medium">평균 오후 교통량:</span>
                           <span className="font-bold text-red-600 text-lg">
-                            {rushHourData.data?.evening_rush?.length || 0}개
+                            {(() => {
+                              const eveningTotal = rushHourData.data?.evening_rush?.reduce(
+                                (sum: number, item: any) => sum + (item.total_evening_rush || 0), 0
+                              ) || 0;
+                              const eveningCount = rushHourData.data?.evening_rush?.length || 1;
+                              return Math.round(eveningTotal / eveningCount).toLocaleString();
+                            })()}명
+                          </span>
+                        </div>
+                        <div className="flex justify-between p-4 bg-purple-50 rounded">
+                          <span className="text-base">오전/오후 비율:</span>
+                          <span className="font-bold text-purple-600 text-base">
+                            {(() => {
+                              const morningTotal = rushHourData.data?.morning_rush?.reduce(
+                                (sum: number, item: any) => sum + (item.total_morning_rush || 0), 0
+                              ) || 0;
+                              const eveningTotal = rushHourData.data?.evening_rush?.reduce(
+                                (sum: number, item: any) => sum + (item.total_evening_rush || 0), 0
+                              ) || 0;
+                              if (eveningTotal === 0) return "N/A";
+                              return (morningTotal / eveningTotal).toFixed(2) + ":1";
+                            })()}
                           </span>
                         </div>
                         <div className="flex justify-between p-4 bg-gray-50 rounded">
-                          <span className="text-base">혼잡도 수준:</span>
+                          <span className="text-base">최고 러시 교통량:</span>
                           <span className="font-bold text-gray-600 text-base">
-                            매우높음
+                            {(() => {
+                              const morningMax = Math.max(
+                                ...(rushHourData.data?.morning_rush?.map((item: any) => item.total_morning_rush || 0) || [0])
+                              );
+                              const eveningMax = Math.max(
+                                ...(rushHourData.data?.evening_rush?.map((item: any) => item.total_evening_rush || 0) || [0])
+                              );
+                              return Math.max(morningMax, eveningMax).toLocaleString();
+                            })()}명
                           </span>
                         </div>
                       </>
@@ -1369,24 +1466,57 @@ export function HeatmapContent({
                     {selectedPattern === "areatype" && areaTypeData && (
                       <>
                         <div className="flex justify-between p-4 bg-sky-50 rounded">
-                          <span className="text-lg font-medium">주거지역:</span>
+                          <span className="text-lg font-medium">주거지역 평균 승차:</span>
                           <span className="font-bold text-sky-600 text-lg">
-                            {areaTypeData.data?.residential_stations?.length ||
-                              0}
-                            개
+                            {(() => {
+                              const residentialTotal = areaTypeData.data?.residential_stations?.reduce(
+                                (sum: number, item: any) => sum + (item.morning_ride || 0), 0
+                              ) || 0;
+                              const residentialCount = areaTypeData.data?.residential_stations?.length || 1;
+                              return Math.round(residentialTotal / residentialCount).toLocaleString();
+                            })()}명
                           </span>
                         </div>
                         <div className="flex justify-between p-4 bg-purple-50 rounded">
-                          <span className="text-base">업무지역:</span>
-                          <span className="font-bold text-purple-600 text-base">
-                            {areaTypeData.data?.business_stations?.length || 0}
-                            개
+                          <span className="text-lg font-medium">업무지역 평균 하차:</span>
+                          <span className="font-bold text-purple-600 text-lg">
+                            {(() => {
+                              const businessTotal = areaTypeData.data?.business_stations?.reduce(
+                                (sum: number, item: any) => sum + (item.morning_alight || 0), 0
+                              ) || 0;
+                              const businessCount = areaTypeData.data?.business_stations?.length || 1;
+                              return Math.round(businessTotal / businessCount).toLocaleString();
+                            })()}명
                           </span>
                         </div>
-                        <div className="flex justify-between p-4 bg-blue-50 rounded">
-                          <span className="text-base">특성화도:</span>
-                          <span className="font-bold text-blue-600 text-base">
-                            높음
+                        <div className="flex justify-between p-4 bg-indigo-50 rounded">
+                          <span className="text-base">교통 방향성 지수:</span>
+                          <span className="font-bold text-indigo-600 text-base">
+                            {(() => {
+                              const residentialRide = areaTypeData.data?.residential_stations?.reduce(
+                                (sum: number, item: any) => sum + (item.morning_ride || 0), 0
+                              ) || 0;
+                              const businessAlight = areaTypeData.data?.business_stations?.reduce(
+                                (sum: number, item: any) => sum + (item.morning_alight || 0), 0
+                              ) || 0;
+                              const total = residentialRide + businessAlight;
+                              if (total === 0) return "N/A";
+                              const directionality = Math.min(residentialRide, businessAlight) / Math.max(residentialRide, businessAlight);
+                              return (directionality * 100).toFixed(1) + "%";
+                            })()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between p-4 bg-teal-50 rounded">
+                          <span className="text-base">지역구분 명확도:</span>
+                          <span className="font-bold text-teal-600 text-base">
+                            {(() => {
+                              const resCount = areaTypeData.data?.residential_stations?.length || 0;
+                              const bizCount = areaTypeData.data?.business_stations?.length || 0;
+                              const total = resCount + bizCount;
+                              if (total === 0) return "N/A";
+                              const balance = Math.abs(resCount - bizCount) / total;
+                              return balance > 0.6 ? "매우명확" : balance > 0.3 ? "명확" : "보통";
+                            })()}
                           </span>
                         </div>
                       </>

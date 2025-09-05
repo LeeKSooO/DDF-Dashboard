@@ -470,7 +470,11 @@ export const DemandContent = memo(function DemandContent({
           <Card className="h-fit shadow-lg border-0 bg-gradient-to-br from-gray-50 to-slate-100">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base font-bold text-gray-800">
-                <Brain className="h-5 w-5 text-blue-600" />
+                <img 
+                  src="/sidebar_icon/DRT분석_사이드바.png" 
+                  alt="DRT 분석" 
+                  className="h-5 w-5"
+                />
                 DRT 모델
               </CardTitle>
               <CardDescription className="text-sm text-gray-600">
@@ -805,7 +809,11 @@ export const DemandContent = memo(function DemandContent({
             ) : (
               <div className="flex items-center justify-center h-64 text-gray-400">
                 <div className="text-center">
-                  <div className="text-4xl mb-3">📊</div>
+                  <img 
+                    src="/drt_icon/정류장피크특성분석_drt분석.png" 
+                    alt="정류장 피크 특성 분석" 
+                    className="h-16 w-16 mx-auto mb-3 opacity-60"
+                  />
                   <div className="text-lg">지도에서 정류장을 클릭하면</div>
                   <div className="text-lg">해당 정류장의 피크 특성을 분석합니다</div>
                 </div>
@@ -940,7 +948,11 @@ export const DemandContent = memo(function DemandContent({
             ) : (
               <div className="flex items-center justify-center h-64 text-gray-400">
                 <div className="text-center">
-                  <div className="text-4xl mb-3">📈</div>
+                  <img 
+                    src="/drt_icon/시간대별DRT점수_drt분석.png" 
+                    alt="시간대별 DRT 점수" 
+                    className="h-16 w-16 mx-auto mb-3 opacity-60"
+                  />
                   <div className="text-lg">지도에서 정류장을 클릭하면</div>
                   <div className="text-lg">24시간 DRT 점수 변화를 확인할 수 있습니다</div>
                 </div>
@@ -952,8 +964,18 @@ export const DemandContent = memo(function DemandContent({
         {/* 모델별 TOP 5 정류장 */}
         <Card className="lg:col-span-1">
           <CardHeader className="pb-4">
-            <CardTitle className="text-2xl flex items-center gap-2">
-              🏆 {selectedDistrictName ? `${selectedDistrictName} ` : ""}{selectedModel} DRT TOP 5
+            <CardTitle className="text-3xl">
+              <div className="flex items-center justify-center gap-2">
+                <img 
+                  src="/icon/인기정류장.png" 
+                  alt="인기정류장" 
+                  className="h-7 w-7"
+                />
+                <span>TOP 5</span>
+              </div>
+              <div className="text-xl text-center mt-1">
+                {selectedDistrictName ? `${selectedDistrictName} ` : ""}{selectedModel} DRT
+              </div>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -976,12 +998,12 @@ export const DemandContent = memo(function DemandContent({
                 </Tooltip>
               </TooltipProvider>
             </CardTitle>
-            <CardDescription className="text-sm">
-              <div className="flex items-center justify-between gap-2">
-                <span className="flex-1 min-w-0">{selectedDistrictName ? `${selectedDistrictName} 지역 ` : ""}{selectedModel} 모델 기준 상위 정류장</span>
+            <CardDescription className="text-sm text-center">
+              <div className="flex items-center justify-center gap-1 flex-wrap">
+                <span>{selectedDistrictName ? `${selectedDistrictName} ` : ""}{selectedModel} 상위 정류장</span>
                 {selectedDistrictName && (
-                  <span className={`${currentTheme.secondary} text-xs font-medium flex-shrink-0`}>
-                    {drtData?.stations?.length || 0}개 중
+                  <span className={`${currentTheme.secondary} text-xs font-medium`}>
+                    ({drtData?.stations?.length || 0}개 중)
                   </span>
                 )}
               </div>
@@ -1001,8 +1023,8 @@ export const DemandContent = memo(function DemandContent({
                           <p className="text-xs text-muted-foreground">{selectedDistrictName}</p>
                         </div>
                         <div className="flex-shrink-0 text-right">
-                          <div className={`text-sm font-bold ${currentTheme.secondary}`}>{station.drt_score?.toFixed(1)}점</div>
-                          <Badge variant={index === 0 ? "default" : index < 3 ? "secondary" : "outline"} className="text-xs px-1.5 py-0.5">
+                          <div className={`text-lg font-bold ${currentTheme.secondary}`}>{station.drt_score?.toFixed(1)}점</div>
+                          <Badge variant={index === 0 ? "default" : index < 3 ? "secondary" : "outline"} className="text-xs px-2 py-1 font-medium">
                             #{index + 1}
                           </Badge>
                         </div>
