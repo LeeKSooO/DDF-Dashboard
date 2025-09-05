@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     
     # CORS settings
-    ALLOWED_HOSTS: List[str] = ["*"]
+    ALLOWED_HOSTS: str = "*"
     
     # Watson AI settings
     WATSON_API_KEY: Optional[str] = os.getenv('WATSON_API_KEY')
@@ -94,13 +94,20 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "your-secret-key-change-in-production"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
-    @validator("ALLOWED_HOSTS", pre=True)
-    def assemble_cors_origins(cls, v: Any) -> List[str]:
-        if isinstance(v, str) and not v.startswith("["):
-            return [i.strip() for i in v.split(",")]
-        elif isinstance(v, (list, str)):
-            return v
-        raise ValueError(v)
+    @property
+    def allowed_hosts_list(self) -> List[str]:
+        """Convert ALLOWED_HOSTS string to list"""
+        if not self.ALLOWED_HOSTS:
+            return ["*"]
+        
+        if self.ALLOWED_HOSTS == "*":
+            return ["*"]
+            
+        # Handle comma-separated values
+        if "," in self.ALLOWED_HOSTS:
+            return [i.strip() for i in self.ALLOWED_HOSTS.split(",") if i.strip()]
+            
+        return [self.ALLOWED_HOSTS.strip()]
     
     class Config:
         env_file = ".env"

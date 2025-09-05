@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class LLMService:
-    """Service for LLM operations using IBM Watson AI"""
+    """Service for LLM operations using IBM Watson AI with CoT enhancement"""
     
     def __init__(self):
         self.client: Optional[APIClient] = None
@@ -27,6 +27,8 @@ class LLMService:
         self.langchain_llm: Optional[WatsonxLLM] = None
         self._initialized = False
         self._health_status = False
+        self.enable_cot = True
+        self.reasoning_steps: List[str] = []
     
     async def initialize(self) -> None:
         """Initialize Watson AI client and model"""
@@ -57,13 +59,13 @@ class LLMService:
             self.client = APIClient(credentials)
             self.client.set.default_project(settings.WATSON_PROJECT_ID)
             
-            # Initialize model
+            # Initialize model with CoT-optimized parameters
             self.model = Model(
                 model_id=settings.WATSON_MODEL_ID,
                 params={
                     "decoding_method": "greedy",
-                    "max_new_tokens": 1000,
-                    "temperature": 0.1,
+                    "max_new_tokens": 2000,
+                    "temperature": 0.1 if self.enable_cot else 0.3,
                     "top_p": 1.0,
                     "top_k": 50,
                     "repetition_penalty": 1.0,
@@ -81,7 +83,7 @@ class LLMService:
                 project_id=settings.WATSON_PROJECT_ID,
                 params={
                     "decoding_method": "greedy",
-                    "max_new_tokens": 1000,
+                    "max_new_tokens": 2000,
                     "temperature": 0.1
                 }
             )
@@ -129,12 +131,19 @@ class LLMService:
             raise LLMServiceException("LLM service not initialized")
         
         try:
-            # 단순하게 기본 파라미터로만 호출 (동적 파라미터는 일단 무시)
+            # CoT 프롬프트 개선 적용
+            if self.enable_cot and "단계별" not in prompt and "step-by-step" not in prompt:
+                prompt = self._enhance_prompt_with_cot(prompt)
+            
             logger.debug(f"Generating text for prompt: {prompt[:100]}...")
             response = self.model.generate_text(prompt=prompt)
             
             if not response:
                 raise LLMServiceException("Empty response from Watson AI")
+            
+            # CoT 추론 단계 추출
+            if self.enable_cot:
+                self._extract_reasoning_steps(response)
             
             logger.debug(f"Generated text: {response[:100]}...")
             return response
@@ -245,3 +254,55 @@ class LLMService:
         self._health_status = False
         
         logger.info("✅ LLM service cleanup completed")
+    
+    def _enhance_prompt_with_cot(self, prompt: str) -> str:
+        """
+        일반 프롬프트를 CoT 구조로 개선
+        
+        DRT 도메인에 특화된 CoT 가이드라인:
+        1. 문제 이해 단계
+        2. 관련 정보 분석 단계  
+        3. 논리적 추론 단계
+        4. 결론 도출 단계
+        """
+        cot_prefix = """DRT(수요응답형 교통) 전문가로서 다음과 같이 단계별로 분석해주세요:
+
+🔍 1단계: 문제 파악
+- 질문의 핵심 요소를 명확히 파악합니다
+- DRT 시스템의 어떤 측면과 관련되는지 식별합니다
+
+📊 2단계: 정보 분석  
+- 제공된 데이터나 문서 내용을 체계적으로 검토합니다
+- 관련 DRT 이론이나 운영 원칙을 고려합니다
+
+🧠 3단계: 논리적 추론
+- 단계적으로 논리를 전개합니다
+- 각 추론 단계의 근거를 명시합니다
+
+✅ 4단계: 결론 도출
+- 앞선 분석을 종합하여 최종 답변을 구성합니다
+- 답변의 신뢰도와 한계점을 언급합니다
+
+이제 다음 질문에 대해 위 단계를 따라 분석해주세요:
+
+"""
+        return cot_prefix + prompt
+    
+    def _extract_reasoning_steps(self, response: str) -> None:
+        """응답에서 추론 단계를 추출하여 저장"""
+        self.reasoning_steps = []
+        if "1단계:" in response:
+            steps = response.split("단계:")
+            for i, step in enumerate(steps[1:], 1):
+                clean_step = step.split("🔍📊🧠✅")[0].strip()
+                if clean_step:
+                    self.reasoning_steps.append(f"단계{i}: {clean_step[:100]}...")
+    
+    def get_reasoning_steps(self) -> List[str]:
+        """추론 단계 반환"""
+        return self.reasoning_steps.copy()
+    
+    def set_cot_mode(self, enable: bool) -> None:
+        """CoT 모드 설정"""
+        self.enable_cot = enable
+        logger.info(f"CoT mode set to: {enable}")

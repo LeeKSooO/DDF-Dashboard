@@ -14,6 +14,7 @@ from app.services.llm_service import LLMService
 from app.services.embedding_service import EmbeddingService
 from app.services.vector_store_service import VectorStoreService
 from app.services.document_loader_service import DocumentLoaderService
+from app.services.rag_service import RAGService
 
 
 # Database setup
@@ -41,6 +42,7 @@ llm_service: Optional[LLMService] = None
 embedding_service: Optional[EmbeddingService] = None
 vector_store_service: Optional[VectorStoreService] = None
 document_loader_service: Optional[DocumentLoaderService] = None
+rag_service: Optional[RAGService] = None
 
 
 def get_database() -> Generator[Session, None, None]:
@@ -88,48 +90,44 @@ def get_document_loader_service() -> DocumentLoaderService:
     return document_loader_service
 
 
+def get_rag_service() -> RAGService:
+    """Get RAG service instance"""
+    if not rag_service:
+        raise RuntimeError("RAG service not initialized")
+    return rag_service
+
+
 async def setup_dependencies(app: FastAPI) -> None:
     """Setup all application dependencies"""
-    global llm_service, embedding_service, vector_store_service, document_loader_service
+    global rag_service
     
-    logging.info("🚀 Initializing application dependencies...")
+    logging.info("🚀 Initializing RAG service...")
     
     try:
-        # Initialize services
-        llm_service = LLMService()
-        embedding_service = EmbeddingService()
-        document_loader_service = DocumentLoaderService()
-        vector_store_service = VectorStoreService(embedding_service)
+        # Initialize unified RAG service
+        rag_service = RAGService()
+        success = await rag_service.initialize()
         
-        # Initialize services in proper order
-        await llm_service.initialize()
-        await embedding_service.initialize() 
-        await document_loader_service.initialize()
-        await vector_store_service.initialize(document_loader_service)  # Pass document loader
-        
-        logging.info("✅ All dependencies initialized successfully")
+        if success:
+            logging.info("✅ RAG service initialized successfully")
+        else:
+            raise RuntimeError("RAG service initialization failed")
         
     except Exception as e:
-        logging.error(f"❌ Failed to initialize dependencies: {e}")
+        logging.error(f"❌ Failed to initialize RAG service: {e}")
         raise e
 
 
 async def cleanup_dependencies() -> None:
     """Cleanup application dependencies"""
-    global llm_service, embedding_service, vector_store_service, document_loader_service
+    global rag_service
     
-    logging.info("🧹 Cleaning up application dependencies...")
+    logging.info("🧹 Cleaning up RAG service...")
     
-    if vector_store_service:
-        await vector_store_service.cleanup()
-    if document_loader_service:
-        await document_loader_service.cleanup()
-    if embedding_service:
-        await embedding_service.cleanup()
-    if llm_service:
-        await llm_service.cleanup()
+    if rag_service:
+        await rag_service.cleanup()
     
     if redis_client:
         await redis_client.close()
     
-    logging.info("✅ Dependencies cleanup completed")
+    logging.info("✅ RAG service cleanup completed")
