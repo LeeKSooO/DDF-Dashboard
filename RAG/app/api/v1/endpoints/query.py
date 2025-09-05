@@ -8,9 +8,8 @@ from typing import Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
-from app.core.dependencies import get_llm_service, get_vector_store_service
-from app.services.llm_service import LLMService  
-from app.services.vector_store_service import VectorStoreService
+from app.core.dependencies import get_rag_service
+from app.services.rag_service import RAGService
 from app.core.config import settings
 
 
@@ -25,6 +24,7 @@ class RAGQueryRequest(BaseModel):
     confidence_threshold: float = Field(default=0.7, description="유사도 임계값", example=0.7)
     include_sources: bool = Field(default=True, description="참조 문서 포함 여부", example=True)
     backend_data: bool = Field(default=True, description="백엔드 데이터 포함 여부", example=True)
+    summary_only: bool = Field(default=False, description="4단계 종합 답변만 반환", example=False)
 
     class Config:
         schema_extra = {
@@ -33,7 +33,8 @@ class RAGQueryRequest(BaseModel):
                 "k": 5,
                 "confidence_threshold": 0.7,
                 "include_sources": True,
-                "backend_data": True
+                "backend_data": True,
+                "summary_only": False
             }
         }
 
@@ -52,119 +53,72 @@ class RAGQueryResponse(BaseModel):
 @router.post(
     "/", 
     response_model=RAGQueryResponse,
-    summary="RAG 기반 질의응답",
+    summary="CoT 강화 RAG 기반 질의응답",
     description="""
-    **RAG(Retrieval-Augmented Generation)를 사용하여 질문에 답변합니다.**
+    **CoT(Chain of Thought) RAG를 사용하여 질문에 답변합니다.**
     
     ## 작동 방식
     1. 벡터 데이터베이스에서 관련 문서 검색
-    2. 백엔드 API에서 추가 데이터 수집
-    3. Watson AI LLM이 통합된 정보로 답변 생성
-    
-    ## 사용법
-    - **query**: 질문을 한국어로 입력하세요
-    - **k**: 검색할 문서 개수 (기본값: 5)
-    - **confidence_threshold**: 유사도 임계값 (기본값: 0.7)
-    - **include_sources**: 참고한 문서 포함 여부
-    - **backend_data**: 백엔드 데이터 포함 여부
+    2. Watson AI LLM의 CoT 추론으로 단계별 분석
+    3. 투명하고 해석 가능한 답변 생성
     
     ## 예시 질문
     - "DRT 시스템이 무엇인가요?"
     - "수요응답형 교통의 장점은?"
     - "ASTGCN 모델에 대해 설명해주세요"
     """,
-    response_description="RAG 기반 답변과 참조 소스들"
+    response_description="CoT 추론 과정이 포함된 RAG 답변"
 )
 async def process_rag_query(
     request: RAGQueryRequest,
-    llm_service: LLMService = Depends(get_llm_service),
-    vector_service: VectorStoreService = Depends(get_vector_store_service)
+    rag_service: RAGService = Depends(get_rag_service)
 ):
     
     try:
-        logger.info(f"Processing RAG query: {request.query}")
+        logger.info(f"Processing CoT RAG query: {request.query}")
         
-        # 1. Retrieve similar documents from vector store
-        similar_docs = await vector_service.search_similar(
-            query=request.query,
-            k=request.k,
-            similarity_threshold=request.confidence_threshold
-        )
+        # RAG 서비스를 통해 질의 처리
+        result = await rag_service.query(request.query)
         
-        # 2. Fetch backend data if requested
-        backend_data = None
-        if request.backend_data:
-            backend_data = await fetch_backend_data(request.query)
-        
-        # 3. Construct context from similar documents
-        context_docs = []
-        sources = []
-        for doc, similarity, metadata in similar_docs:
-            context_docs.append(doc)
-            if request.include_sources:
-                sources.append({
-                    "content": doc,  # 전체 내용 표시
-                    "similarity": similarity,
-                    "source": metadata.get("source", "unknown"),
-                    "metadata": metadata
-                })
-        
-        # 4. Create RAG prompt
-        context = "\n\n".join(context_docs) if context_docs else "관련 문서를 찾을 수 없습니다."
-        
-        backend_context = ""
-        if backend_data:
-            backend_context = f"\n\n백엔드 데이터:\n{format_backend_data(backend_data)}"
-        
-        prompt = f"""
-다음 문서들을 참고하여 사용자의 질문에 답변해주세요.
-
-참고 문서:
-{context}{backend_context}
-
-사용자 질문: {request.query}
-
-답변은 다음 조건을 지켜주세요:
-1. 참고 문서의 내용을 바탕으로 정확하고 구체적으로 답변
-2. 한국어로 자연스럽게 작성
-3. 백엔드 데이터가 있다면 이를 활용하여 더 풍부한 답변 제공
-4. 확실하지 않은 내용은 추측하지 말고 "확실하지 않습니다"라고 표현
-
-답변:
-"""
-        
-        # LLM 프롬프트 로깅 (디버깅용)
-        logger.info(f"=== LLM PROMPT ===\n{prompt}\n=== END PROMPT ===")
-        logger.info(f"Found {len(context_docs)} context documents with total length: {len(context)} characters")
-        
-        # 5. Generate answer using LLM
-        answer = await llm_service.generate_text(
-            prompt=prompt,
-            max_tokens=1000,
-            temperature=0.1
-        )
-        
-        # 6. Calculate average confidence
-        avg_confidence = None
-        if similar_docs:
-            avg_confidence = sum([sim for _, sim, _ in similar_docs]) / len(similar_docs)
+        # 4단계 종합 답변만 추출하는 옵션
+        final_answer = result["answer"]
+        if request.summary_only:
+            final_answer = extract_summary_answer(result["answer"])
         
         return RAGQueryResponse(
             status="success",
-            message="RAG query processed successfully", 
-            query=request.query,
-            answer=answer.strip(),
-            sources=sources if request.include_sources else None,
-            backend_data=backend_data,
-            confidence=avg_confidence
+            message="CoT RAG query processed successfully", 
+            query=result["question"],
+            answer=final_answer,
+            sources=[{"reasoning_steps": result["reasoning_steps"]}] if request.include_sources else None,
+            backend_data={"cot_enabled": result["cot_enabled"]},
+            confidence=result["confidence"]
         )
         
     except Exception as e:
-        logger.error(f"RAG query processing failed: {e}")
+        logger.error(f"CoT RAG query processing failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"RAG query processing failed: {str(e)}"
+            detail=f"CoT RAG query processing failed: {str(e)}"
         )
+
+
+def extract_summary_answer(cot_response: str) -> str:
+    """Extract only the summary answer from 4th step of CoT response"""
+    
+    # "✅ 4단계: 종합 답변" 이후의 내용만 정확히 추출
+    if "✅ 4단계: 종합 답변" in cot_response:
+        parts = cot_response.split("✅ 4단계: 종합 답변")
+        if len(parts) > 1:
+            summary_part = parts[-1].strip()
+            # 줄바꿈 이후의 실제 답변 내용만 반환 (첫 번째 줄은 보통 비어있음)
+            lines = summary_part.split('\n')
+            # 빈 줄 제거하고 실제 내용만 추출
+            content_lines = [line for line in lines if line.strip()]
+            return '\n'.join(content_lines).strip()
+    
+    # 4단계가 없으면 전체 응답 반환
+    return cot_response.strip()
 
 
 async def fetch_backend_data(query: str) -> Optional[Dict[str, Any]]:
@@ -208,6 +162,68 @@ def format_backend_data(data: Dict[str, Any]) -> str:
     return "\n".join(formatted)
 
 
+@router.post("/reload-documents")
+async def reload_documents(
+    rag_service: RAGService = Depends(get_rag_service)
+):
+    """문서를 다시 로드하고 임베딩을 재생성합니다"""
+    
+    try:
+        logger.info("Starting document reload process...")
+        success = await rag_service.reload_documents()
+        
+        if success:
+            return {
+                "status": "success",
+                "message": "Documents reloaded and embeddings regenerated successfully"
+            }
+        else:
+            return {
+                "status": "error", 
+                "message": "Failed to reload documents"
+            }
+            
+    except Exception as e:
+        logger.error(f"Document reload failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Document reload failed: {str(e)}"
+        )
+
+
+@router.get("/cot/{mode}")
+async def set_cot_mode(
+    mode: str,
+    rag_service: RAGService = Depends(get_rag_service)
+):
+    """CoT 모드를 설정합니다 (on/off)"""
+    
+    try:
+        if mode.lower() not in ["on", "off"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Mode must be 'on' or 'off'"
+            )
+        
+        enable_cot = mode.lower() == "on"
+        await rag_service.set_cot_mode(enable_cot)
+        
+        return {
+            "status": "success",
+            "message": f"CoT mode set to {mode}",
+            "cot_enabled": enable_cot
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"CoT mode setting failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"CoT mode setting failed: {str(e)}"
+        )
+
+
 @router.get("/examples")
 async def get_query_examples():
     """Get example queries for RAG system"""
@@ -223,6 +239,11 @@ async def get_query_examples():
             "스마트 교통 시스템의 구성요소는?",
             "교통 빅데이터 활용 사례를 알려주세요"
         ],
+        "cot_endpoints": {
+            "set_cot_on": "/api/v1/query/cot/on",
+            "set_cot_off": "/api/v1/query/cot/off",
+            "reload_documents": "/api/v1/query/reload-documents"
+        },
         "usage": {
             "endpoint": "/api/v1/query/",
             "method": "POST",

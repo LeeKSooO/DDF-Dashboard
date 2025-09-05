@@ -354,6 +354,27 @@ class DocumentLoaderService:
             self._health_status = False
             return False
     
+    async def load_documents_from_directory(self, directory_path: str) -> List[Document]:
+        """Load and chunk documents from directory (alias for compatibility)"""
+        return await self.load_directory_and_chunk(directory_path)
+
+    async def get_new_documents(self, directory_path: str) -> List[Document]:
+        """Get new or changed documents from directory"""
+        try:
+            new_files = await self.get_new_or_changed_files(directory_path)
+            if not new_files:
+                return []
+            
+            all_docs = []
+            for file_path in new_files:
+                docs = await self.load_and_chunk(file_path)
+                all_docs.extend(docs)
+            
+            return all_docs
+        except Exception as e:
+            logger.error(f"Failed to get new documents: {e}")
+            return []
+
     async def get_service_info(self) -> Dict[str, Any]:
         """Get service information"""
         
