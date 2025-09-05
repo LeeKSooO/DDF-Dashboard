@@ -13,8 +13,6 @@ const nextConfig: NextConfig = {
     domains: ['localhost'],
   },
   
-  // 프로덕션 빌드 최적화
-  swcMinify: true,
   
   // CORS 및 헤더 설정
   async headers() {
