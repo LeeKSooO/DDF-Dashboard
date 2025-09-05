@@ -14,6 +14,5 @@ USER postgres
 
 COPY init/*.sql /docker-entrypoint-initdb.d/
 
-ENV POSTGRES_USER=ddf_user
-ENV POSTGRES_PASSWORD=ddf_password
-ENV POSTGRES_DB=ddf_db
+ENV POSTGRES_USER=postgres
+ENV POSTGRES_DB=postgres

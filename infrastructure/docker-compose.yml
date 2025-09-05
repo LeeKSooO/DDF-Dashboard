@@ -35,95 +35,73 @@ services:
     container_name: ddf-backend
     environment:
       DATABASE_URL: postgresql://ddf_user:ddf_password@postgres:5432/ddf_db
-      TORCHSERVE_URL: http://torchserve:8080
-      MODEL_BASE_PATH: /backend/ddf_model
       TZ: Asia/Seoul
     ports:
       - "8000:8000"
     volumes:
       - ../backend:/backend
-      - ../ai/ddf_model:/backend/ddf_model
     depends_on:
       postgres:
         condition: service_healthy
-      # torchserve:
-      #   condition: service_healthy
     networks:
       - ddf-network
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
-  # 모델 등록 서비스 (일회성)
-  model-registration:
-    build: ../ai/torchserve
-    container_name: ddf-model-registration
-    environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: ddf_db
-      DB_USER: ddf_user
-      DB_PASSWORD: ddf_password
-      TORCHSERVE_HOST: torchserve
-      TORCHSERVE_MANAGEMENT_PORT: 8081
-    depends_on:
-      postgres:
-        condition: service_healthy
-      torchserve:
-        condition: service_healthy
-    networks:
-      - ddf-network
-    volumes:
-      - ../ai/torchserve/model-store:/home/model-server/model-store
-    profiles:
-      - registration
-    command: python3 /home/model-server/model_registration.py
 
-  # TorchServe Inference Server
-  torchserve:
-    build: ../ai/torchserve
-    container_name: ddf-torchserve
+
+  # Infrastructure Nginx (API Gateway)
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+      args:
+        BUILD_ENV: dev
+    image: ddf-nginx:v1
+    container_name: ddf-nginx
     environment:
       TZ: Asia/Seoul
     ports:
-      - "8080:8080"  # Inference API
-      #- "8081:8081"  # Management API
-      #- "8082:8082"  # Metrics API
-    volumes:
-      # .mar 파일이 있는 model-store와 config 파일만 마운트.
-      - ../ai/torchserve/model-store:/home/model-server/model-store
-      - ../ai/torchserve/config:/home/model-server/config
-      #- ./ddf_model:/home/model-server/models
+      - "8080:8080"  # External access point
+    depends_on:
+      frontend:
+        condition: service_healthy
     networks:
       - ddf-network
-    #deploy: # 🚨 [추가] GPU 사용을 위한 설정
-    #  resources:
-    #    reservations:
-    #      devices:
-    #        - driver: nvidia
-    #          count: 1
-    #          capabilities: [gpu]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-    command: torchserve --start --model-store /home/model-server/model-store --models mstgcn=mstgcn.mar --ts-config /home/model-server/config/config.properties
+      test: ["CMD", "curl", "-f", "http://localhost:8080/nginx-health"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
-  # React Frontend
+  # Frontend Next.js SSR (Stateful Application Server)
   frontend:
-    build: ../frontend
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile.ssr
+    image: ddf-frontend:v4
     container_name: ddf-frontend
     environment:
-      REACT_APP_API_URL: http://localhost:8000
       TZ: Asia/Seoul
-    ports:
-      - "3000:80"
+      NODE_ENV: production
+      BACKEND_API_URL: http://backend:8000
+      RAG_API_URL: http://rag:8001
+      # Stateful 설정
+      SESSION_CLEANUP_INTERVAL: 300000  # 5분마다 세션 정리
+      MAX_SESSIONS: 1000               # 최대 세션 수
     depends_on:
-      - backend
+      backend:
+        condition: service_started
+      rag:
+        condition: service_started
     networks:
       - ddf-network
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   # RAG API Server
   rag:
@@ -135,6 +113,9 @@ services:
       BACKEND_API_URL: http://backend:8000
       DATABASE_URL: postgresql://ddf_user:ddf_password@postgres:5432/ddf_db
       TZ: Asia/Seoul
+      # RAG 문서 로딩 제어 환경 변수
+      SKIP_INITIAL_DOCUMENT_LOAD: "true"   # 기본값: 초기 문서 로딩 건너뛰기
+      FORCE_RELOAD_DOCUMENTS: "false"      # 기본값: 강제 재로딩 비활성화
     ports:
       - "8001:8001"
     volumes:
@@ -148,6 +129,25 @@ services:
     networks:
       - ddf-network
     command: uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+
+  # ChromaDB Vector Database  
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: ddf-chromadb
+    environment:
+      PERSIST_DIRECTORY: /data
+    ports:
+      - "8003:8000"  # External access (내부 8000 → 외부 8003)
+    volumes:
+      - ../RAG/chroma:/data  # ChromaDB 데이터 연결
+    networks:
+      - ddf-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   # Redis for caching (optional but recommended)
   redis:
