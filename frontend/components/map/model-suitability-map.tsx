@@ -45,6 +45,7 @@ interface ModelSuitabilityMapProps {
   selectedMonth?: string
   initialDistrictName?: string
   onDistrictAnalysis?: (districtName: string, analysis: any) => void
+  height?: string
 }
 
 interface StationAnalysis {
@@ -62,7 +63,8 @@ function ModelSuitabilityMapComponent({
   selectedModel,
   selectedMonth = "7",
   initialDistrictName,
-  onDistrictAnalysis 
+  onDistrictAnalysis,
+  height = "600px"
 }: ModelSuitabilityMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
@@ -184,6 +186,7 @@ function ModelSuitabilityMapComponent({
       marker.bindTooltip(
         `<div>
           <strong>${station.station_name}</strong><br/>
+          <small style="color: #666; font-size: 11px;">(ID: ${station.station_id})</small><br/>
           DRT 점수: ${station.drt_score.toFixed(1)}점<br/>
           적합성: ${getSuitabilityLevel(station.drt_score)}
         </div>`,
@@ -259,6 +262,19 @@ function ModelSuitabilityMapComponent({
       // Load station data for this district with current model
       await loadStationData(districtName)
       
+      // Notify parent component about district change
+      if (onDistrictAnalysis) {
+        console.log('📤 Notifying parent about district change:', districtName);
+        onDistrictAnalysis(districtName, {
+          districtName,
+          stationName: null, // No specific station selected
+          selectedModelScore: null,
+          allModelScores: {},
+          bestModel: selectedModel,
+          stationData: null
+        });
+      }
+      
     } catch (err) {
       console.error('🚨 District analysis error:', err)
     }
@@ -277,9 +293,14 @@ function ModelSuitabilityMapComponent({
       maxZoom: 16,        // 최대 줌 레벨 설정
       maxBounds: seoulBoundingBox, // 서울시 경계로 이동 제한
       maxBoundsViscosity: 1.0,     // 경계 제한 강도 (1.0 = 완전 제한)
-      zoomControl: true,
+      zoomControl: false,  // 기본 줌 컨트롤 비활성화
       attributionControl: true
     })
+    
+    // Add zoom control to bottom-right to avoid overlap with other controls
+    L.control.zoom({
+      position: 'bottomright'
+    }).addTo(map)
 
     // CartoDB Positron tiles
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -443,8 +464,8 @@ function ModelSuitabilityMapComponent({
     <div className="relative">
       <div 
         ref={mapRef} 
-        className="h-[400px] rounded-lg border"
-        style={{ zIndex: 1 }}
+        className="rounded-lg border"
+        style={{ height: height, zIndex: 1 }}
       />
       
       {isLoading && (

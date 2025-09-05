@@ -1,0 +1,5563 @@
+엔드포인트: /api/v1/drt-score/districts/{district_name}
+
+Parameters:
+Method: GET
+Name	Description
+district_name *
+string
+(path)
+구명 (예: 강남구, 마포구)
+강남구
+
+model_type *
+string
+(query)
+pattern: ^(commuter|tourism|vulnerable)$
+DRT 모델 타입
+commuter
+
+analysis_month *
+string($date)
+(query)
+분석 월 (YYYY-MM-DD 형식, 예: 2025-07-01, 프론트에서 -01 추가)
+2025-07-01
+
+Responses
+Curl
+
+curl -X 'GET' \
+  'http://localhost:8000/api/v1/drt-score/districts/%EA%B0%95%EB%82%A8%EA%B5%AC?model_type=commuter&analysis_month=2025-07-01' \
+  -H 'accept: application/json'
+Request URL
+http://localhost:8000/api/v1/drt-score/districts/%EA%B0%95%EB%82%A8%EA%B5%AC?model_type=commuter&analysis_month=2025-07-01
+
+
+{
+  "district_name": "강남구",
+  "model_type": "commuter",
+  "analysis_month": "2025-07",
+  "stations": [
+    {
+      "station_id": "121000014",
+      "station_name": "논현역",
+      "coordinate": {
+        "lat": 37.506367,
+        "lng": 127.023728
+      },
+      "drt_score": 88.5424,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000408",
+      "station_name": "한남대교전망카페",
+      "coordinate": {
+        "lat": 37.524552,
+        "lng": 127.015683
+      },
+      "drt_score": 87.2003,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000318",
+      "station_name": "쟁골마을",
+      "coordinate": {
+        "lat": 37.481887,
+        "lng": 127.105076
+      },
+      "drt_score": 85.671,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000718",
+      "station_name": "고속철도수서역",
+      "coordinate": {
+        "lat": 37.484874,
+        "lng": 127.104391
+      },
+      "drt_score": 85.0069,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "121000008",
+      "station_name": "래미안아파트.파이낸셜뉴스",
+      "coordinate": {
+        "lat": 37.491087,
+        "lng": 127.030987
+      },
+      "drt_score": 84.5484,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "121000006",
+      "station_name": "뱅뱅사거리",
+      "coordinate": {
+        "lat": 37.486653,
+        "lng": 127.033097
+      },
+      "drt_score": 84.1697,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "121000012",
+      "station_name": "지하철2호선강남역",
+      "coordinate": {
+        "lat": 37.500785,
+        "lng": 127.02637
+      },
+      "drt_score": 83.9836,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000744",
+      "station_name": "LH수서아파트",
+      "coordinate": {
+        "lat": 37.478608,
+        "lng": 127.105347
+      },
+      "drt_score": 83.5825,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000121",
+      "station_name": "농협대치지점",
+      "coordinate": {
+        "lat": 37.49793697,
+        "lng": 127.06115455
+      },
+      "drt_score": 83.1587,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122000128",
+      "station_name": "대치역7번출구.선경아파트",
+      "coordinate": {
+        "lat": 37.492458,
+        "lng": 127.06408
+      },
+      "drt_score": 82.9941,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122000701",
+      "station_name": "강남현대힐스테이트에코",
+      "coordinate": {
+        "lat": 37.47501091,
+        "lng": 127.10496278
+      },
+      "drt_score": 82.8232,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000010",
+      "station_name": "신사역3번출구",
+      "coordinate": {
+        "lat": 37.515232,
+        "lng": 127.020079
+      },
+      "drt_score": 82.7396,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000743",
+      "station_name": "LH수서아파트",
+      "coordinate": {
+        "lat": 37.479078,
+        "lng": 127.105708
+      },
+      "drt_score": 82.6145,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122900045",
+      "station_name": "LPG가스충전소",
+      "coordinate": {
+        "lat": 37.490756,
+        "lng": 127.035844
+      },
+      "drt_score": 82.4883,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "121000010",
+      "station_name": "신분당선강남역",
+      "coordinate": {
+        "lat": 37.494993,
+        "lng": 127.029112
+      },
+      "drt_score": 82.4309,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000277",
+      "station_name": "일원본동주민센터",
+      "coordinate": {
+        "lat": 37.48348852,
+        "lng": 127.08474977
+      },
+      "drt_score": 82.2752,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000127",
+      "station_name": "대치역8번출구",
+      "coordinate": {
+        "lat": 37.493865,
+        "lng": 127.06223
+      },
+      "drt_score": 81.9375,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122000232",
+      "station_name": "개현초등학교",
+      "coordinate": {
+        "lat": 37.481319,
+        "lng": 127.062072
+      },
+      "drt_score": 81.899,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000692",
+      "station_name": "래미안강남힐즈",
+      "coordinate": {
+        "lat": 37.47234832,
+        "lng": 127.09738066
+      },
+      "drt_score": 81.8311,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000664",
+      "station_name": "은곡마을진입로",
+      "coordinate": {
+        "lat": 37.465764,
+        "lng": 127.098699
+      },
+      "drt_score": 81.4786,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000689",
+      "station_name": "강남효성해링턴코트",
+      "coordinate": {
+        "lat": 37.46768843,
+        "lng": 127.09391266
+      },
+      "drt_score": 81.2873,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000690",
+      "station_name": "세곡중학교.세명초등학교",
+      "coordinate": {
+        "lat": 37.470412,
+        "lng": 127.092048
+      },
+      "drt_score": 81.258,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000302",
+      "station_name": "수서역5번출구",
+      "coordinate": {
+        "lat": 37.486861,
+        "lng": 127.102594
+      },
+      "drt_score": 81.2078,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000217",
+      "station_name": "뱅뱅사거리.뱅뱅프라자",
+      "coordinate": {
+        "lat": 37.48974728,
+        "lng": 127.03287637
+      },
+      "drt_score": 80.904,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000343",
+      "station_name": "개포중학교",
+      "coordinate": {
+        "lat": 37.480019,
+        "lng": 127.063631
+      },
+      "drt_score": 80.8707,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000291",
+      "station_name": "대치아파트.대모산입구역3번출구",
+      "coordinate": {
+        "lat": 37.492414,
+        "lng": 127.07248732
+      },
+      "drt_score": 80.7991,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000137",
+      "station_name": "쌍용아파트",
+      "coordinate": {
+        "lat": 37.498082,
+        "lng": 127.069323
+      },
+      "drt_score": 80.7977,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000146",
+      "station_name": "휘문중고등학교",
+      "coordinate": {
+        "lat": 37.5040742,
+        "lng": 127.06149662
+      },
+      "drt_score": 80.5939,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000282",
+      "station_name": "삼성서울병원정문",
+      "coordinate": {
+        "lat": 37.48654451,
+        "lng": 127.08299028
+      },
+      "drt_score": 80.4655,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000263",
+      "station_name": "능인선원앞",
+      "coordinate": {
+        "lat": 37.47206,
+        "lng": 127.052327
+      },
+      "drt_score": 80.4344,
+      "peak_hour": 10
+    },
+    {
+      "station_id": "122000210",
+      "station_name": "도곡1동주민센터.역삼럭키아파트",
+      "coordinate": {
+        "lat": 37.49158005,
+        "lng": 127.0390292
+      },
+      "drt_score": 80.387,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122900105",
+      "station_name": "방죽마을입구",
+      "coordinate": {
+        "lat": 37.47122,
+        "lng": 127.106467
+      },
+      "drt_score": 80.3453,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122900005",
+      "station_name": "삼성서울병원정문",
+      "coordinate": {
+        "lat": 37.48622092,
+        "lng": 127.08312788
+      },
+      "drt_score": 80.3348,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000344",
+      "station_name": "구룡마을",
+      "coordinate": {
+        "lat": 37.478975,
+        "lng": 127.064041
+      },
+      "drt_score": 80.3131,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122900104",
+      "station_name": "한신휴플러스6단지",
+      "coordinate": {
+        "lat": 37.46897554,
+        "lng": 127.10395617
+      },
+      "drt_score": 80.3098,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122900006",
+      "station_name": "삼성서울병원본관",
+      "coordinate": {
+        "lat": 37.48808713,
+        "lng": 127.08436256
+      },
+      "drt_score": 80.3077,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000183",
+      "station_name": "신논현역6번출구",
+      "coordinate": {
+        "lat": 37.50235998,
+        "lng": 127.02579021
+      },
+      "drt_score": 80.293,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122900095",
+      "station_name": "강남더샵포레스트아파트",
+      "coordinate": {
+        "lat": 37.482128,
+        "lng": 127.094432
+      },
+      "drt_score": 80.2501,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122900103",
+      "station_name": "LH이-편한세상",
+      "coordinate": {
+        "lat": 37.467409,
+        "lng": 127.101834
+      },
+      "drt_score": 80.2285,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122900098",
+      "station_name": "수서교회.수서동성당앞",
+      "coordinate": {
+        "lat": 37.483484,
+        "lng": 127.094572
+      },
+      "drt_score": 80.2218,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122000357",
+      "station_name": "수도공고앞",
+      "coordinate": {
+        "lat": 37.487234,
+        "lng": 127.061926
+      },
+      "drt_score": 80.1949,
+      "peak_hour": 13
+    },
+    {
+      "station_id": "122900102",
+      "station_name": "강남신동아파밀리에2단지",
+      "coordinate": {
+        "lat": 37.464601,
+        "lng": 127.101708
+      },
+      "drt_score": 80.1801,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122900091",
+      "station_name": "강남데시앙포레상가앞",
+      "coordinate": {
+        "lat": 37.48136201,
+        "lng": 127.09185289
+      },
+      "drt_score": 80.172,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122900087",
+      "station_name": "강남구민체육관",
+      "coordinate": {
+        "lat": 37.47599,
+        "lng": 127.053878
+      },
+      "drt_score": 80.0702,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000686",
+      "station_name": "못골마을.강남자곡아이파크",
+      "coordinate": {
+        "lat": 37.47326,
+        "lng": 127.101727
+      },
+      "drt_score": 80.0562,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000691",
+      "station_name": "세곡중학교.세명초등학교",
+      "coordinate": {
+        "lat": 37.470248,
+        "lng": 127.091797
+      },
+      "drt_score": 80.0432,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000360",
+      "station_name": "개포4단지7단지",
+      "coordinate": {
+        "lat": 37.48788296,
+        "lng": 127.07360274
+      },
+      "drt_score": 80.0348,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000011",
+      "station_name": "신사역1번출구",
+      "coordinate": {
+        "lat": 37.51679281,
+        "lng": 127.02182669
+      },
+      "drt_score": 79.9881,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000057",
+      "station_name": "한양아파트.압구정로데오역",
+      "coordinate": {
+        "lat": 37.5279295,
+        "lng": 127.03925745
+      },
+      "drt_score": 79.9381,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000239",
+      "station_name": "개포고등학교",
+      "coordinate": {
+        "lat": 37.484213,
+        "lng": 127.058944
+      },
+      "drt_score": 79.9219,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000078",
+      "station_name": "일지아트홀.압구정노인복지관",
+      "coordinate": {
+        "lat": 37.52431596,
+        "lng": 127.03963457
+      },
+      "drt_score": 79.9204,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000247",
+      "station_name": "경기여고",
+      "coordinate": {
+        "lat": 37.48653,
+        "lng": 127.067244
+      },
+      "drt_score": 79.8664,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122000325",
+      "station_name": "영동고교앞",
+      "coordinate": {
+        "lat": 37.52150355,
+        "lng": 127.03989329
+      },
+      "drt_score": 79.7079,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000012",
+      "station_name": "신사동고개",
+      "coordinate": {
+        "lat": 37.51855451,
+        "lng": 127.02601526
+      },
+      "drt_score": 79.6608,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000240",
+      "station_name": "개포1동주민센터",
+      "coordinate": {
+        "lat": 37.48250136,
+        "lng": 127.06096935
+      },
+      "drt_score": 79.6378,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000362",
+      "station_name": "개포동역1번출구",
+      "coordinate": {
+        "lat": 37.4889678,
+        "lng": 127.06541393
+      },
+      "drt_score": 79.6195,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000688",
+      "station_name": "세곡푸르지오",
+      "coordinate": {
+        "lat": 37.467538,
+        "lng": 127.093839
+      },
+      "drt_score": 79.6076,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000299",
+      "station_name": "궁마을",
+      "coordinate": {
+        "lat": 37.485427,
+        "lng": 127.097328
+      },
+      "drt_score": 79.5689,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122900004",
+      "station_name": "일원역",
+      "coordinate": {
+        "lat": 37.48427409,
+        "lng": 127.08374878
+      },
+      "drt_score": 79.4457,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000093",
+      "station_name": "강남경찰서면허시험장",
+      "coordinate": {
+        "lat": 37.509894,
+        "lng": 127.06591
+      },
+      "drt_score": 79.3851,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122900086",
+      "station_name": "강남스포츠문화센터",
+      "coordinate": {
+        "lat": 37.488578,
+        "lng": 127.105059
+      },
+      "drt_score": 79.3716,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000064",
+      "station_name": "청담동주민센터",
+      "coordinate": {
+        "lat": 37.524615,
+        "lng": 127.049332
+      },
+      "drt_score": 79.3288,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000086",
+      "station_name": "봉은사.삼성1파출소앞",
+      "coordinate": {
+        "lat": 37.51496776,
+        "lng": 127.05943538
+      },
+      "drt_score": 79.316,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000359",
+      "station_name": "개포4단지6단지",
+      "coordinate": {
+        "lat": 37.486853,
+        "lng": 127.072076
+      },
+      "drt_score": 79.2276,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000211",
+      "station_name": "도곡1차아이파크.도곡중학교",
+      "coordinate": {
+        "lat": 37.49263498,
+        "lng": 127.04240211
+      },
+      "drt_score": 79.2143,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000305",
+      "station_name": "은곡마을.LH이편한세상",
+      "coordinate": {
+        "lat": 37.465344,
+        "lng": 127.102535
+      },
+      "drt_score": 79.1958,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000258",
+      "station_name": "일원초등학교",
+      "coordinate": {
+        "lat": 37.488338,
+        "lng": 127.074692
+      },
+      "drt_score": 79.1634,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000241",
+      "station_name": "래미안블레스티지아파트",
+      "coordinate": {
+        "lat": 37.480651,
+        "lng": 127.063217
+      },
+      "drt_score": 79.1474,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000319",
+      "station_name": "쟁골마을",
+      "coordinate": {
+        "lat": 37.48265458,
+        "lng": 127.10439905
+      },
+      "drt_score": 79.1114,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000230",
+      "station_name": "구룡중학교앞",
+      "coordinate": {
+        "lat": 37.485803,
+        "lng": 127.057243
+      },
+      "drt_score": 79.1034,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000049",
+      "station_name": "현대아파트",
+      "coordinate": {
+        "lat": 37.52829867,
+        "lng": 127.03112258
+      },
+      "drt_score": 79.0358,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122900096",
+      "station_name": "강남데시앙포레정문",
+      "coordinate": {
+        "lat": 37.481418,
+        "lng": 127.089059
+      },
+      "drt_score": 79.035,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000020",
+      "station_name": "삼정호텔",
+      "coordinate": {
+        "lat": 37.50678565,
+        "lng": 127.03169051
+      },
+      "drt_score": 78.986,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000254",
+      "station_name": "개포6단지앞",
+      "coordinate": {
+        "lat": 37.489962,
+        "lng": 127.07042
+      },
+      "drt_score": 78.8331,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000297",
+      "station_name": "수서역1번출구",
+      "coordinate": {
+        "lat": 37.48718852,
+        "lng": 127.10073584
+      },
+      "drt_score": 78.8002,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000306",
+      "station_name": "강남신동아파밀리에1단지",
+      "coordinate": {
+        "lat": 37.465433,
+        "lng": 127.099922
+      },
+      "drt_score": 78.6884,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122900052",
+      "station_name": "구룡마을",
+      "coordinate": {
+        "lat": 37.476907,
+        "lng": 127.061071
+      },
+      "drt_score": 78.6354,
+      "peak_hour": 10
+    },
+    {
+      "station_id": "122000196",
+      "station_name": "역삼동개나리아파트",
+      "coordinate": {
+        "lat": 37.499378,
+        "lng": 127.047595
+      },
+      "drt_score": 78.5984,
+      "peak_hour": 12
+    },
+    {
+      "station_id": "122000301",
+      "station_name": "수서역",
+      "coordinate": {
+        "lat": 37.486788,
+        "lng": 127.102045
+      },
+      "drt_score": 78.4846,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000276",
+      "station_name": "수서삼성아파트앞",
+      "coordinate": {
+        "lat": 37.4843994,
+        "lng": 127.0909893
+      },
+      "drt_score": 78.4337,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000134",
+      "station_name": "은마아파트",
+      "coordinate": {
+        "lat": 37.49576666,
+        "lng": 127.06697378
+      },
+      "drt_score": 78.4312,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000337",
+      "station_name": "일원동한솔아파트",
+      "coordinate": {
+        "lat": 37.482544,
+        "lng": 127.079314
+      },
+      "drt_score": 78.4168,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122000366",
+      "station_name": "구룡역1번출구",
+      "coordinate": {
+        "lat": 37.48616967,
+        "lng": 127.05896137
+      },
+      "drt_score": 78.4123,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000206",
+      "station_name": "한티역7번출구",
+      "coordinate": {
+        "lat": 37.49601,
+        "lng": 127.05148
+      },
+      "drt_score": 78.4079,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000059",
+      "station_name": "씨네시티앞",
+      "coordinate": {
+        "lat": 37.522898,
+        "lng": 127.037602
+      },
+      "drt_score": 78.3795,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000207",
+      "station_name": "역삼중학교.강남세브란스병원",
+      "coordinate": {
+        "lat": 37.49471181,
+        "lng": 127.04769832
+      },
+      "drt_score": 78.3469,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000702",
+      "station_name": "강남더샵라르고오피스텔",
+      "coordinate": {
+        "lat": 37.47522745,
+        "lng": 127.10481662
+      },
+      "drt_score": 78.3409,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000076",
+      "station_name": "강남구청역",
+      "coordinate": {
+        "lat": 37.518505,
+        "lng": 127.04094
+      },
+      "drt_score": 78.3299,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000330",
+      "station_name": "삼성역3번출구",
+      "coordinate": {
+        "lat": 37.507158,
+        "lng": 127.063711
+      },
+      "drt_score": 78.3238,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000271",
+      "station_name": "포이사거리.삼호물산",
+      "coordinate": {
+        "lat": 37.478296,
+        "lng": 127.045191
+      },
+      "drt_score": 78.263,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000115",
+      "station_name": "선릉역",
+      "coordinate": {
+        "lat": 37.505143,
+        "lng": 127.050205
+      },
+      "drt_score": 78.2582,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000696",
+      "station_name": "강남한양수자인아파트",
+      "coordinate": {
+        "lat": 37.478158,
+        "lng": 127.11335
+      },
+      "drt_score": 78.2558,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000135",
+      "station_name": "대치동미도아파트",
+      "coordinate": {
+        "lat": 37.49560494,
+        "lng": 127.06770762
+      },
+      "drt_score": 78.2463,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122000252",
+      "station_name": "개포시장.개포5단지상가",
+      "coordinate": {
+        "lat": 37.489411,
+        "lng": 127.068631
+      },
+      "drt_score": 78.1915,
+      "peak_hour": 12
+    },
+    {
+      "station_id": "122000079",
+      "station_name": "청담초등학교앞",
+      "coordinate": {
+        "lat": 37.52646133,
+        "lng": 127.04508573
+      },
+      "drt_score": 78.0976,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000019",
+      "station_name": "논현동고개",
+      "coordinate": {
+        "lat": 37.51025653,
+        "lng": 127.03230281
+      },
+      "drt_score": 77.9967,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000265",
+      "station_name": "국악고교사거리",
+      "coordinate": {
+        "lat": 37.47452692,
+        "lng": 127.04804503
+      },
+      "drt_score": 77.9687,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000392",
+      "station_name": "우성3차아파트",
+      "coordinate": {
+        "lat": 37.483822,
+        "lng": 127.057183
+      },
+      "drt_score": 77.9175,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000061",
+      "station_name": "신구중학교",
+      "coordinate": {
+        "lat": 37.52564607,
+        "lng": 127.03354041
+      },
+      "drt_score": 77.8381,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000693",
+      "station_name": "래미안강남힐즈",
+      "coordinate": {
+        "lat": 37.472291,
+        "lng": 127.09525
+      },
+      "drt_score": 77.8093,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122900024",
+      "station_name": "영희초등학교",
+      "coordinate": {
+        "lat": 37.49181728,
+        "lng": 127.08240805
+      },
+      "drt_score": 77.7813,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000228",
+      "station_name": "도곡렉슬아파트정문",
+      "coordinate": {
+        "lat": 37.49475081,
+        "lng": 127.05343558
+      },
+      "drt_score": 77.779,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122900094",
+      "station_name": "강남더샵포레스트아파트",
+      "coordinate": {
+        "lat": 37.4820891,
+        "lng": 127.09426679
+      },
+      "drt_score": 77.7775,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000147",
+      "station_name": "대치사거리",
+      "coordinate": {
+        "lat": 37.50366,
+        "lng": 127.058578
+      },
+      "drt_score": 77.7756,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000053",
+      "station_name": "압구정중고등학교.현대아파트",
+      "coordinate": {
+        "lat": 37.529758,
+        "lng": 127.033683
+      },
+      "drt_score": 77.7756,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000068",
+      "station_name": "청담역.경기고교",
+      "coordinate": {
+        "lat": 37.520982,
+        "lng": 127.056165
+      },
+      "drt_score": 77.7581,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000185",
+      "station_name": "역삼역.포스코타워역삼",
+      "coordinate": {
+        "lat": 37.49949,
+        "lng": 127.033598
+      },
+      "drt_score": 77.7403,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122900069",
+      "station_name": "중동고등학교",
+      "coordinate": {
+        "lat": 37.49288671,
+        "lng": 127.0800445
+      },
+      "drt_score": 77.6889,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000122",
+      "station_name": "대치SKVIEW아파트.서울교회",
+      "coordinate": {
+        "lat": 37.49626135,
+        "lng": 127.06205569
+      },
+      "drt_score": 77.679,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122000250",
+      "station_name": "개포동역6번출구.개포시장",
+      "coordinate": {
+        "lat": 37.488545,
+        "lng": 127.06658
+      },
+      "drt_score": 77.6609,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000090",
+      "station_name": "봉은사역5번출구.광동병원",
+      "coordinate": {
+        "lat": 37.51445716,
+        "lng": 127.06219997
+      },
+      "drt_score": 77.6197,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000098",
+      "station_name": "한국무역센터.삼성역",
+      "coordinate": {
+        "lat": 37.508448,
+        "lng": 127.060899
+      },
+      "drt_score": 77.607,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000005",
+      "station_name": "압구정역4번출구",
+      "coordinate": {
+        "lat": 37.525735,
+        "lng": 127.02819
+      },
+      "drt_score": 77.5896,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000159",
+      "station_name": "대치동현대아파트",
+      "coordinate": {
+        "lat": 37.50164601,
+        "lng": 127.05917486
+      },
+      "drt_score": 77.5607,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122000154",
+      "station_name": "도성초교사거리",
+      "coordinate": {
+        "lat": 37.500882,
+        "lng": 127.051612
+      },
+      "drt_score": 77.5361,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000048",
+      "station_name": "현대아파트",
+      "coordinate": {
+        "lat": 37.52843848,
+        "lng": 127.03058067
+      },
+      "drt_score": 77.4621,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000219",
+      "station_name": "매봉역",
+      "coordinate": {
+        "lat": 37.485917,
+        "lng": 127.044855
+      },
+      "drt_score": 77.4485,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000123",
+      "station_name": "대치역1번출구",
+      "coordinate": {
+        "lat": 37.4938593,
+        "lng": 127.06149842
+      },
+      "drt_score": 77.441,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122000109",
+      "station_name": "삼성2문화센터",
+      "coordinate": {
+        "lat": 37.51109176,
+        "lng": 127.04613753
+      },
+      "drt_score": 77.4082,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122900061",
+      "station_name": "래미안루체하임.일원동맛의거리",
+      "coordinate": {
+        "lat": 37.4895038,
+        "lng": 127.0816026
+      },
+      "drt_score": 77.3468,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000368",
+      "station_name": "럭키아파트",
+      "coordinate": {
+        "lat": 37.491638,
+        "lng": 127.041126
+      },
+      "drt_score": 77.3417,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000402",
+      "station_name": "삼익아파트앞",
+      "coordinate": {
+        "lat": 37.489895,
+        "lng": 127.0417
+      },
+      "drt_score": 77.3045,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000370",
+      "station_name": "수도공고",
+      "coordinate": {
+        "lat": 37.48755,
+        "lng": 127.062351
+      },
+      "drt_score": 77.2611,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000259",
+      "station_name": "현대아파트",
+      "coordinate": {
+        "lat": 37.48226538,
+        "lng": 127.05282852
+      },
+      "drt_score": 77.2573,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000231",
+      "station_name": "개포1동주민센터.개포고등학교",
+      "coordinate": {
+        "lat": 37.483066,
+        "lng": 127.059951
+      },
+      "drt_score": 77.2207,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000246",
+      "station_name": "개포자이프레지던스",
+      "coordinate": {
+        "lat": 37.483766,
+        "lng": 127.069256
+      },
+      "drt_score": 77.2171,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000249",
+      "station_name": "개포주공5단지경기여고",
+      "coordinate": {
+        "lat": 37.48670758,
+        "lng": 127.06747117
+      },
+      "drt_score": 77.1974,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000287",
+      "station_name": "일원주유소.삼성서울병원후문",
+      "coordinate": {
+        "lat": 37.49065376,
+        "lng": 127.0876823
+      },
+      "drt_score": 77.1709,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000024",
+      "station_name": "언북중학교입구",
+      "coordinate": {
+        "lat": 37.52029789,
+        "lng": 127.03082058
+      },
+      "drt_score": 77.1493,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000243",
+      "station_name": "수도전기공고후문",
+      "coordinate": {
+        "lat": 37.48478206,
+        "lng": 127.065624
+      },
+      "drt_score": 77.1454,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000320",
+      "station_name": "래미안포레아파트",
+      "coordinate": {
+        "lat": 37.475134,
+        "lng": 127.106266
+      },
+      "drt_score": 77.1284,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122900062",
+      "station_name": "영희초등학교",
+      "coordinate": {
+        "lat": 37.49135165,
+        "lng": 127.0807474
+      },
+      "drt_score": 77.1186,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000278",
+      "station_name": "푸른마을아파트앞",
+      "coordinate": {
+        "lat": 37.48291292,
+        "lng": 127.08058341
+      },
+      "drt_score": 77.113,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000187",
+      "station_name": "역삼럭키아파트.역삼월드메르디앙아파트",
+      "coordinate": {
+        "lat": 37.49183877,
+        "lng": 127.03871947
+      },
+      "drt_score": 77.0836,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122900022",
+      "station_name": "서울일원동우체국",
+      "coordinate": {
+        "lat": 37.492279,
+        "lng": 127.087654
+      },
+      "drt_score": 77.0656,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000021",
+      "station_name": "신논현역3번출구",
+      "coordinate": {
+        "lat": 37.50507548,
+        "lng": 127.02584838
+      },
+      "drt_score": 77.0246,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000703",
+      "station_name": "도곡한신아파트",
+      "coordinate": {
+        "lat": 37.48654618,
+        "lng": 127.04143358
+      },
+      "drt_score": 76.9421,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000089",
+      "station_name": "봉은사역3번출구.삼성1파출소",
+      "coordinate": {
+        "lat": 37.51510797,
+        "lng": 127.06016288
+      },
+      "drt_score": 76.886,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000045",
+      "station_name": "언주역3번출구",
+      "coordinate": {
+        "lat": 37.50847832,
+        "lng": 127.03350558
+      },
+      "drt_score": 76.884,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000651",
+      "station_name": "도산공원사거리",
+      "coordinate": {
+        "lat": 37.52203,
+        "lng": 127.034595
+      },
+      "drt_score": 76.8775,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000257",
+      "station_name": "개포주공7단지앞",
+      "coordinate": {
+        "lat": 37.489156,
+        "lng": 127.073811
+      },
+      "drt_score": 76.8628,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122000674",
+      "station_name": "세곡푸르지오.은곡삼거리",
+      "coordinate": {
+        "lat": 37.464972,
+        "lng": 127.094703
+      },
+      "drt_score": 76.8389,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122900051",
+      "station_name": "영동2교",
+      "coordinate": {
+        "lat": 37.482774,
+        "lng": 127.043651
+      },
+      "drt_score": 76.8149,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000179",
+      "station_name": "역삼역6번출구",
+      "coordinate": {
+        "lat": 37.501542,
+        "lng": 127.036385
+      },
+      "drt_score": 76.7991,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122900065",
+      "station_name": "강남우체국",
+      "coordinate": {
+        "lat": 37.493332,
+        "lng": 127.07827
+      },
+      "drt_score": 76.7736,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000001",
+      "station_name": "신사중학교",
+      "coordinate": {
+        "lat": 37.52292774,
+        "lng": 127.02049913
+      },
+      "drt_score": 76.723,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000004",
+      "station_name": "광림교회.현대고등학교",
+      "coordinate": {
+        "lat": 37.52527795,
+        "lng": 127.02443929
+      },
+      "drt_score": 76.7208,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000156",
+      "station_name": "선릉역",
+      "coordinate": {
+        "lat": 37.5047612,
+        "lng": 127.05046227
+      },
+      "drt_score": 76.6489,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000524",
+      "station_name": "도곡2동주민센터.대치중학교",
+      "coordinate": {
+        "lat": 37.48448611,
+        "lng": 127.04533108
+      },
+      "drt_score": 76.6349,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000324",
+      "station_name": "언주역2번출구.차병원사거리",
+      "coordinate": {
+        "lat": 37.50795302,
+        "lng": 127.03336169
+      },
+      "drt_score": 76.6336,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000174",
+      "station_name": "서울상록회관.한국기술센터",
+      "coordinate": {
+        "lat": 37.503232,
+        "lng": 127.044057
+      },
+      "drt_score": 76.6115,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000071",
+      "station_name": "진흥아파트",
+      "coordinate": {
+        "lat": 37.5192911,
+        "lng": 127.05208985
+      },
+      "drt_score": 76.5957,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000208",
+      "station_name": "도곡1차아이파크.역삼청소년수련관",
+      "coordinate": {
+        "lat": 37.49280822,
+        "lng": 127.04178586
+      },
+      "drt_score": 76.5948,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000094",
+      "station_name": "삼성역7번출구",
+      "coordinate": {
+        "lat": 37.51039894,
+        "lng": 127.06269116
+      },
+      "drt_score": 76.5803,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122900041",
+      "station_name": "강남세브란스병원",
+      "coordinate": {
+        "lat": 37.49410242,
+        "lng": 127.04603547
+      },
+      "drt_score": 76.5775,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000129",
+      "station_name": "대청중학교",
+      "coordinate": {
+        "lat": 37.49025786,
+        "lng": 127.05570331
+      },
+      "drt_score": 76.5651,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000069",
+      "station_name": "우리은행청담지점.청담삼익아파트",
+      "coordinate": {
+        "lat": 37.521076,
+        "lng": 127.056898
+      },
+      "drt_score": 76.5422,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122900025",
+      "station_name": "삼성서울병원정문건너편",
+      "coordinate": {
+        "lat": 37.48644558,
+        "lng": 127.08271086
+      },
+      "drt_score": 76.5024,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000190",
+      "station_name": "뱅뱅사거리.역삼동",
+      "coordinate": {
+        "lat": 37.49026251,
+        "lng": 127.03359809
+      },
+      "drt_score": 76.4744,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000673",
+      "station_name": "세곡푸르지오.은곡삼거리",
+      "coordinate": {
+        "lat": 37.465062,
+        "lng": 127.096478
+      },
+      "drt_score": 76.4729,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000014",
+      "station_name": "학동역",
+      "coordinate": {
+        "lat": 37.51478423,
+        "lng": 127.03016785
+      },
+      "drt_score": 76.4568,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122900082",
+      "station_name": "상업지역",
+      "coordinate": {
+        "lat": 37.466983,
+        "lng": 127.10091
+      },
+      "drt_score": 76.4118,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000345",
+      "station_name": "디에이치퍼스티어아이파크",
+      "coordinate": {
+        "lat": 37.478381,
+        "lng": 127.056741
+      },
+      "drt_score": 76.3856,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000110",
+      "station_name": "삼성2문화센터",
+      "coordinate": {
+        "lat": 37.51081047,
+        "lng": 127.04651291
+      },
+      "drt_score": 76.3685,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000026",
+      "station_name": "영동119안전센터",
+      "coordinate": {
+        "lat": 37.52255572,
+        "lng": 127.03810065
+      },
+      "drt_score": 76.3187,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000212",
+      "station_name": "매봉삼성아파트SK리더스뷰",
+      "coordinate": {
+        "lat": 37.48814495,
+        "lng": 127.04896068
+      },
+      "drt_score": 76.3145,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000328",
+      "station_name": "우성아파트",
+      "coordinate": {
+        "lat": 37.501145,
+        "lng": 127.06841
+      },
+      "drt_score": 76.3111,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122000640",
+      "station_name": "마루공원",
+      "coordinate": {
+        "lat": 37.494823,
+        "lng": 127.083308
+      },
+      "drt_score": 76.2689,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122900017",
+      "station_name": "대치2동주민센터.래미안하이스턴",
+      "coordinate": {
+        "lat": 37.501732,
+        "lng": 127.066677
+      },
+      "drt_score": 76.2543,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000235",
+      "station_name": "구룡초교사거리",
+      "coordinate": {
+        "lat": 37.48090349,
+        "lng": 127.0542007
+      },
+      "drt_score": 76.2384,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000317",
+      "station_name": "래미안포레아파트",
+      "coordinate": {
+        "lat": 37.474548,
+        "lng": 127.106784
+      },
+      "drt_score": 76.2227,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000054",
+      "station_name": "압구정파출소",
+      "coordinate": {
+        "lat": 37.529112,
+        "lng": 127.036279
+      },
+      "drt_score": 76.2027,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000095",
+      "station_name": "무역센터",
+      "coordinate": {
+        "lat": 37.51246288,
+        "lng": 127.06082847
+      },
+      "drt_score": 76.1412,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000321",
+      "station_name": "방죽마을",
+      "coordinate": {
+        "lat": 37.47222473,
+        "lng": 127.10692047
+      },
+      "drt_score": 76.1306,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000022",
+      "station_name": "신논현역3번출구.교보타워사거리",
+      "coordinate": {
+        "lat": 37.5057773,
+        "lng": 127.02414563
+      },
+      "drt_score": 76.1175,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000323",
+      "station_name": "국민은행압구정종합금융센터",
+      "coordinate": {
+        "lat": 37.52327289,
+        "lng": 127.02851309
+      },
+      "drt_score": 76.1069,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000184",
+      "station_name": "강남역1번출구.역삼세무서",
+      "coordinate": {
+        "lat": 37.49829745,
+        "lng": 127.02909683
+      },
+      "drt_score": 76.0874,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000056",
+      "station_name": "한양아파트.압구정로데오역",
+      "coordinate": {
+        "lat": 37.52827,
+        "lng": 127.03957896
+      },
+      "drt_score": 76.085,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122900023",
+      "station_name": "일원지구대",
+      "coordinate": {
+        "lat": 37.49256036,
+        "lng": 127.08415498
+      },
+      "drt_score": 76.082,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000316",
+      "station_name": "방죽마을",
+      "coordinate": {
+        "lat": 37.472383,
+        "lng": 127.10735
+      },
+      "drt_score": 76.0785,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000225",
+      "station_name": "숙명여고",
+      "coordinate": {
+        "lat": 37.489722,
+        "lng": 127.05237
+      },
+      "drt_score": 76.0643,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122900066",
+      "station_name": "개포3일원1동통합주민센터",
+      "coordinate": {
+        "lat": 37.49238876,
+        "lng": 127.07538127
+      },
+      "drt_score": 75.9992,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000152",
+      "station_name": "영동농협풍림아이원아파트",
+      "coordinate": {
+        "lat": 37.50219797,
+        "lng": 127.05635107
+      },
+      "drt_score": 75.9793,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122000333",
+      "station_name": "개포우성아파트",
+      "coordinate": {
+        "lat": 37.47656443,
+        "lng": 127.05786386
+      },
+      "drt_score": 75.9706,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122900093",
+      "station_name": "강남데시앙포레상가앞",
+      "coordinate": {
+        "lat": 37.48142709,
+        "lng": 127.09274512
+      },
+      "drt_score": 75.9548,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000139",
+      "station_name": "삼성역",
+      "coordinate": {
+        "lat": 37.50731821,
+        "lng": 127.06438331
+      },
+      "drt_score": 75.948,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000082",
+      "station_name": "차병원차움",
+      "coordinate": {
+        "lat": 37.523668,
+        "lng": 127.04417
+      },
+      "drt_score": 75.9462,
+      "peak_hour": 15
+    },
+    {
+      "station_id": "122000352",
+      "station_name": "강남세브란스병원",
+      "coordinate": {
+        "lat": 37.493352,
+        "lng": 127.04746
+      },
+      "drt_score": 75.9262,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000315",
+      "station_name": "세곡동사거리",
+      "coordinate": {
+        "lat": 37.465806,
+        "lng": 127.108547
+      },
+      "drt_score": 75.8735,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000699",
+      "station_name": "대왕초등학교",
+      "coordinate": {
+        "lat": 37.465069,
+        "lng": 127.106555
+      },
+      "drt_score": 75.8702,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000279",
+      "station_name": "상록수아파트앞",
+      "coordinate": {
+        "lat": 37.48280463,
+        "lng": 127.08212225
+      },
+      "drt_score": 75.8691,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122000009",
+      "station_name": "신사역6번출구",
+      "coordinate": {
+        "lat": 37.517422,
+        "lng": 127.019435
+      },
+      "drt_score": 75.8453,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000153",
+      "station_name": "영동농협풍림아이원아파트",
+      "coordinate": {
+        "lat": 37.502615,
+        "lng": 127.056883
+      },
+      "drt_score": 75.8344,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122000348",
+      "station_name": "태화기독교사회복지관",
+      "coordinate": {
+        "lat": 37.48452821,
+        "lng": 127.09335279
+      },
+      "drt_score": 75.7338,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122900080",
+      "station_name": "세종고등학교",
+      "coordinate": {
+        "lat": 37.48786397,
+        "lng": 127.1029015
+      },
+      "drt_score": 75.723,
+      "peak_hour": 17
+    },
+    {
+      "station_id": "122900032",
+      "station_name": "삼성역7번출구",
+      "coordinate": {
+        "lat": 37.51029949,
+        "lng": 127.06273647
+      },
+      "drt_score": 75.6835,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000132",
+      "station_name": "은마아파트",
+      "coordinate": {
+        "lat": 37.499483,
+        "lng": 127.063132
+      },
+      "drt_score": 75.6775,
+      "peak_hour": 21
+    },
+    {
+      "station_id": "122000178",
+      "station_name": "역삼역7번출구.GS타워",
+      "coordinate": {
+        "lat": 37.501505,
+        "lng": 127.036765
+      },
+      "drt_score": 75.6611,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000043",
+      "station_name": "국민은행논현동지점",
+      "coordinate": {
+        "lat": 37.508573,
+        "lng": 127.037383
+      },
+      "drt_score": 75.6566,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000381",
+      "station_name": "도곡한신아파트",
+      "coordinate": {
+        "lat": 37.48687583,
+        "lng": 127.04115765
+      },
+      "drt_score": 75.6445,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000003",
+      "station_name": "광림교회.현대고등학교",
+      "coordinate": {
+        "lat": 37.52538681,
+        "lng": 127.02526638
+      },
+      "drt_score": 75.6414,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000388",
+      "station_name": "새마을운동중앙회",
+      "coordinate": {
+        "lat": 37.501889,
+        "lng": 127.067238
+      },
+      "drt_score": 75.6247,
+      "peak_hour": 17
+    },
+    {
+      "station_id": "122000641",
+      "station_name": "대청초등학교",
+      "coordinate": {
+        "lat": 37.49387062,
+        "lng": 127.0865721
+      },
+      "drt_score": 75.5843,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122000142",
+      "station_name": "휘문고교사거리",
+      "coordinate": {
+        "lat": 37.504394,
+        "lng": 127.065214
+      },
+      "drt_score": 75.5681,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000237",
+      "station_name": "현대1차.우성3차아파트",
+      "coordinate": {
+        "lat": 37.482973,
+        "lng": 127.056549
+      },
+      "drt_score": 75.5454,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000262",
+      "station_name": "구룡산입구",
+      "coordinate": {
+        "lat": 37.477298,
+        "lng": 127.061771
+      },
+      "drt_score": 75.5257,
+      "peak_hour": 21
+    },
+    {
+      "station_id": "122000304",
+      "station_name": "세곡동주민센터",
+      "coordinate": {
+        "lat": 37.469462,
+        "lng": 127.107673
+      },
+      "drt_score": 75.5234,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122900100",
+      "station_name": "암센터후문.장례식장",
+      "coordinate": {
+        "lat": 37.489905,
+        "lng": 127.087704
+      },
+      "drt_score": 75.5219,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000165",
+      "station_name": "차병원",
+      "coordinate": {
+        "lat": 37.50553234,
+        "lng": 127.03448606
+      },
+      "drt_score": 75.4875,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000351",
+      "station_name": "도곡교회.인바디빌딩",
+      "coordinate": {
+        "lat": 37.47443356,
+        "lng": 127.0554585
+      },
+      "drt_score": 75.4862,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122900042",
+      "station_name": "역삼청소년수련관.도곡1차아이파크",
+      "coordinate": {
+        "lat": 37.49310435,
+        "lng": 127.04271563
+      },
+      "drt_score": 75.4672,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000309",
+      "station_name": "세곡동",
+      "coordinate": {
+        "lat": 37.464611,
+        "lng": 127.109506
+      },
+      "drt_score": 75.4566,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000720",
+      "station_name": "세곡2지구3.4단지",
+      "coordinate": {
+        "lat": 37.47693,
+        "lng": 127.110063
+      },
+      "drt_score": 75.4461,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000088",
+      "station_name": "봉은사.코엑스북문",
+      "coordinate": {
+        "lat": 37.51354672,
+        "lng": 127.05763901
+      },
+      "drt_score": 75.4223,
+      "peak_hour": 12
+    },
+    {
+      "station_id": "122000096",
+      "station_name": "무역센터",
+      "coordinate": {
+        "lat": 37.51056733,
+        "lng": 127.06185562
+      },
+      "drt_score": 75.3987,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000157",
+      "station_name": "포스코빌딩",
+      "coordinate": {
+        "lat": 37.50604938,
+        "lng": 127.05488883
+      },
+      "drt_score": 75.3955,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122900070",
+      "station_name": "대왕초등학교",
+      "coordinate": {
+        "lat": 37.46473368,
+        "lng": 127.1060868
+      },
+      "drt_score": 75.3842,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000234",
+      "station_name": "개포파크빌리지",
+      "coordinate": {
+        "lat": 37.477328,
+        "lng": 127.057772
+      },
+      "drt_score": 75.3832,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000288",
+      "station_name": "삼성서울병원사거리",
+      "coordinate": {
+        "lat": 37.489117,
+        "lng": 127.082446
+      },
+      "drt_score": 75.3789,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000171",
+      "station_name": "선정릉역4번출구.시니어플라자",
+      "coordinate": {
+        "lat": 37.509842,
+        "lng": 127.042892
+      },
+      "drt_score": 75.3778,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000322",
+      "station_name": "압구정역3번출구",
+      "coordinate": {
+        "lat": 37.52600147,
+        "lng": 127.02871399
+      },
+      "drt_score": 75.3584,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000117",
+      "station_name": "중대부고",
+      "coordinate": {
+        "lat": 37.49188724,
+        "lng": 127.05509369
+      },
+      "drt_score": 75.3517,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000105",
+      "station_name": "센트럴아이파크.강남구도시관리공단",
+      "coordinate": {
+        "lat": 37.5153174,
+        "lng": 127.05186961
+      },
+      "drt_score": 75.3182,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000046",
+      "station_name": "논현고개",
+      "coordinate": {
+        "lat": 37.51144604,
+        "lng": 127.03210763
+      },
+      "drt_score": 75.305,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122900097",
+      "station_name": "수서교회.수서동성당앞",
+      "coordinate": {
+        "lat": 37.483477,
+        "lng": 127.094652
+      },
+      "drt_score": 75.2745,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122900037",
+      "station_name": "노블발렌티웨딩홀",
+      "coordinate": {
+        "lat": 37.51513435,
+        "lng": 127.0648044
+      },
+      "drt_score": 75.2593,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122900002",
+      "station_name": "수서역5번출구.이마트앞",
+      "coordinate": {
+        "lat": 37.48678908,
+        "lng": 127.10267113
+      },
+      "drt_score": 75.2176,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122900046",
+      "station_name": "도곡중학교.강남세브란스병원",
+      "coordinate": {
+        "lat": 37.493474,
+        "lng": 127.044794
+      },
+      "drt_score": 75.1964,
+      "peak_hour": 6
+    },
+    {
+      "station_id": "122000746",
+      "station_name": "강남세곡체육공원",
+      "coordinate": {
+        "lat": 37.465565,
+        "lng": 127.112862
+      },
+      "drt_score": 75.1585,
+      "peak_hour": 5
+    },
+    {
+      "station_id": "122000382",
+      "station_name": "현대1차아파트",
+      "coordinate": {
+        "lat": 37.482287,
+        "lng": 127.05525
+      },
+      "drt_score": 75.1501,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122900015",
+      "station_name": "코엑스동문",
+      "coordinate": {
+        "lat": 37.51236538,
+        "lng": 127.06081066
+      },
+      "drt_score": 75.1472,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000055",
+      "station_name": "압구정파출소",
+      "coordinate": {
+        "lat": 37.52874691,
+        "lng": 127.03605814
+      },
+      "drt_score": 75.1471,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000162",
+      "station_name": "한티역2번출구.서울강남고용노동지청",
+      "coordinate": {
+        "lat": 37.49677356,
+        "lng": 127.05392899
+      },
+      "drt_score": 75.1327,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000261",
+      "station_name": "능인선원앞",
+      "coordinate": {
+        "lat": 37.47242465,
+        "lng": 127.05225403
+      },
+      "drt_score": 75.1159,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122900090",
+      "station_name": "LH이편한세상",
+      "coordinate": {
+        "lat": 37.46650368,
+        "lng": 127.10173458
+      },
+      "drt_score": 75.0911,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000155",
+      "station_name": "진선여자중고등학교",
+      "coordinate": {
+        "lat": 37.5027442,
+        "lng": 127.04996554
+      },
+      "drt_score": 75.0815,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000120",
+      "station_name": "삼성아파트입구",
+      "coordinate": {
+        "lat": 37.4981982,
+        "lng": 127.05956007
+      },
+      "drt_score": 75.0775,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122000074",
+      "station_name": "강남구청.강남세무서",
+      "coordinate": {
+        "lat": 37.518429,
+        "lng": 127.047293
+      },
+      "drt_score": 75.0751,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000042",
+      "station_name": "논현아이파크",
+      "coordinate": {
+        "lat": 37.511143,
+        "lng": 127.03592
+      },
+      "drt_score": 75.0659,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000201",
+      "station_name": "대한사회복지회",
+      "coordinate": {
+        "lat": 37.501137,
+        "lng": 127.038818
+      },
+      "drt_score": 75.0625,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000141",
+      "station_name": "삼성역",
+      "coordinate": {
+        "lat": 37.507145,
+        "lng": 127.063686
+      },
+      "drt_score": 75.0439,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122900077",
+      "station_name": "세곡푸르지오",
+      "coordinate": {
+        "lat": 37.466784,
+        "lng": 127.094374
+      },
+      "drt_score": 75.0227,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122900078",
+      "station_name": "세곡푸르지오",
+      "coordinate": {
+        "lat": 37.466836,
+        "lng": 127.094527
+      },
+      "drt_score": 75.0185,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122000052",
+      "station_name": "신구중학교",
+      "coordinate": {
+        "lat": 37.52673198,
+        "lng": 127.03323428
+      },
+      "drt_score": 75.0065,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000186",
+      "station_name": "영동중앙교회",
+      "coordinate": {
+        "lat": 37.49815395,
+        "lng": 127.03797515
+      },
+      "drt_score": 74.9825,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000191",
+      "station_name": "역삼초등학교",
+      "coordinate": {
+        "lat": 37.49219527,
+        "lng": 127.03065297
+      },
+      "drt_score": 74.9759,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000166",
+      "station_name": "차병원",
+      "coordinate": {
+        "lat": 37.506356,
+        "lng": 127.034549
+      },
+      "drt_score": 74.9481,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000238",
+      "station_name": "개일초등학교앞",
+      "coordinate": {
+        "lat": 37.486174,
+        "lng": 127.057216
+      },
+      "drt_score": 74.9035,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000193",
+      "station_name": "래미안그레이튼아파트",
+      "coordinate": {
+        "lat": 37.49604364,
+        "lng": 127.04570841
+      },
+      "drt_score": 74.8854,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000075",
+      "station_name": "청담동래미안아파트",
+      "coordinate": {
+        "lat": 37.517654,
+        "lng": 127.042911
+      },
+      "drt_score": 74.8737,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000124",
+      "station_name": "래미안대치팰리스",
+      "coordinate": {
+        "lat": 37.49255959,
+        "lng": 127.05857962
+      },
+      "drt_score": 74.8666,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122900027",
+      "station_name": "대왕파출소",
+      "coordinate": {
+        "lat": 37.46520256,
+        "lng": 127.10774137
+      },
+      "drt_score": 74.8536,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000293",
+      "station_name": "대청역",
+      "coordinate": {
+        "lat": 37.493243,
+        "lng": 127.078603
+      },
+      "drt_score": 74.8471,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122900109",
+      "station_name": "대청초교삼거리",
+      "coordinate": {
+        "lat": 37.49330698,
+        "lng": 127.08627043
+      },
+      "drt_score": 74.8278,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000386",
+      "station_name": "총회회관.휘문고입구",
+      "coordinate": {
+        "lat": 37.504156,
+        "lng": 127.066098
+      },
+      "drt_score": 74.7635,
+      "peak_hour": 17
+    },
+    {
+      "station_id": "122000326",
+      "station_name": "개포우성6차아파트",
+      "coordinate": {
+        "lat": 37.475732,
+        "lng": 127.057883
+      },
+      "drt_score": 74.747,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000161",
+      "station_name": "도곡초등학교",
+      "coordinate": {
+        "lat": 37.49768961,
+        "lng": 127.05664852
+      },
+      "drt_score": 74.725,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000050",
+      "station_name": "신사동교회",
+      "coordinate": {
+        "lat": 37.52069983,
+        "lng": 127.03062503
+      },
+      "drt_score": 74.7104,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000160",
+      "station_name": "은마아파트입구사거리",
+      "coordinate": {
+        "lat": 37.49872738,
+        "lng": 127.06006755
+      },
+      "drt_score": 74.7037,
+      "peak_hour": 17
+    },
+    {
+      "station_id": "122000719",
+      "station_name": "세곡동주민센터",
+      "coordinate": {
+        "lat": 37.469635,
+        "lng": 127.108095
+      },
+      "drt_score": 74.7009,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000140",
+      "station_name": "강남경찰서.강남운전면허시험장",
+      "coordinate": {
+        "lat": 37.509799,
+        "lng": 127.067028
+      },
+      "drt_score": 74.6966,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122900083",
+      "station_name": "강남신동아파밀리에",
+      "coordinate": {
+        "lat": 37.465498,
+        "lng": 127.101311
+      },
+      "drt_score": 74.6895,
+      "peak_hour": 17
+    },
+    {
+      "station_id": "122000033",
+      "station_name": "강남을지병원",
+      "coordinate": {
+        "lat": 37.51856649,
+        "lng": 127.02878128
+      },
+      "drt_score": 74.6803,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000226",
+      "station_name": "도곡렉슬아파트.강남세브란스병원",
+      "coordinate": {
+        "lat": 37.49443678,
+        "lng": 127.0481867
+      },
+      "drt_score": 74.6676,
+      "peak_hour": 17
+    },
+    {
+      "station_id": "122000067",
+      "station_name": "영동교입구",
+      "coordinate": {
+        "lat": 37.522801,
+        "lng": 127.05519
+      },
+      "drt_score": 74.6583,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000256",
+      "station_name": "개원중학교.대모산입구역2번출구",
+      "coordinate": {
+        "lat": 37.492262,
+        "lng": 127.072156
+      },
+      "drt_score": 74.6199,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122000107",
+      "station_name": "삼성중앙역.플래티넘아파트",
+      "coordinate": {
+        "lat": 37.51266376,
+        "lng": 127.05152869
+      },
+      "drt_score": 74.6025,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000072",
+      "station_name": "청담동성당",
+      "coordinate": {
+        "lat": 37.5204992,
+        "lng": 127.04957354
+      },
+      "drt_score": 74.5739,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000007",
+      "station_name": "신사동고개",
+      "coordinate": {
+        "lat": 37.518898,
+        "lng": 127.025755
+      },
+      "drt_score": 74.5605,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000106",
+      "station_name": "한별구립어린이집",
+      "coordinate": {
+        "lat": 37.5102276,
+        "lng": 127.05460266
+      },
+      "drt_score": 74.5421,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000104",
+      "station_name": "청담역7번출구",
+      "coordinate": {
+        "lat": 37.51763565,
+        "lng": 127.05061883
+      },
+      "drt_score": 74.5176,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122900075",
+      "station_name": "은곡마을",
+      "coordinate": {
+        "lat": 37.46723232,
+        "lng": 127.09679958
+      },
+      "drt_score": 74.4877,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000295",
+      "station_name": "수서역",
+      "coordinate": {
+        "lat": 37.4884602,
+        "lng": 127.10068094
+      },
+      "drt_score": 74.4869,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000113",
+      "station_name": "한국토지주택공사앞",
+      "coordinate": {
+        "lat": 37.512637,
+        "lng": 127.043208
+      },
+      "drt_score": 74.4496,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000126",
+      "station_name": "대치동우성아파트",
+      "coordinate": {
+        "lat": 37.49257709,
+        "lng": 127.05961102
+      },
+      "drt_score": 74.4441,
+      "peak_hour": 15
+    },
+    {
+      "station_id": "122900088",
+      "station_name": "포스코사거리",
+      "coordinate": {
+        "lat": 37.508666,
+        "lng": 127.055511
+      },
+      "drt_score": 74.4286,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000111",
+      "station_name": "선릉역8번출구.선정릉",
+      "coordinate": {
+        "lat": 37.506203,
+        "lng": 127.048337
+      },
+      "drt_score": 74.4036,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000008",
+      "station_name": "신사역8번출구.가로수길",
+      "coordinate": {
+        "lat": 37.51743974,
+        "lng": 127.02217531
+      },
+      "drt_score": 74.3853,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000025",
+      "station_name": "도산공원사거리.호림아트센터",
+      "coordinate": {
+        "lat": 37.52157901,
+        "lng": 127.03493693
+      },
+      "drt_score": 74.3731,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000091",
+      "station_name": "노블발렌티웨딩홀",
+      "coordinate": {
+        "lat": 37.5148307,
+        "lng": 127.06475888
+      },
+      "drt_score": 74.3683,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000400",
+      "station_name": "포스코사거리교차로",
+      "coordinate": {
+        "lat": 37.50703217,
+        "lng": 127.05790669
+      },
+      "drt_score": 74.3332,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000182",
+      "station_name": "강남역11번출구",
+      "coordinate": {
+        "lat": 37.499338,
+        "lng": 127.027257
+      },
+      "drt_score": 74.3285,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122900039",
+      "station_name": "강남더드림병원.도성초등학교",
+      "coordinate": {
+        "lat": 37.50101373,
+        "lng": 127.05079909
+      },
+      "drt_score": 74.3161,
+      "peak_hour": 12
+    },
+    {
+      "station_id": "122000151",
+      "station_name": "도성초교사거리",
+      "coordinate": {
+        "lat": 37.50082,
+        "lng": 127.051957
+      },
+      "drt_score": 74.2643,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122000176",
+      "station_name": "KT강남지사",
+      "coordinate": {
+        "lat": 37.50475785,
+        "lng": 127.0414645
+      },
+      "drt_score": 74.2603,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000065",
+      "station_name": "청담동주민센터",
+      "coordinate": {
+        "lat": 37.524522,
+        "lng": 127.051348
+      },
+      "drt_score": 74.1997,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000119",
+      "station_name": "한티역3번출구.서울강남고용노동지청",
+      "coordinate": {
+        "lat": 37.49644636,
+        "lng": 127.05414251
+      },
+      "drt_score": 74.1972,
+      "peak_hour": 17
+    },
+    {
+      "station_id": "122000036",
+      "station_name": "한국토지주택공사앞",
+      "coordinate": {
+        "lat": 37.51319,
+        "lng": 127.042662
+      },
+      "drt_score": 74.1902,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000002",
+      "station_name": "신사중학교",
+      "coordinate": {
+        "lat": 37.52386,
+        "lng": 127.02155
+      },
+      "drt_score": 74.1835,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000032",
+      "station_name": "학동역",
+      "coordinate": {
+        "lat": 37.51515813,
+        "lng": 127.03037502
+      },
+      "drt_score": 74.1707,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000077",
+      "station_name": "농협앞",
+      "coordinate": {
+        "lat": 37.5240778,
+        "lng": 127.04438671
+      },
+      "drt_score": 74.1348,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122900003",
+      "station_name": "개포4복합문화센터.달터공원",
+      "coordinate": {
+        "lat": 37.47655014,
+        "lng": 127.04965638
+      },
+      "drt_score": 74.0977,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000028",
+      "station_name": "강남구청역",
+      "coordinate": {
+        "lat": 37.516954,
+        "lng": 127.039948
+      },
+      "drt_score": 74.08,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000371",
+      "station_name": "개포4단지6단지",
+      "coordinate": {
+        "lat": 37.48699289,
+        "lng": 127.07196701
+      },
+      "drt_score": 74.0152,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000260",
+      "station_name": "개포래미안포레스트",
+      "coordinate": {
+        "lat": 37.479942,
+        "lng": 127.054609
+      },
+      "drt_score": 73.994,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000223",
+      "station_name": "군인공제회관",
+      "coordinate": {
+        "lat": 37.489211,
+        "lng": 127.052019
+      },
+      "drt_score": 73.9927,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000385",
+      "station_name": "개포4단지7단지",
+      "coordinate": {
+        "lat": 37.48765266,
+        "lng": 127.0729326
+      },
+      "drt_score": 73.9877,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000168",
+      "station_name": "시티프라디움더강남.라움아트센터",
+      "coordinate": {
+        "lat": 37.507862,
+        "lng": 127.03893
+      },
+      "drt_score": 73.9877,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000136",
+      "station_name": "대치역6번출구.강남구민회관",
+      "coordinate": {
+        "lat": 37.492785,
+        "lng": 127.064278
+      },
+      "drt_score": 73.9415,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000180",
+      "station_name": "역삼역4번출구",
+      "coordinate": {
+        "lat": 37.500428,
+        "lng": 127.034735
+      },
+      "drt_score": 73.9291,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000215",
+      "station_name": "뱅뱅사거리.구영동중학교",
+      "coordinate": {
+        "lat": 37.48772432,
+        "lng": 127.03280763
+      },
+      "drt_score": 73.9063,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000189",
+      "station_name": "역삼초등학교",
+      "coordinate": {
+        "lat": 37.49433084,
+        "lng": 127.03410544
+      },
+      "drt_score": 73.9055,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000085",
+      "station_name": "청담역.경기고교",
+      "coordinate": {
+        "lat": 37.519306,
+        "lng": 127.057852
+      },
+      "drt_score": 73.9023,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000404",
+      "station_name": "디아크리온강남아파트",
+      "coordinate": {
+        "lat": 37.4760979,
+        "lng": 127.10768465
+      },
+      "drt_score": 73.89,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000149",
+      "station_name": "한티역",
+      "coordinate": {
+        "lat": 37.4981161,
+        "lng": 127.05214752
+      },
+      "drt_score": 73.8823,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000203",
+      "station_name": "진선여자중고등학교",
+      "coordinate": {
+        "lat": 37.50226486,
+        "lng": 127.04987247
+      },
+      "drt_score": 73.862,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000173",
+      "station_name": "선릉역",
+      "coordinate": {
+        "lat": 37.50588439,
+        "lng": 127.04817596
+      },
+      "drt_score": 73.8359,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000112",
+      "station_name": "선정릉역.국가무형유산전수교육관",
+      "coordinate": {
+        "lat": 37.50976426,
+        "lng": 127.04419549
+      },
+      "drt_score": 73.8349,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000364",
+      "station_name": "경남아파트",
+      "coordinate": {
+        "lat": 37.48897598,
+        "lng": 127.04132008
+      },
+      "drt_score": 73.8119,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000311",
+      "station_name": "삼일자동차학원.강남자동차검사소",
+      "coordinate": {
+        "lat": 37.4679154,
+        "lng": 127.12118049
+      },
+      "drt_score": 73.806,
+      "peak_hour": 16
+    },
+    {
+      "station_id": "122000148",
+      "station_name": "한국무역센터.삼성역",
+      "coordinate": {
+        "lat": 37.507841,
+        "lng": 127.060548
+      },
+      "drt_score": 73.8015,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "121900030",
+      "station_name": "원불교",
+      "coordinate": {
+        "lat": 37.48333107,
+        "lng": 127.04244095
+      },
+      "drt_score": 73.7951,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000084",
+      "station_name": "청담역.경기고교",
+      "coordinate": {
+        "lat": 37.519823,
+        "lng": 127.056455
+      },
+      "drt_score": 73.7744,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000346",
+      "station_name": "영희초등학교",
+      "coordinate": {
+        "lat": 37.49119143,
+        "lng": 127.08048713
+      },
+      "drt_score": 73.7598,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000342",
+      "station_name": "도곡역4번출구",
+      "coordinate": {
+        "lat": 37.48997336,
+        "lng": 127.05561004
+      },
+      "drt_score": 73.7543,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000133",
+      "station_name": "대치동은마아파트",
+      "coordinate": {
+        "lat": 37.498904,
+        "lng": 127.068456
+      },
+      "drt_score": 73.7528,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000018",
+      "station_name": "학동역5번출구",
+      "coordinate": {
+        "lat": 37.51357315,
+        "lng": 127.03014927
+      },
+      "drt_score": 73.7223,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000307",
+      "station_name": "대왕초등학교",
+      "coordinate": {
+        "lat": 37.46467083,
+        "lng": 127.10683849
+      },
+      "drt_score": 73.7199,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000675",
+      "station_name": "은곡마을.강남신동아파밀리에",
+      "coordinate": {
+        "lat": 37.465026,
+        "lng": 127.102457
+      },
+      "drt_score": 73.7088,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000394",
+      "station_name": "포이초교",
+      "coordinate": {
+        "lat": 37.475212,
+        "lng": 127.052693
+      },
+      "drt_score": 73.6648,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000101",
+      "station_name": "센트럴아이파크.강남구도시관리공단",
+      "coordinate": {
+        "lat": 37.51577954,
+        "lng": 127.05204668
+      },
+      "drt_score": 73.6636,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000266",
+      "station_name": "삼호물산",
+      "coordinate": {
+        "lat": 37.47724305,
+        "lng": 127.04525175
+      },
+      "drt_score": 73.6582,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122900084",
+      "station_name": "리엔파크3단지",
+      "coordinate": {
+        "lat": 37.463042,
+        "lng": 127.103828
+      },
+      "drt_score": 73.545,
+      "peak_hour": 21
+    },
+    {
+      "station_id": "122000103",
+      "station_name": "강남구청.강남세무서",
+      "coordinate": {
+        "lat": 37.518249,
+        "lng": 127.047658
+      },
+      "drt_score": 73.5417,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122900040",
+      "station_name": "동영문화센터",
+      "coordinate": {
+        "lat": 37.498017,
+        "lng": 127.044823
+      },
+      "drt_score": 73.5374,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000248",
+      "station_name": "개포동역7번출구.개포시장",
+      "coordinate": {
+        "lat": 37.488648,
+        "lng": 127.066165
+      },
+      "drt_score": 73.5268,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122000031",
+      "station_name": "서울세관",
+      "coordinate": {
+        "lat": 37.517333,
+        "lng": 127.035172
+      },
+      "drt_score": 73.5121,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122900044",
+      "station_name": "양재전화국",
+      "coordinate": {
+        "lat": 37.485645,
+        "lng": 127.04079
+      },
+      "drt_score": 73.5103,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000087",
+      "station_name": "봉은사.코엑스북문",
+      "coordinate": {
+        "lat": 37.51417,
+        "lng": 127.058828
+      },
+      "drt_score": 73.5075,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000029",
+      "station_name": "세관앞",
+      "coordinate": {
+        "lat": 37.51575936,
+        "lng": 127.0360666
+      },
+      "drt_score": 73.5003,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000303",
+      "station_name": "수서역.로즈데일빌딩",
+      "coordinate": {
+        "lat": 37.48739844,
+        "lng": 127.10286773
+      },
+      "drt_score": 73.4871,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000242",
+      "station_name": "개포도서관",
+      "coordinate": {
+        "lat": 37.483697,
+        "lng": 127.063897
+      },
+      "drt_score": 73.4626,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000616",
+      "station_name": "신논현역",
+      "coordinate": {
+        "lat": 37.500755,
+        "lng": 127.026579
+      },
+      "drt_score": 73.4552,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122000058",
+      "station_name": "일지아트홀",
+      "coordinate": {
+        "lat": 37.524912,
+        "lng": 127.039498
+      },
+      "drt_score": 73.3921,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000312",
+      "station_name": "삼일자동차학원.강남자동차검사소",
+      "coordinate": {
+        "lat": 37.46799872,
+        "lng": 127.12076798
+      },
+      "drt_score": 73.3707,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000227",
+      "station_name": "한티역6번출구",
+      "coordinate": {
+        "lat": 37.495722,
+        "lng": 127.05194
+      },
+      "drt_score": 73.3375,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000272",
+      "station_name": "국민은행그린공원",
+      "coordinate": {
+        "lat": 37.4785642,
+        "lng": 127.04724256
+      },
+      "drt_score": 73.3237,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000665",
+      "station_name": "강남구보건소",
+      "coordinate": {
+        "lat": 37.515478,
+        "lng": 127.041773
+      },
+      "drt_score": 73.3188,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000172",
+      "station_name": "선정릉역.국가무형유산전수교육관",
+      "coordinate": {
+        "lat": 37.50923357,
+        "lng": 127.04409352
+      },
+      "drt_score": 73.2915,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000118",
+      "station_name": "단대부고.대치아이파크아파트",
+      "coordinate": {
+        "lat": 37.49467496,
+        "lng": 127.05377707
+      },
+      "drt_score": 73.2866,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000724",
+      "station_name": "래미안개포루체하임아파트",
+      "coordinate": {
+        "lat": 37.4893,
+        "lng": 127.081473
+      },
+      "drt_score": 73.2684,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000073",
+      "station_name": "청담2치안센터",
+      "coordinate": {
+        "lat": 37.523026,
+        "lng": 127.048215
+      },
+      "drt_score": 73.2634,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000273",
+      "station_name": "광수빌딩",
+      "coordinate": {
+        "lat": 37.478898,
+        "lng": 127.049378
+      },
+      "drt_score": 73.2519,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000213",
+      "station_name": "매봉역.양재최의원",
+      "coordinate": {
+        "lat": 37.48616426,
+        "lng": 127.04456168
+      },
+      "drt_score": 73.1999,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000167",
+      "station_name": "언주역5번출구.차병원사거리",
+      "coordinate": {
+        "lat": 37.507558,
+        "lng": 127.035323
+      },
+      "drt_score": 73.1974,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000395",
+      "station_name": "국악중고교",
+      "coordinate": {
+        "lat": 37.475652,
+        "lng": 127.050648
+      },
+      "drt_score": 73.1852,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122900012",
+      "station_name": "도성초등학교앞",
+      "coordinate": {
+        "lat": 37.50046426,
+        "lng": 127.05032029
+      },
+      "drt_score": 73.173,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000181",
+      "station_name": "강남역12번출구",
+      "coordinate": {
+        "lat": 37.49881,
+        "lng": 127.029558
+      },
+      "drt_score": 73.0876,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000245",
+      "station_name": "디에이치아너힐즈",
+      "coordinate": {
+        "lat": 37.48373,
+        "lng": 127.068697
+      },
+      "drt_score": 73.0763,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122000327",
+      "station_name": "대치유수지체육공원",
+      "coordinate": {
+        "lat": 37.501358,
+        "lng": 127.068123
+      },
+      "drt_score": 73.0668,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000202",
+      "station_name": "한국자산신탁.센터필드",
+      "coordinate": {
+        "lat": 37.502783,
+        "lng": 127.044247
+      },
+      "drt_score": 73.0221,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000143",
+      "station_name": "래미안하이스턴.대치순복음교회",
+      "coordinate": {
+        "lat": 37.49994499,
+        "lng": 127.0638661
+      },
+      "drt_score": 73.0163,
+      "peak_hour": 17
+    },
+    {
+      "station_id": "122000264",
+      "station_name": "구룡사입구",
+      "coordinate": {
+        "lat": 37.47192069,
+        "lng": 127.05075113
+      },
+      "drt_score": 72.9669,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000164",
+      "station_name": "삼정호텔앞",
+      "coordinate": {
+        "lat": 37.50624203,
+        "lng": 127.03111084
+      },
+      "drt_score": 72.9397,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000355",
+      "station_name": "도곡중학교.강남세브란스병원",
+      "coordinate": {
+        "lat": 37.49360204,
+        "lng": 127.04672163
+      },
+      "drt_score": 72.9306,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000083",
+      "station_name": "진흥아파트.청담역",
+      "coordinate": {
+        "lat": 37.51904588,
+        "lng": 127.05213059
+      },
+      "drt_score": 72.9067,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000198",
+      "station_name": "총지사",
+      "coordinate": {
+        "lat": 37.496322,
+        "lng": 127.040453
+      },
+      "drt_score": 72.905,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000314",
+      "station_name": "세곡동",
+      "coordinate": {
+        "lat": 37.464935,
+        "lng": 127.109393
+      },
+      "drt_score": 72.8959,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000748",
+      "station_name": "역삼1동주민센터",
+      "coordinate": {
+        "lat": 37.496548,
+        "lng": 127.032341
+      },
+      "drt_score": 72.8378,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000200",
+      "station_name": "영동중앙교회",
+      "coordinate": {
+        "lat": 37.49771852,
+        "lng": 127.03857548
+      },
+      "drt_score": 72.7911,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000204",
+      "station_name": "역삼e-편한세상아파트",
+      "coordinate": {
+        "lat": 37.49925456,
+        "lng": 127.0512978
+      },
+      "drt_score": 72.7674,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122000195",
+      "station_name": "역삼동성당.역삼자이아파트",
+      "coordinate": {
+        "lat": 37.49987934,
+        "lng": 127.04379509
+      },
+      "drt_score": 72.767,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000389",
+      "station_name": "총지사",
+      "coordinate": {
+        "lat": 37.49471,
+        "lng": 127.039592
+      },
+      "drt_score": 72.7063,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000214",
+      "station_name": "양재역말죽거리.강남베드로병원",
+      "coordinate": {
+        "lat": 37.48525104,
+        "lng": 127.03796862
+      },
+      "drt_score": 72.695,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000108",
+      "station_name": "삼성중앙역.플래티넘아파트",
+      "coordinate": {
+        "lat": 37.51237798,
+        "lng": 127.05182713
+      },
+      "drt_score": 72.639,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000393",
+      "station_name": "우성6차아파트",
+      "coordinate": {
+        "lat": 37.477546,
+        "lng": 127.0552
+      },
+      "drt_score": 72.6385,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122900081",
+      "station_name": "은곡마을",
+      "coordinate": {
+        "lat": 37.466996,
+        "lng": 127.097637
+      },
+      "drt_score": 72.5846,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000403",
+      "station_name": "래미안포레아파트",
+      "coordinate": {
+        "lat": 37.47565851,
+        "lng": 127.10729508
+      },
+      "drt_score": 72.5715,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000313",
+      "station_name": "광연자동차학원앞",
+      "coordinate": {
+        "lat": 37.46702297,
+        "lng": 127.11884454
+      },
+      "drt_score": 72.544,
+      "peak_hour": 15
+    },
+    {
+      "station_id": "122900106",
+      "station_name": "방죽마을입구",
+      "coordinate": {
+        "lat": 37.471284,
+        "lng": 127.106377
+      },
+      "drt_score": 72.5041,
+      "peak_hour": 16
+    },
+    {
+      "station_id": "122000197",
+      "station_name": "역삼동개나리아파트",
+      "coordinate": {
+        "lat": 37.49945085,
+        "lng": 127.04734846
+      },
+      "drt_score": 72.4895,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000063",
+      "station_name": "청담초등학교",
+      "coordinate": {
+        "lat": 37.52680283,
+        "lng": 127.04512214
+      },
+      "drt_score": 72.4827,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000338",
+      "station_name": "시립수서청소년센터",
+      "coordinate": {
+        "lat": 37.483863,
+        "lng": 127.089107
+      },
+      "drt_score": 72.4741,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000006",
+      "station_name": "국민은행압구정종합금융센터",
+      "coordinate": {
+        "lat": 37.52309828,
+        "lng": 127.02811891
+      },
+      "drt_score": 72.4651,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122900073",
+      "station_name": "강남신동아파밀리에2단지",
+      "coordinate": {
+        "lat": 37.463471,
+        "lng": 127.102259
+      },
+      "drt_score": 72.4646,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000365",
+      "station_name": "구룡역5번출구",
+      "coordinate": {
+        "lat": 37.486106,
+        "lng": 127.059199
+      },
+      "drt_score": 72.4445,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000251",
+      "station_name": "개포시장.개포5단지상가",
+      "coordinate": {
+        "lat": 37.48952,
+        "lng": 127.068071
+      },
+      "drt_score": 72.3497,
+      "peak_hour": 16
+    },
+    {
+      "station_id": "122000310",
+      "station_name": "광연자동차학원앞",
+      "coordinate": {
+        "lat": 37.4656909,
+        "lng": 127.11636099
+      },
+      "drt_score": 72.3449,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000220",
+      "station_name": "도곡개포한신아파트",
+      "coordinate": {
+        "lat": 37.48803731,
+        "lng": 127.0493284
+      },
+      "drt_score": 72.3357,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000100",
+      "station_name": "한별구립어린이집",
+      "coordinate": {
+        "lat": 37.51041039,
+        "lng": 127.05490143
+      },
+      "drt_score": 72.3343,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000221",
+      "station_name": "개포한신.우성4차아파트",
+      "coordinate": {
+        "lat": 37.48708516,
+        "lng": 127.05037295
+      },
+      "drt_score": 72.3231,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000125",
+      "station_name": "도곡역3번출구",
+      "coordinate": {
+        "lat": 37.49118189,
+        "lng": 127.05654748
+      },
+      "drt_score": 72.3125,
+      "peak_hour": 17
+    },
+    {
+      "station_id": "122000102",
+      "station_name": "삼성동서광아파트",
+      "coordinate": {
+        "lat": 37.517323,
+        "lng": 127.042455
+      },
+      "drt_score": 72.2779,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000114",
+      "station_name": "포스코건너편",
+      "coordinate": {
+        "lat": 37.50668319,
+        "lng": 127.05542693
+      },
+      "drt_score": 72.2691,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122900053",
+      "station_name": "개포동역8번출구",
+      "coordinate": {
+        "lat": 37.488672,
+        "lng": 127.064961
+      },
+      "drt_score": 72.2024,
+      "peak_hour": 13
+    },
+    {
+      "station_id": "122000099",
+      "station_name": "포스코사거리",
+      "coordinate": {
+        "lat": 37.50782266,
+        "lng": 127.05631797
+      },
+      "drt_score": 72.175,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122900008",
+      "station_name": "암센터정문",
+      "coordinate": {
+        "lat": 37.48872808,
+        "lng": 127.08771058
+      },
+      "drt_score": 72.1602,
+      "peak_hour": 16
+    },
+    {
+      "station_id": "122900074",
+      "station_name": "리엔파크4단지.강남데시앙파크",
+      "coordinate": {
+        "lat": 37.461224,
+        "lng": 127.101871
+      },
+      "drt_score": 72.1381,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000116",
+      "station_name": "도곡역2번출구.동부센트레빌",
+      "coordinate": {
+        "lat": 37.49158559,
+        "lng": 127.05652291
+      },
+      "drt_score": 72.1249,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000358",
+      "station_name": "개포4단지5단지",
+      "coordinate": {
+        "lat": 37.486365,
+        "lng": 127.068309
+      },
+      "drt_score": 72.1014,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122900018",
+      "station_name": "봉은사역.삼성래미안아파트",
+      "coordinate": {
+        "lat": 37.514719,
+        "lng": 127.062293
+      },
+      "drt_score": 72.0917,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000300",
+      "station_name": "궁마을",
+      "coordinate": {
+        "lat": 37.4852808,
+        "lng": 127.09760664
+      },
+      "drt_score": 72.076,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000023",
+      "station_name": "영동시장.논현역3번출구",
+      "coordinate": {
+        "lat": 37.50934621,
+        "lng": 127.02239631
+      },
+      "drt_score": 72.0709,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122900101",
+      "station_name": "신분당선.강남역4번출구",
+      "coordinate": {
+        "lat": 37.494539,
+        "lng": 127.029565
+      },
+      "drt_score": 72.0553,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000387",
+      "station_name": "예림당아트홀.신한은행전산센터",
+      "coordinate": {
+        "lat": 37.498223,
+        "lng": 127.044293
+      },
+      "drt_score": 72.0331,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000017",
+      "station_name": "영동시장.논현역1번출구",
+      "coordinate": {
+        "lat": 37.51133678,
+        "lng": 127.02245363
+      },
+      "drt_score": 72.0131,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000150",
+      "station_name": "도성초등학교",
+      "coordinate": {
+        "lat": 37.50012236,
+        "lng": 127.05121357
+      },
+      "drt_score": 72.0069,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000255",
+      "station_name": "디에이치자이개포아파트",
+      "coordinate": {
+        "lat": 37.4923,
+        "lng": 127.075568
+      },
+      "drt_score": 72.0051,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122900099",
+      "station_name": "강남신동아파밀리에1단지",
+      "coordinate": {
+        "lat": 37.46339528,
+        "lng": 127.10139124
+      },
+      "drt_score": 71.9612,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000205",
+      "station_name": "한티역",
+      "coordinate": {
+        "lat": 37.49720234,
+        "lng": 127.05224754
+      },
+      "drt_score": 71.9452,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000060",
+      "station_name": "도산공원",
+      "coordinate": {
+        "lat": 37.52281302,
+        "lng": 127.03353009
+      },
+      "drt_score": 71.8758,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000192",
+      "station_name": "역삼2동주민센터.대림역삼아파트",
+      "coordinate": {
+        "lat": 37.49624526,
+        "lng": 127.04599268
+      },
+      "drt_score": 71.8321,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122900038",
+      "station_name": "삼성역",
+      "coordinate": {
+        "lat": 37.50736076,
+        "lng": 127.06433771
+      },
+      "drt_score": 71.808,
+      "peak_hour": 17
+    },
+    {
+      "station_id": "122900016",
+      "station_name": "대청초교삼거리",
+      "coordinate": {
+        "lat": 37.49316699,
+        "lng": 127.08639148
+      },
+      "drt_score": 71.8078,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122900031",
+      "station_name": "삼성역7번출구",
+      "coordinate": {
+        "lat": 37.510187,
+        "lng": 127.06280582
+      },
+      "drt_score": 71.8077,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000356",
+      "station_name": "강남경찰서.강남운전면허시험장",
+      "coordinate": {
+        "lat": 37.5095036,
+        "lng": 127.06600874
+      },
+      "drt_score": 71.7862,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000070",
+      "station_name": "청담역.경기고교",
+      "coordinate": {
+        "lat": 37.520026,
+        "lng": 127.056114
+      },
+      "drt_score": 71.7698,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122900010",
+      "station_name": "강남서초교육지원청",
+      "coordinate": {
+        "lat": 37.51145259,
+        "lng": 127.04744314
+      },
+      "drt_score": 71.7386,
+      "peak_hour": 13
+    },
+    {
+      "station_id": "122000177",
+      "station_name": "아가방빌딩.하나은행",
+      "coordinate": {
+        "lat": 37.50164,
+        "lng": 127.038772
+      },
+      "drt_score": 71.6312,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000398",
+      "station_name": "코원에너지서비스",
+      "coordinate": {
+        "lat": 37.49848963,
+        "lng": 127.07616213
+      },
+      "drt_score": 71.6176,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000666",
+      "station_name": "강남구보건소",
+      "coordinate": {
+        "lat": 37.515333,
+        "lng": 127.042155
+      },
+      "drt_score": 71.592,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122000283",
+      "station_name": "삼성서울병원정문건너편",
+      "coordinate": {
+        "lat": 37.48702518,
+        "lng": 127.08244915
+      },
+      "drt_score": 71.5531,
+      "peak_hour": 17
+    },
+    {
+      "station_id": "122000131",
+      "station_name": "은마치안센터",
+      "coordinate": {
+        "lat": 37.49809897,
+        "lng": 127.06152338
+      },
+      "drt_score": 71.5445,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122000130",
+      "station_name": "은마아파트",
+      "coordinate": {
+        "lat": 37.49559591,
+        "lng": 127.0628615
+      },
+      "drt_score": 71.5138,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000396",
+      "station_name": "풍양빌딩",
+      "coordinate": {
+        "lat": 37.47739,
+        "lng": 127.048815
+      },
+      "drt_score": 71.4256,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000353",
+      "station_name": "도곡교회.인바디빌딩.건너",
+      "coordinate": {
+        "lat": 37.474276,
+        "lng": 127.055993
+      },
+      "drt_score": 71.3772,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000340",
+      "station_name": "포스코사거리",
+      "coordinate": {
+        "lat": 37.50808,
+        "lng": 127.05574
+      },
+      "drt_score": 71.336,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000062",
+      "station_name": "성수대교남단.현대아파트",
+      "coordinate": {
+        "lat": 37.52991981,
+        "lng": 127.03414087
+      },
+      "drt_score": 71.3291,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000175",
+      "station_name": "KT강남지사",
+      "coordinate": {
+        "lat": 37.50475497,
+        "lng": 127.04197915
+      },
+      "drt_score": 71.3117,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000274",
+      "station_name": "개포지구대",
+      "coordinate": {
+        "lat": 37.47944529,
+        "lng": 127.05120706
+      },
+      "drt_score": 71.2403,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000209",
+      "station_name": "총지사",
+      "coordinate": {
+        "lat": 37.49494269,
+        "lng": 127.03986332
+      },
+      "drt_score": 71.2244,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122900107",
+      "station_name": "한신휴플러스6단지",
+      "coordinate": {
+        "lat": 37.469051,
+        "lng": 127.103892
+      },
+      "drt_score": 71.1684,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000275",
+      "station_name": "구룡초등학교",
+      "coordinate": {
+        "lat": 37.480467,
+        "lng": 127.052903
+      },
+      "drt_score": 71.1332,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122900067",
+      "station_name": "대청역",
+      "coordinate": {
+        "lat": 37.493292,
+        "lng": 127.079653
+      },
+      "drt_score": 71.1301,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000645",
+      "station_name": "선릉역",
+      "coordinate": {
+        "lat": 37.505447,
+        "lng": 127.051217
+      },
+      "drt_score": 71.1243,
+      "peak_hour": 17
+    },
+    {
+      "station_id": "122900021",
+      "station_name": "수서역",
+      "coordinate": {
+        "lat": 37.488706,
+        "lng": 127.099809
+      },
+      "drt_score": 71.119,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000698",
+      "station_name": "세곡2지구3.4단지",
+      "coordinate": {
+        "lat": 37.476668,
+        "lng": 127.110393
+      },
+      "drt_score": 71.0945,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000013",
+      "station_name": "강남을지병원",
+      "coordinate": {
+        "lat": 37.518221,
+        "lng": 127.028629
+      },
+      "drt_score": 71.0031,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000695",
+      "station_name": "강남한양수자인아파트",
+      "coordinate": {
+        "lat": 37.477818,
+        "lng": 127.113478
+      },
+      "drt_score": 70.9625,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122900014",
+      "station_name": "영희초등학교정문",
+      "coordinate": {
+        "lat": 37.49177024,
+        "lng": 127.08266584
+      },
+      "drt_score": 70.9347,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000015",
+      "station_name": "학동역6번출구",
+      "coordinate": {
+        "lat": 37.51378,
+        "lng": 127.029634
+      },
+      "drt_score": 70.8901,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000170",
+      "station_name": "아크로힐스논현",
+      "coordinate": {
+        "lat": 37.50910775,
+        "lng": 127.04064796
+      },
+      "drt_score": 70.7987,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000199",
+      "station_name": "총지사",
+      "coordinate": {
+        "lat": 37.4966905,
+        "lng": 127.04084254
+      },
+      "drt_score": 70.7734,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000384",
+      "station_name": "영동고등학교.현대아파트",
+      "coordinate": {
+        "lat": 37.52135499,
+        "lng": 127.03953005
+      },
+      "drt_score": 70.7607,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122900033",
+      "station_name": "역삼2동주민센터.래미안그레이튼아파트",
+      "coordinate": {
+        "lat": 37.494825,
+        "lng": 127.046636
+      },
+      "drt_score": 70.7193,
+      "peak_hour": 10
+    },
+    {
+      "station_id": "122000687",
+      "station_name": "못골마을",
+      "coordinate": {
+        "lat": 37.47310235,
+        "lng": 127.10188824
+      },
+      "drt_score": 70.7188,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122900028",
+      "station_name": "영희초등학교후문",
+      "coordinate": {
+        "lat": 37.491521,
+        "lng": 127.080479
+      },
+      "drt_score": 70.6427,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000041",
+      "station_name": "펜트힐루논현.임피리얼팰리스호텔",
+      "coordinate": {
+        "lat": 37.51354654,
+        "lng": 127.03515264
+      },
+      "drt_score": 70.5442,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000244",
+      "station_name": "수도전기공고후문",
+      "coordinate": {
+        "lat": 37.485273,
+        "lng": 127.065984
+      },
+      "drt_score": 70.5195,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000268",
+      "station_name": "광수빌딩",
+      "coordinate": {
+        "lat": 37.47906075,
+        "lng": 127.0493324
+      },
+      "drt_score": 70.491,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000027",
+      "station_name": "강남구청역",
+      "coordinate": {
+        "lat": 37.51851786,
+        "lng": 127.04064163
+      },
+      "drt_score": 70.4806,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000390",
+      "station_name": "신한은행데이터센터",
+      "coordinate": {
+        "lat": 37.498146,
+        "lng": 127.043699
+      },
+      "drt_score": 70.3528,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000280",
+      "station_name": "일원본동주민센터",
+      "coordinate": {
+        "lat": 37.4833831,
+        "lng": 127.08597539
+      },
+      "drt_score": 70.3018,
+      "peak_hour": 17
+    },
+    {
+      "station_id": "122000044",
+      "station_name": "언주역4번출구.차병원사거리",
+      "coordinate": {
+        "lat": 37.507842,
+        "lng": 127.03515
+      },
+      "drt_score": 70.2831,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122900007",
+      "station_name": "한아름아파트.사이룩스오피스텔",
+      "coordinate": {
+        "lat": 37.48828832,
+        "lng": 127.10436957
+      },
+      "drt_score": 70.2786,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000236",
+      "station_name": "현대아파트경남아파트",
+      "coordinate": {
+        "lat": 37.482875,
+        "lng": 127.053115
+      },
+      "drt_score": 70.1824,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000229",
+      "station_name": "중대부고앞",
+      "coordinate": {
+        "lat": 37.492538,
+        "lng": 127.054525
+      },
+      "drt_score": 70.117,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000016",
+      "station_name": "영동시장",
+      "coordinate": {
+        "lat": 37.51185086,
+        "lng": 127.02346888
+      },
+      "drt_score": 70.0944,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000145",
+      "station_name": "휘문중고등학교",
+      "coordinate": {
+        "lat": 37.50396586,
+        "lng": 127.06189806
+      },
+      "drt_score": 70.054,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000038",
+      "station_name": "아크로힐스논현",
+      "coordinate": {
+        "lat": 37.50922287,
+        "lng": 127.0396749
+      },
+      "drt_score": 70.0274,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000391",
+      "station_name": "포스코사거리",
+      "coordinate": {
+        "lat": 37.50731926,
+        "lng": 127.0575279
+      },
+      "drt_score": 69.9926,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000281",
+      "station_name": "수서119안전센터앞",
+      "coordinate": {
+        "lat": 37.48424129,
+        "lng": 127.09385031
+      },
+      "drt_score": 69.9003,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000253",
+      "station_name": "양전초등학교",
+      "coordinate": {
+        "lat": 37.490243,
+        "lng": 127.070593
+      },
+      "drt_score": 69.8214,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122900026",
+      "station_name": "일원역",
+      "coordinate": {
+        "lat": 37.484031,
+        "lng": 127.083599
+      },
+      "drt_score": 69.73,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000349",
+      "station_name": "개포도서관",
+      "coordinate": {
+        "lat": 37.483553,
+        "lng": 127.063564
+      },
+      "drt_score": 69.6902,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000284",
+      "station_name": "일원역7번출구",
+      "coordinate": {
+        "lat": 37.48491143,
+        "lng": 127.08330767
+      },
+      "drt_score": 69.6135,
+      "peak_hour": 17
+    },
+    {
+      "station_id": "122000039",
+      "station_name": "논현아이파크",
+      "coordinate": {
+        "lat": 37.511223,
+        "lng": 127.036438
+      },
+      "drt_score": 69.6129,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000503",
+      "station_name": "도곡2동주민센터.대치중학교",
+      "coordinate": {
+        "lat": 37.48425407,
+        "lng": 127.04540443
+      },
+      "drt_score": 69.4707,
+      "peak_hour": 17
+    },
+    {
+      "station_id": "122000034",
+      "station_name": "세관앞",
+      "coordinate": {
+        "lat": 37.515601,
+        "lng": 127.036421
+      },
+      "drt_score": 69.3429,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000270",
+      "station_name": "포이사거리.삼호물산",
+      "coordinate": {
+        "lat": 37.478451,
+        "lng": 127.045145
+      },
+      "drt_score": 69.3312,
+      "peak_hour": 17
+    },
+    {
+      "station_id": "122000081",
+      "station_name": "청담동성당",
+      "coordinate": {
+        "lat": 37.52025832,
+        "lng": 127.04920452
+      },
+      "drt_score": 69.2325,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000188",
+      "station_name": "역삼초등학교",
+      "coordinate": {
+        "lat": 37.494218,
+        "lng": 127.034183
+      },
+      "drt_score": 69.2258,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000285",
+      "station_name": "삼성서울병원후문",
+      "coordinate": {
+        "lat": 37.49019972,
+        "lng": 127.08752006
+      },
+      "drt_score": 69.214,
+      "peak_hour": 16
+    },
+    {
+      "station_id": "122000158",
+      "station_name": "대치사거리",
+      "coordinate": {
+        "lat": 37.503405,
+        "lng": 127.058292
+      },
+      "drt_score": 69.1703,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000296",
+      "station_name": "수서역.KT수서지점",
+      "coordinate": {
+        "lat": 37.48854768,
+        "lng": 127.09986549
+      },
+      "drt_score": 69.074,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000040",
+      "station_name": "임피리얼팰리스호텔.펜트힐루논현",
+      "coordinate": {
+        "lat": 37.51432856,
+        "lng": 127.03560097
+      },
+      "drt_score": 68.8565,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000163",
+      "station_name": "신논현역4번출구",
+      "coordinate": {
+        "lat": 37.504682,
+        "lng": 127.025813
+      },
+      "drt_score": 68.7986,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000222",
+      "station_name": "우성캐릭터빌아파트",
+      "coordinate": {
+        "lat": 37.48700968,
+        "lng": 127.05080091
+      },
+      "drt_score": 68.7695,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000169",
+      "station_name": "라움아트센터.시티프라디움더강남",
+      "coordinate": {
+        "lat": 37.507745,
+        "lng": 127.039648
+      },
+      "drt_score": 68.7323,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122900063",
+      "station_name": "일원지구대",
+      "coordinate": {
+        "lat": 37.49250248,
+        "lng": 127.08444669
+      },
+      "drt_score": 68.7042,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000144",
+      "station_name": "대치현대아파트",
+      "coordinate": {
+        "lat": 37.500825,
+        "lng": 127.060062
+      },
+      "drt_score": 68.6426,
+      "peak_hour": 17
+    },
+    {
+      "station_id": "122000035",
+      "station_name": "강남구청역",
+      "coordinate": {
+        "lat": 37.51677,
+        "lng": 127.040165
+      },
+      "drt_score": 68.5454,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000080",
+      "station_name": "청담2치안센터",
+      "coordinate": {
+        "lat": 37.52293516,
+        "lng": 127.04779095
+      },
+      "drt_score": 68.4254,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000717",
+      "station_name": "고속철도수서역",
+      "coordinate": {
+        "lat": 37.484498,
+        "lng": 127.103737
+      },
+      "drt_score": 68.3414,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000643",
+      "station_name": "학여울역",
+      "coordinate": {
+        "lat": 37.497144,
+        "lng": 127.071451
+      },
+      "drt_score": 68.0515,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122900057",
+      "station_name": "국민은행",
+      "coordinate": {
+        "lat": 37.478396,
+        "lng": 127.047728
+      },
+      "drt_score": 68.0224,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000267",
+      "station_name": "구룡초등학교",
+      "coordinate": {
+        "lat": 37.480828,
+        "lng": 127.05311
+      },
+      "drt_score": 67.9981,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000644",
+      "station_name": "학여울역",
+      "coordinate": {
+        "lat": 37.49667869,
+        "lng": 127.0713978
+      },
+      "drt_score": 67.8475,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000037",
+      "station_name": "선정릉역1번출구.시니어플라자",
+      "coordinate": {
+        "lat": 37.510235,
+        "lng": 127.0431
+      },
+      "drt_score": 67.7805,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000269",
+      "station_name": "국민은행그린공원",
+      "coordinate": {
+        "lat": 37.47876982,
+        "lng": 127.04682546
+      },
+      "drt_score": 67.7595,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122900108",
+      "station_name": "LH이-편한세상",
+      "coordinate": {
+        "lat": 37.46752,
+        "lng": 127.101745
+      },
+      "drt_score": 67.7555,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000544",
+      "station_name": "매봉역입구",
+      "coordinate": {
+        "lat": 37.485055,
+        "lng": 127.046452
+      },
+      "drt_score": 67.6547,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000294",
+      "station_name": "수서역.현대벤쳐빌",
+      "coordinate": {
+        "lat": 37.48768078,
+        "lng": 127.1021201
+      },
+      "drt_score": 67.5613,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000092",
+      "station_name": "서울의료원강남분원",
+      "coordinate": {
+        "lat": 37.512568,
+        "lng": 127.065604
+      },
+      "drt_score": 67.5557,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000066",
+      "station_name": "영동교입구.청담자이아파트",
+      "coordinate": {
+        "lat": 37.522598,
+        "lng": 127.056049
+      },
+      "drt_score": 67.5094,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000749",
+      "station_name": "마루공원",
+      "coordinate": {
+        "lat": 37.49485,
+        "lng": 127.082818
+      },
+      "drt_score": 67.4971,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122900047",
+      "station_name": "영동2교",
+      "coordinate": {
+        "lat": 37.48241061,
+        "lng": 127.04362093
+      },
+      "drt_score": 67.1232,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122900043",
+      "station_name": "동영문화센터",
+      "coordinate": {
+        "lat": 37.49821633,
+        "lng": 127.04506987
+      },
+      "drt_score": 67.0714,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000051",
+      "station_name": "도산공원",
+      "coordinate": {
+        "lat": 37.52211382,
+        "lng": 127.03332953
+      },
+      "drt_score": 66.8301,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000642",
+      "station_name": "서울일원동우체국",
+      "coordinate": {
+        "lat": 37.49199699,
+        "lng": 127.08762662
+      },
+      "drt_score": 66.7589,
+      "peak_hour": 17
+    },
+    {
+      "station_id": "122000286",
+      "station_name": "삼성서울병원사거리",
+      "coordinate": {
+        "lat": 37.48884,
+        "lng": 127.0827
+      },
+      "drt_score": 66.7506,
+      "peak_hour": 17
+    },
+    {
+      "station_id": "122000194",
+      "station_name": "역삼자이아파트",
+      "coordinate": {
+        "lat": 37.499811,
+        "lng": 127.044322
+      },
+      "drt_score": 66.6682,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000397",
+      "station_name": "코원에너지서비스",
+      "coordinate": {
+        "lat": 37.49806976,
+        "lng": 127.07609724
+      },
+      "drt_score": 66.3512,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122900076",
+      "station_name": "상업지역",
+      "coordinate": {
+        "lat": 37.46717697,
+        "lng": 127.09995922
+      },
+      "drt_score": 66.1936,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000218",
+      "station_name": "원불교앞",
+      "coordinate": {
+        "lat": 37.48355818,
+        "lng": 127.04235514
+      },
+      "drt_score": 66.1694,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000372",
+      "station_name": "개포4단지5단지",
+      "coordinate": {
+        "lat": 37.486497,
+        "lng": 127.068237
+      },
+      "drt_score": 66.1163,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000047",
+      "station_name": "서울세관사거리",
+      "coordinate": {
+        "lat": 37.515313,
+        "lng": 127.034607
+      },
+      "drt_score": 65.7727,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000030",
+      "station_name": "서울세관",
+      "coordinate": {
+        "lat": 37.51702735,
+        "lng": 127.03562827
+      },
+      "drt_score": 65.6464,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000401",
+      "station_name": "국민은행그린공원",
+      "coordinate": {
+        "lat": 37.478785,
+        "lng": 127.047966
+      },
+      "drt_score": 65.1157,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122900092",
+      "station_name": "강남데시앙포레정문",
+      "coordinate": {
+        "lat": 37.48184764,
+        "lng": 127.08958748
+      },
+      "drt_score": 62.2449,
+      "peak_hour": 17
+    },
+    {
+      "station_id": "122900089",
+      "station_name": "서울요양원.강남구립행복요양병원",
+      "coordinate": {
+        "lat": 37.460694,
+        "lng": 127.10349
+      },
+      "drt_score": 60.0282,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122900036",
+      "station_name": "학동역",
+      "coordinate": {
+        "lat": 37.515378,
+        "lng": 127.03
+      },
+      "drt_score": 57.854,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122900035",
+      "station_name": "서울의료원후문",
+      "coordinate": {
+        "lat": 37.51285422,
+        "lng": 127.06702977
+      },
+      "drt_score": 52.8826,
+      "peak_hour": 17
+    },
+    {
+      "station_id": "122000753",
+      "station_name": "청담자이아파트",
+      "coordinate": {
+        "lat": 37.522073,
+        "lng": 127.056339
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 5
+    },
+    {
+      "station_id": "122000697",
+      "station_name": "프라마호텔",
+      "coordinate": {
+        "lat": 37.524927,
+        "lng": 127.051344
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 15
+    },
+    {
+      "station_id": "122000676",
+      "station_name": "삼성역",
+      "coordinate": {
+        "lat": 37.51097711,
+        "lng": 127.06265289
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 4
+    },
+    {
+      "station_id": "122000672",
+      "station_name": "성수대교남단(가상)",
+      "coordinate": {
+        "lat": 37.53362782,
+        "lng": 127.03088151
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 21
+    },
+    {
+      "station_id": "122000638",
+      "station_name": "미성아파트",
+      "coordinate": {
+        "lat": 37.523524,
+        "lng": 127.021536
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 13
+    },
+    {
+      "station_id": "122000637",
+      "station_name": "리베라호텔",
+      "coordinate": {
+        "lat": 37.52377,
+        "lng": 127.05463
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 20
+    },
+    {
+      "station_id": "122000633",
+      "station_name": "압구정역",
+      "coordinate": {
+        "lat": 37.528598,
+        "lng": 127.03092
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000649",
+      "station_name": "탄천교(가상)",
+      "coordinate": {
+        "lat": 37.50153631,
+        "lng": 127.07323245
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 5
+    },
+    {
+      "station_id": "122000648",
+      "station_name": "탄천교(가상)",
+      "coordinate": {
+        "lat": 37.50131857,
+        "lng": 127.07270856
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000630",
+      "station_name": "도곡동",
+      "coordinate": {
+        "lat": 37.48794924,
+        "lng": 127.0491445
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 10
+    },
+    {
+      "station_id": "122000607",
+      "station_name": "강남역12번출구",
+      "coordinate": {
+        "lat": 37.49871237,
+        "lng": 127.02939683
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 4
+    },
+    {
+      "station_id": "122000629",
+      "station_name": "타워펠리스",
+      "coordinate": {
+        "lat": 37.4892408,
+        "lng": 127.05209947
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 10
+    },
+    {
+      "station_id": "122000606",
+      "station_name": "강남역",
+      "coordinate": {
+        "lat": 37.49836707,
+        "lng": 127.03011261
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 9
+    },
+    {
+      "station_id": "122000605",
+      "station_name": "역삼역",
+      "coordinate": {
+        "lat": 37.50037703,
+        "lng": 127.03484448
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 5
+    },
+    {
+      "station_id": "122000628",
+      "station_name": "대치동",
+      "coordinate": {
+        "lat": 37.493578,
+        "lng": 127.061606
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 10
+    },
+    {
+      "station_id": "122000627",
+      "station_name": "학여울역",
+      "coordinate": {
+        "lat": 37.495636,
+        "lng": 127.067629
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 10
+    },
+    {
+      "station_id": "122000599",
+      "station_name": "포스코사거리",
+      "coordinate": {
+        "lat": 37.50662833,
+        "lng": 127.0551984
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000626",
+      "station_name": "개포동",
+      "coordinate": {
+        "lat": 37.48885926,
+        "lng": 127.07376514
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 10
+    },
+    {
+      "station_id": "122000597",
+      "station_name": "삼성역그랜드인터컨티넨탈",
+      "coordinate": {
+        "lat": 37.508435,
+        "lng": 127.060905
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 16
+    },
+    {
+      "station_id": "122000660",
+      "station_name": "노보텔앰배서더호텔",
+      "coordinate": {
+        "lat": 37.50551134,
+        "lng": 127.02876722
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 5
+    },
+    {
+      "station_id": "122000739",
+      "station_name": "을지병원포포인츠강남&호텔선샤인",
+      "coordinate": {
+        "lat": 37.5201297,
+        "lng": 127.02885477
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000723",
+      "station_name": "코엑스도심공항",
+      "coordinate": {
+        "lat": 37.509275,
+        "lng": 127.058892
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 11
+    },
+    {
+      "station_id": "122000722",
+      "station_name": "언주역삼정&베스트웨스턴강남",
+      "coordinate": {
+        "lat": 37.506341,
+        "lng": 127.03114
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 5
+    },
+    {
+      "station_id": "122000709",
+      "station_name": "성수대교(가상)",
+      "coordinate": {
+        "lat": 37.53256766,
+        "lng": 127.03445782
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 23
+    },
+    {
+      "station_id": "122000654",
+      "station_name": "신논현역",
+      "coordinate": {
+        "lat": 37.50195985,
+        "lng": 127.0259767
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 22
+    },
+    {
+      "station_id": "122000620",
+      "station_name": "학여울역",
+      "coordinate": {
+        "lat": 37.49585931,
+        "lng": 127.06726565
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 11
+    },
+    {
+      "station_id": "122000716",
+      "station_name": "글래드라이브강남호텔",
+      "coordinate": {
+        "lat": 37.508085,
+        "lng": 127.036999
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 15
+    },
+    {
+      "station_id": "122000715",
+      "station_name": "도심공항터미널(가상)",
+      "coordinate": {
+        "lat": 37.50869367,
+        "lng": 127.0590298
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 16
+    },
+    {
+      "station_id": "122000721",
+      "station_name": "역삼아르누보&조선팰리스강남",
+      "coordinate": {
+        "lat": 37.50327145,
+        "lng": 127.04267899
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000741",
+      "station_name": "봉은사역코엑스인터컨티넨탈",
+      "coordinate": {
+        "lat": 37.513612,
+        "lng": 127.057443
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 6
+    },
+    {
+      "station_id": "122000711",
+      "station_name": "동호대교(가상)",
+      "coordinate": {
+        "lat": 37.53115265,
+        "lng": 127.02416419
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000710",
+      "station_name": "동호대교(가상)",
+      "coordinate": {
+        "lat": 37.53174245,
+        "lng": 127.02373445
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 5
+    },
+    {
+      "station_id": "122000708",
+      "station_name": "성수대교(가상)",
+      "coordinate": {
+        "lat": 37.53309516,
+        "lng": 127.03455438
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 5
+    },
+    {
+      "station_id": "122000742",
+      "station_name": "삼성서초역삼세무서",
+      "coordinate": {
+        "lat": 37.49841237,
+        "lng": 127.0297942
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 8
+    },
+    {
+      "station_id": "122000604",
+      "station_name": "역삼역",
+      "coordinate": {
+        "lat": 37.500375,
+        "lng": 127.036278
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 20
+    },
+    {
+      "station_id": "122000617",
+      "station_name": "신사동",
+      "coordinate": {
+        "lat": 37.517654,
+        "lng": 127.019358
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 11
+    },
+    {
+      "station_id": "121000922",
+      "station_name": "양재역",
+      "coordinate": {
+        "lat": 37.485411,
+        "lng": 127.03885
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 11
+    },
+    {
+      "station_id": "122000707",
+      "station_name": "영동대교(가상)",
+      "coordinate": {
+        "lat": 37.52596087,
+        "lng": 127.05518057
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 23
+    },
+    {
+      "station_id": "122000706",
+      "station_name": "영동대교(가상)",
+      "coordinate": {
+        "lat": 37.52662455,
+        "lng": 127.05562045
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 5
+    },
+    {
+      "station_id": "122000618",
+      "station_name": "타워펠리스",
+      "coordinate": {
+        "lat": 37.489825,
+        "lng": 127.052447
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 11
+    },
+    {
+      "station_id": "122000619",
+      "station_name": "대치동",
+      "coordinate": {
+        "lat": 37.493886,
+        "lng": 127.061372
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 5
+    },
+    {
+      "station_id": "122000750",
+      "station_name": "디에이치퍼스티어아이파크",
+      "coordinate": {
+        "lat": 37.47995,
+        "lng": 127.058296
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 6
+    },
+    {
+      "station_id": "122000751",
+      "station_name": "개포중학교",
+      "coordinate": {
+        "lat": 37.481031,
+        "lng": 127.060267
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000657",
+      "station_name": "선정릉역라마다서울호텔",
+      "coordinate": {
+        "lat": 37.510642,
+        "lng": 127.045647
+      },
+      "drt_score": 39.9999,
+      "peak_hour": 6
+    }
+  ],
+  "top_stations": [
+    {
+      "station_id": "121000014",
+      "station_name": "논현역",
+      "coordinate": {
+        "lat": 37.506367,
+        "lng": 127.023728
+      },
+      "drt_score": 88.5424,
+      "peak_hour": 18
+    },
+    {
+      "station_id": "122000408",
+      "station_name": "한남대교전망카페",
+      "coordinate": {
+        "lat": 37.524552,
+        "lng": 127.015683
+      },
+      "drt_score": 87.2003,
+      "peak_hour": 19
+    },
+    {
+      "station_id": "122000318",
+      "station_name": "쟁골마을",
+      "coordinate": {
+        "lat": 37.481887,
+        "lng": 127.105076
+      },
+      "drt_score": 85.671,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "122000718",
+      "station_name": "고속철도수서역",
+      "coordinate": {
+        "lat": 37.484874,
+        "lng": 127.104391
+      },
+      "drt_score": 85.0069,
+      "peak_hour": 7
+    },
+    {
+      "station_id": "121000008",
+      "station_name": "래미안아파트.파이낸셜뉴스",
+      "coordinate": {
+        "lat": 37.491087,
+        "lng": 127.030987
+      },
+      "drt_score": 84.5484,
+      "peak_hour": 18
+    }
+  ]
+}

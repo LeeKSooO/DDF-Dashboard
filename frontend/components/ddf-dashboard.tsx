@@ -33,6 +33,7 @@ import {
   Target,
   ChevronDown,
   MapPin,
+  Link2,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -198,6 +199,9 @@ export function DDFDashboard() {
     getDefaultRegionForPage(activePage)
   );
   const [showRegionSelector, setShowRegionSelector] = useState(false);
+  
+  // DRT 분석 탭에서 지도가 선택한 구를 헤더에 반영하기 위한 상태
+  const [drtSelectedDistrict, setDrtSelectedDistrict] = useState<string | null>(null);
   const regionSelectorRef = useRef<HTMLDivElement>(null);
 
   // 외부 클릭 시 드롭다운 닫기
@@ -225,6 +229,11 @@ export function DDFDashboard() {
     }
     setActivePage(pageId);
     setSelectedRegion(getDefaultRegionForPage(pageId));
+    
+    // DRT 분석 탭이 아닌 곳으로 이동할 때 DRT 구 선택 상태 초기화
+    if (pageId !== "drt-analysis") {
+      setDrtSelectedDistrict(null);
+    }
     // 챗봇은 다른 탭으로 이동해도 유지됨
   };
 
@@ -286,6 +295,10 @@ export function DDFDashboard() {
               setSelectedModel={setSelectedModel}
               selectedMonth={selectedMonth}
               selectedRegion={selectedRegion}
+              onDistrictChange={(district: string) => {
+                console.log("📥 Received district change from DRT analysis:", district);
+                setDrtSelectedDistrict(district);
+              }}
             />
           </Suspense>
         );
@@ -467,16 +480,38 @@ export function DDFDashboard() {
               <div className="relative" ref={regionSelectorRef}>
                 <Button
                   variant="outline"
-                  onClick={() => setShowRegionSelector(!showRegionSelector)}
-                  className="w-[140px] justify-between"
+                  onClick={() => {
+                    // DRT 분석 탭에서는 읽기 전용
+                    if (activePage !== "drt-analysis") {
+                      setShowRegionSelector(!showRegionSelector);
+                    }
+                  }}
+                  className={`w-[140px] justify-between ${
+                    activePage === "drt-analysis" ? 'cursor-default opacity-75' : 'cursor-pointer'
+                  }`}
                 >
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4" />
-                    <span>{selectedRegion === "전체" ? "전체 지역" : selectedRegion}</span>
+                    <span>
+                      {activePage === "drt-analysis" && drtSelectedDistrict
+                        ? drtSelectedDistrict
+                        : (selectedRegion === "전체" ? "전체 지역" : selectedRegion)
+                      }
+                    </span>
                   </div>
-                  <ChevronDown className={`h-4 w-4 transition-transform ${
-                    showRegionSelector ? 'rotate-180' : ''
-                  }`} />
+                  {activePage !== "drt-analysis" && (
+                    <ChevronDown className={`h-4 w-4 transition-transform ${
+                      showRegionSelector ? 'rotate-180' : ''
+                    }`} />
+                  )}
+                  {activePage === "drt-analysis" && (
+                    <div className="relative group">
+                      <Link2 className="h-3 w-3 text-blue-400" />
+                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                        지도에서 선택된 구역
+                      </div>
+                    </div>
+                  )}
                 </Button>
                 
                 {showRegionSelector && (
