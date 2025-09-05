@@ -144,7 +144,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
       <div className="space-y-6">
         {/* KPI 카드들 */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
+          <Card className="bg-gray-50">
             <CardContent className="p-6">
               <div className="flex items-center space-x-3">
                 <Users className="h-7 w-7 text-blue-500" />
@@ -155,11 +155,12 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
               </div>
               <div className="text-4xl font-bold text-gray-900 mt-4">
                 {getTrafficStats(currentData)?.totalWeekdayRide || '-'}
+                {getTrafficStats(currentData)?.totalWeekdayRide && <span className="text-lg text-gray-600 ml-1">명</span>}
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-gray-50">
             <CardContent className="p-6">
               <div className="flex items-center space-x-3">
                 <Users className="h-7 w-7 text-red-500" />
@@ -170,11 +171,12 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
               </div>
               <div className="text-4xl font-bold text-gray-900 mt-4">
                 {getTrafficStats(currentData)?.totalWeekdayAlight || '-'}
+                {getTrafficStats(currentData)?.totalWeekdayAlight && <span className="text-lg text-gray-600 ml-1">명</span>}
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-gray-50">
             <CardContent className="p-6">
               <div className="flex items-center space-x-3">
                 <Users className="h-7 w-7 text-green-500" />
@@ -185,11 +187,12 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
               </div>
               <div className="text-4xl font-bold text-gray-900 mt-4">
                 {getTrafficStats(currentData)?.totalWeekendRide || '-'}
+                {getTrafficStats(currentData)?.totalWeekendRide && <span className="text-lg text-gray-600 ml-1">명</span>}
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-gray-50">
             <CardContent className="p-6">
               <div className="flex items-center space-x-3">
                 <Users className="h-7 w-7 text-yellow-500" />
@@ -200,6 +203,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
               </div>
               <div className="text-4xl font-bold text-gray-900 mt-4">
                 {getTrafficStats(currentData)?.totalWeekendAlight || '-'}
+                {getTrafficStats(currentData)?.totalWeekendAlight && <span className="text-lg text-gray-600 ml-1">명</span>}
               </div>
             </CardContent>
           </Card>
@@ -207,31 +211,31 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
 
         {/* 피크 시간 정보 - 승차/하차 비율 파이차트 포함 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader className="pb-6">
+          <Card className="bg-gray-100">
+            <CardHeader className="pb-1">
               <CardTitle className="text-2xl font-bold">주중 아침 피크</CardTitle>
             </CardHeader>
-            <CardContent className="p-8">
+            <CardContent className="p-2">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="text-6xl font-bold text-blue-600 mb-4">
-                    {currentData ? `${currentData.peak_hours.weekday_morning_peak.hour}:00` : '8:00'}
-                  </div>
-                  <Badge variant="secondary" className="text-xl px-4 py-2">
                     {currentData ? 
-                      Math.round(currentData.peak_hours.weekday_morning_peak.avg_total_passengers) + '명' :
-                      '24명'
+                      `${currentData.peak_hours.weekday_morning_peak.avg_total_passengers.toFixed(2)}명` :
+                      '24.00명'
                     }
+                  </div>
+                  <Badge variant="secondary" className="text-base px-3 py-1 bg-gray-300">
+                    {currentData ? `${currentData.peak_hours.weekday_morning_peak.hour}:00` : '8:00'}
                   </Badge>
                 </div>
                 
                 {/* 승차/하차 비율 파이차트 */}
-                <div className="w-36 h-36">
+                <div className="w-48 h-48">
                   {(() => {
                     const morningPeakHour = currentData?.peak_hours.weekday_morning_peak.hour || 8;
                     const morningData = currentData?.weekday_patterns[morningPeakHour];
-                    const rideValue = morningData ? Math.round(morningData.avg_ride_passengers) : 12;
-                    const alightValue = morningData ? Math.round(morningData.avg_alight_passengers) : 12;
+                    const rideValue = morningData ? morningData.avg_ride_passengers : 12;
+                    const alightValue = morningData ? morningData.avg_alight_passengers : 12;
                     
                     return (
                       <ResponsiveContainer width="100%" height="100%">
@@ -251,7 +255,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
                             <Cell fill="#3B82F6" />
                             <Cell fill="#93C5FD" />
                           </Pie>
-                          <Tooltip formatter={(value, name) => [`${value}명`, name]} />
+                          <Tooltip formatter={(value, name) => [`${Number(value).toFixed(2)}명`, name]} />
                         </PieChart>
                       </ResponsiveContainer>
                     );
@@ -266,8 +270,8 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
                   const morningData = currentData?.weekday_patterns[morningPeakHour];
                   if (morningData) {
                     const total = morningData.avg_ride_passengers + morningData.avg_alight_passengers;
-                    const ridePercent = Math.round((morningData.avg_ride_passengers / total) * 100);
-                    const alightPercent = Math.round((morningData.avg_alight_passengers / total) * 100);
+                    const ridePercent = ((morningData.avg_ride_passengers / total) * 100).toFixed(1);
+                    const alightPercent = ((morningData.avg_alight_passengers / total) * 100).toFixed(1);
                     return (
                       <>
                         <span>승차 {ridePercent}%</span>
@@ -286,31 +290,31 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-6">
+          <Card className="bg-gray-100">
+            <CardHeader className="pb-1">
               <CardTitle className="text-2xl font-bold">주중 저녁 피크</CardTitle>
             </CardHeader>
-            <CardContent className="p-8">
+            <CardContent className="p-2">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="text-6xl font-bold text-red-600 mb-4">
-                    {currentData ? `${currentData.peak_hours.weekday_evening_peak.hour}:00` : '18:00'}
-                  </div>
-                  <Badge variant="secondary" className="text-xl px-4 py-2">
                     {currentData ? 
-                      Math.round(currentData.peak_hours.weekday_evening_peak.avg_total_passengers) + '명' :
-                      '23명'
+                      `${currentData.peak_hours.weekday_evening_peak.avg_total_passengers.toFixed(2)}명` :
+                      '23.00명'
                     }
+                  </div>
+                  <Badge variant="secondary" className="text-base px-3 py-1 bg-gray-300">
+                    {currentData ? `${currentData.peak_hours.weekday_evening_peak.hour}:00` : '18:00'}
                   </Badge>
                 </div>
                 
                 {/* 승차/하차 비율 파이차트 */}
-                <div className="w-36 h-36">
+                <div className="w-48 h-48">
                   {(() => {
                     const eveningPeakHour = currentData?.peak_hours.weekday_evening_peak.hour || 18;
                     const eveningData = currentData?.weekday_patterns[eveningPeakHour];
-                    const rideValue = eveningData ? Math.round(eveningData.avg_ride_passengers) : 11;
-                    const alightValue = eveningData ? Math.round(eveningData.avg_alight_passengers) : 12;
+                    const rideValue = eveningData ? eveningData.avg_ride_passengers : 11;
+                    const alightValue = eveningData ? eveningData.avg_alight_passengers : 12;
                     
                     return (
                       <ResponsiveContainer width="100%" height="100%">
@@ -330,7 +334,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
                             <Cell fill="#DC2626" />
                             <Cell fill="#FCA5A5" />
                           </Pie>
-                          <Tooltip formatter={(value, name) => [`${value}명`, name]} />
+                          <Tooltip formatter={(value, name) => [`${Number(value).toFixed(2)}명`, name]} />
                         </PieChart>
                       </ResponsiveContainer>
                     );
@@ -345,8 +349,8 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
                   const eveningData = currentData?.weekday_patterns[eveningPeakHour];
                   if (eveningData) {
                     const total = eveningData.avg_ride_passengers + eveningData.avg_alight_passengers;
-                    const ridePercent = Math.round((eveningData.avg_ride_passengers / total) * 100);
-                    const alightPercent = Math.round((eveningData.avg_alight_passengers / total) * 100);
+                    const ridePercent = ((eveningData.avg_ride_passengers / total) * 100).toFixed(1);
+                    const alightPercent = ((eveningData.avg_alight_passengers / total) * 100).toFixed(1);
                     return (
                       <>
                         <span>승차 {ridePercent}%</span>
@@ -365,31 +369,31 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-6">
+          <Card className="bg-gray-100">
+            <CardHeader className="pb-1">
               <CardTitle className="text-2xl font-bold">주말 피크</CardTitle>
             </CardHeader>
-            <CardContent className="p-8">
+            <CardContent className="p-2">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="text-6xl font-bold text-green-600 mb-4">
-                    {currentData ? `${currentData.peak_hours.weekend_peak.hour}:00` : '17:00'}
-                  </div>
-                  <Badge variant="secondary" className="text-xl px-4 py-2">
                     {currentData ? 
-                      Math.round(currentData.peak_hours.weekend_peak.avg_total_passengers) + '명' :
-                      '13명'
+                      `${currentData.peak_hours.weekend_peak.avg_total_passengers.toFixed(2)}명` :
+                      '13.00명'
                     }
+                  </div>
+                  <Badge variant="secondary" className="text-base px-3 py-1 bg-gray-300">
+                    {currentData ? `${currentData.peak_hours.weekend_peak.hour}:00` : '17:00'}
                   </Badge>
                 </div>
                 
                 {/* 승차/하차 비율 파이차트 */}
-                <div className="w-36 h-36">
+                <div className="w-48 h-48">
                   {(() => {
                     const weekendPeakHour = currentData?.peak_hours.weekend_peak.hour || 17;
                     const weekendData = currentData?.weekend_patterns[weekendPeakHour];
-                    const rideValue = weekendData ? Math.round(weekendData.avg_ride_passengers) : 7;
-                    const alightValue = weekendData ? Math.round(weekendData.avg_alight_passengers) : 6;
+                    const rideValue = weekendData ? weekendData.avg_ride_passengers : 7;
+                    const alightValue = weekendData ? weekendData.avg_alight_passengers : 6;
                     
                     return (
                       <ResponsiveContainer width="100%" height="100%">
@@ -409,7 +413,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
                             <Cell fill="#059669" />
                             <Cell fill="#86EFAC" />
                           </Pie>
-                          <Tooltip formatter={(value, name) => [`${value}명`, name]} />
+                          <Tooltip formatter={(value, name) => [`${Number(value).toFixed(2)}명`, name]} />
                         </PieChart>
                       </ResponsiveContainer>
                     );
@@ -424,8 +428,8 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
                   const weekendData = currentData?.weekend_patterns[weekendPeakHour];
                   if (weekendData) {
                     const total = weekendData.avg_ride_passengers + weekendData.avg_alight_passengers;
-                    const ridePercent = Math.round((weekendData.avg_ride_passengers / total) * 100);
-                    const alightPercent = Math.round((weekendData.avg_alight_passengers / total) * 100);
+                    const ridePercent = ((weekendData.avg_ride_passengers / total) * 100).toFixed(1);
+                    const alightPercent = ((weekendData.avg_alight_passengers / total) * 100).toFixed(1);
                     return (
                       <>
                         <span>승차 {ridePercent}%</span>
@@ -448,7 +452,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
         {/* 주중/주말 분리 차트 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* 주중 차트 */}
-          <Card>
+          <Card className="bg-gray-50">
             <CardHeader>
               <CardTitle>주중 승하차 패턴 (월~금)</CardTitle>
               <CardDescription>주중 24시간 승차/하차 변화 추이</CardDescription>
@@ -507,7 +511,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
           </Card>
 
           {/* 주말 차트 */}
-          <Card>
+          <Card className="bg-gray-50">
             <CardHeader>
               <CardTitle>주말 승하차 패턴 (토~일)</CardTitle>
               <CardDescription>주말 24시간 승차/하차 변화 추이</CardDescription>
@@ -676,6 +680,16 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
       return colors[districtIndex] || colors[0];
     };
 
+    // 헤더 선택 구인지 확인하는 함수
+    const isHeaderSelectedDistrict = (district: string) => {
+      return selectedRegion !== "전체" && district === selectedRegion;
+    };
+
+    // 구별 선 굵기 결정 함수
+    const getStrokeWidth = (district: string) => {
+      return isHeaderSelectedDistrict(district) ? 4 : 2;
+    };
+
     // 구별 총합 데이터 (승차/하차 분리)
     const summaryData = selectedDistricts.map((district) => {
       const data = districtData[district];
@@ -688,10 +702,10 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
       
       return {
         district,
-        weekday_boarding: weekdayRide.toFixed(1),
-        weekday_alighting: weekdayAlight.toFixed(1),
-        weekend_boarding: weekendRide.toFixed(1),
-        weekend_alighting: weekendAlight.toFixed(1),
+        weekday_boarding: weekdayRide.toFixed(2),
+        weekday_alighting: weekdayAlight.toFixed(2),
+        weekend_boarding: weekendRide.toFixed(2),
+        weekend_alighting: weekendAlight.toFixed(2),
         weekday_total: data.total_weekday_passengers || 0,
         weekend_total: data.total_weekend_passengers || 0,
         color: getDistrictColor(district)
@@ -705,7 +719,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
     return (
       <div className="space-y-6">
         {/* 구 선택 */}
-        <Card>
+        <Card className="bg-gray-50">
           <CardHeader>
             <CardTitle className="flex items-center justify-between text-2xl font-bold">
               <div className="flex items-center space-x-3">
@@ -764,7 +778,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
               const availableDistricts = utils.seoulDistricts.filter(d => !selectedDistricts.includes(d));
               
               return selectedDistricts.length < maxDistricts && availableDistricts.length > 0 && (
-                <Select onValueChange={addDistrict}>
+                <Select value="" onValueChange={addDistrict}>
                   <SelectTrigger className="w-64 text-lg py-3">
                     <SelectValue placeholder="구 추가하기" />
                   </SelectTrigger>
@@ -813,7 +827,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
             {/* 승차/하차 분리 차트 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* 승차 차트 */}
-              <Card>
+              <Card className="bg-gray-50">
                 <CardHeader>
                   <CardTitle className="text-2xl font-bold">{patternType === 'weekday' ? '주중' : '주말'} 구별 승차 패턴</CardTitle>
                   <CardDescription className="text-lg">
@@ -840,8 +854,8 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
                             type="monotone"
                             dataKey={district}
                             stroke={getDistrictColor(district)}
-                            strokeWidth={2}
-                            dot={{ r: 2 }}
+                            strokeWidth={getStrokeWidth(district)}
+                            dot={{ r: isHeaderSelectedDistrict(district) ? 3 : 2 }}
                           />
                         ))}
                       </LineChart>
@@ -851,7 +865,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
               </Card>
 
               {/* 하차 차트 */}
-              <Card>
+              <Card className="bg-gray-50">
                 <CardHeader>
                   <CardTitle className="text-2xl font-bold">{patternType === 'weekday' ? '주중' : '주말'} 구별 하차 패턴</CardTitle>
                   <CardDescription className="text-lg">
@@ -878,8 +892,8 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
                             type="monotone"
                             dataKey={district}
                             stroke={getDistrictColor(district)}
-                            strokeWidth={2}
-                            dot={{ r: 2 }}
+                            strokeWidth={getStrokeWidth(district)}
+                            dot={{ r: isHeaderSelectedDistrict(district) ? 3 : 2 }}
                           />
                         ))}
                       </LineChart>
@@ -892,7 +906,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
             {/* 구별 총합 비교 및 바 차트 */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* 좌측: 구별 총합 비교 */}
-              <Card>
+              <Card className="bg-gray-50">
                 <CardHeader>
                   <CardTitle className="text-2xl font-bold">구별 일 평균 승하차 수 ({patternType === 'weekday' ? '주중' : '주말'})</CardTitle>
                 </CardHeader>
@@ -913,11 +927,17 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
                             <div className="text-lg space-y-3 mt-3">
                               <div className="flex justify-between">
                                 <span className="text-lg">승차:</span>
-                                <span className={`font-bold text-lg ${patternType === 'weekday' ? 'text-blue-800' : ''}`}>{item.weekday_boarding.toLocaleString()}</span>
+                                <span className={`font-bold text-lg ${patternType === 'weekday' ? 'text-blue-800' : ''}`}>
+                                  {item.weekday_boarding}
+                                  <span className="text-sm text-gray-600 ml-1">명</span>
+                                </span>
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-lg">하차:</span>
-                                <span className={`font-bold text-lg ${patternType === 'weekday' ? 'text-blue-800' : ''}`}>{item.weekday_alighting.toLocaleString()}</span>
+                                <span className={`font-bold text-lg ${patternType === 'weekday' ? 'text-blue-800' : ''}`}>
+                                  {item.weekday_alighting}
+                                  <span className="text-sm text-gray-600 ml-1">명</span>
+                                </span>
                               </div>
                             </div>
                           </div>
@@ -926,11 +946,17 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
                             <div className="text-lg space-y-3 mt-3">
                               <div className="flex justify-between">
                                 <span className="text-lg">승차:</span>
-                                <span className={`font-bold text-lg ${patternType === 'weekend' ? 'text-green-800' : ''}`}>{item.weekend_boarding.toLocaleString()}</span>
+                                <span className={`font-bold text-lg ${patternType === 'weekend' ? 'text-green-800' : ''}`}>
+                                  {item.weekend_boarding}
+                                  <span className="text-sm text-gray-600 ml-1">명</span>
+                                </span>
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-lg">하차:</span>
-                                <span className={`font-bold text-lg ${patternType === 'weekend' ? 'text-green-800' : ''}`}>{item.weekend_alighting.toLocaleString()}</span>
+                                <span className={`font-bold text-lg ${patternType === 'weekend' ? 'text-green-800' : ''}`}>
+                                  {item.weekend_alighting}
+                                  <span className="text-sm text-gray-600 ml-1">명</span>
+                                </span>
                               </div>
                             </div>
                           </div>
@@ -944,7 +970,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
               {/* 우측: 바 차트 2개 */}
               <div className="lg:col-span-2 space-y-6">
                 {/* 주중 승하차 바 차트 */}
-                <Card>
+                <Card className="bg-gray-50">
                   <CardHeader>
                     <CardTitle className="text-lg">구별 주중 승하차 비교</CardTitle>
                   </CardHeader>
@@ -980,7 +1006,7 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
                 </Card>
 
                 {/* 주말 승하차 바 차트 */}
-                <Card>
+                <Card className="bg-gray-50">
                   <CardHeader>
                     <CardTitle className="text-lg">구별 주말 승하차 비교</CardTitle>
                   </CardHeader>

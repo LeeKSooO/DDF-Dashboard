@@ -29,8 +29,11 @@ import { SparkBar } from "@/components/charts/SparkBar";
 
 // InteractiveMap을 동적으로 로드하여 SSR 문제 방지
 const InteractiveMap = dynamic(
-  () => import("@/components/dashboard/interactive-map.client").then((mod) => mod.InteractiveMapClient),
-  { 
+  () =>
+    import("@/components/dashboard/interactive-map.client").then(
+      (mod) => mod.InteractiveMapClient
+    ),
+  {
     ssr: false,
     loading: () => (
       <div className="w-full h-[1000px] bg-gradient-to-br from-blue-50 to-green-50 rounded-lg flex items-center justify-center">
@@ -39,7 +42,7 @@ const InteractiveMap = dynamic(
           <p className="text-gray-600">지도 로딩 중...</p>
         </div>
       </div>
-    )
+    ),
   }
 );
 
@@ -84,28 +87,38 @@ export function DashboardOverviewContent({
   const [districtData, setDistrictData] = useState<DistrictData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [highlightedStationId, setHighlightedStationId] = useState<string | null>(null);
-  const [openPopupStationId, setOpenPopupStationId] = useState<string | null>(null);
+  const [highlightedStationId, setHighlightedStationId] = useState<
+    string | null
+  >(null);
+  const [openPopupStationId, setOpenPopupStationId] = useState<string | null>(
+    null
+  );
 
   // 부모-자식 상태 루프 차단을 위한 useCallback + identity guards
   const handleStationClick = useCallback((id: string) => {
-    setHighlightedStationId(prev => (prev === id ? prev : id));
+    setHighlightedStationId((prev) => (prev === id ? prev : id));
   }, []);
 
   const handlePopupToggle = useCallback((id: string | null) => {
-    setOpenPopupStationId(prev => (prev === id ? prev : id));
+    setOpenPopupStationId((prev) => (prev === id ? prev : id));
   }, []);
 
   // 카드 클릭 핸들러
-  const handleCardClick = useCallback((stationId: string) => {
-    handleStationClick(stationId);
-    // 팝업 토글
-    setOpenPopupStationId(prev => prev === stationId ? null : stationId);
-  }, [handleStationClick]);
+  const handleCardClick = useCallback(
+    (stationId: string) => {
+      handleStationClick(stationId);
+      // 팝업 토글
+      setOpenPopupStationId((prev) => (prev === stationId ? null : stationId));
+    },
+    [handleStationClick]
+  );
 
-  const handleMouseEnter = useCallback((stationId: string) => {
-    handleStationClick(stationId);
-  }, [handleStationClick]);
+  const handleMouseEnter = useCallback(
+    (stationId: string) => {
+      handleStationClick(stationId);
+    },
+    [handleStationClick]
+  );
 
   const handleMouseLeave = useCallback(() => {
     setHighlightedStationId(null);
@@ -165,30 +178,36 @@ export function DashboardOverviewContent({
   // TOP 5 정류장 (선택된 지역에 따라 달라짐) - useMemo로 참조 안정화
   const topStations = useMemo(() => {
     if (!heatmapData) return [];
-    
+
     if (selectedRegion === "전체") {
       const allStations = heatmapData.districts
         .flatMap((d) => d.stations || [])
         .sort((a, b) => b.total_traffic - a.total_traffic)
         .slice(0, 5);
-      
-      console.log("🔍 Seoul TOP 5 stations:", allStations.map(s => ({
-        name: s.station_name,
-        id: s.station_id,
-        coordinate: s.coordinate,
-        traffic: s.total_traffic
-      })));
-      
+
+      console.log(
+        "🔍 Seoul TOP 5 stations:",
+        allStations.map((s) => ({
+          name: s.station_name,
+          id: s.station_id,
+          coordinate: s.coordinate,
+          traffic: s.total_traffic,
+        }))
+      );
+
       // 전체 지역에서도 좌표 형식 변환 (만약 lat/lng 형식이라면)
-      return allStations.map(station => {
-        if (station.coordinate && typeof (station.coordinate as any).lat === 'number') {
+      return allStations.map((station) => {
+        if (
+          station.coordinate &&
+          typeof (station.coordinate as any).lat === "number"
+        ) {
           // lat/lng 형식인 경우 latitude/longitude로 변환
           return {
             ...station,
             coordinate: {
               latitude: (station.coordinate as any).lat,
-              longitude: (station.coordinate as any).lng
-            }
+              longitude: (station.coordinate as any).lng,
+            },
           };
         }
         // 이미 latitude/longitude 형식이거나 좌표가 없는 경우 그대로 반환
@@ -197,22 +216,26 @@ export function DashboardOverviewContent({
     } else {
       // 구별 데이터가 있으면 실제 좌표가 포함된 정류장 데이터 사용
       if (districtData && districtData.stations) {
-        console.log("🗺️ Converting district station coordinates from lat/lng to latitude/longitude");
+        console.log(
+          "🗺️ Converting district station coordinates from lat/lng to latitude/longitude"
+        );
         return districtData.stations
-          .map(station => ({
+          .map((station) => ({
             ...station,
             coordinate: {
               latitude: (station.coordinate as any).lat,
-              longitude: (station.coordinate as any).lng
-            }
+              longitude: (station.coordinate as any).lng,
+            },
           }))
           .sort((a, b) => b.total_traffic - a.total_traffic)
           .slice(0, 5);
       }
       // fallback to original data
-      return filteredDistricts[0]?.stations
-        ?.sort((a, b) => b.total_traffic - a.total_traffic)
-        .slice(0, 5) || [];
+      return (
+        filteredDistricts[0]?.stations
+          ?.sort((a, b) => b.total_traffic - a.total_traffic)
+          .slice(0, 5) || []
+      );
     }
   }, [heatmapData, districtData, selectedRegion, filteredDistricts]);
 
@@ -224,13 +247,11 @@ export function DashboardOverviewContent({
     return new Map<string, string>();
   }, [topStations]);
 
-
   // 구 평균 교통량 계산
   const districtAverageTraffic = heatmapData?.districts.length
     ? heatmapData.districts.reduce((sum, d) => sum + d.total_traffic, 0) /
       heatmapData.districts.length
     : 0;
-
 
   // 선택된 지역에 따른 동적 KPI 계산
   const getCurrentData = () => {
@@ -273,338 +294,452 @@ export function DashboardOverviewContent({
   const currentData = getCurrentData();
 
   // KPI 계산에 필요한 기본 값들을 메모이제이션
-  const basicMetrics = useMemo(() => ({
-    totalTraffic: currentData.totalTraffic,
-    stationCount: currentData.stationCount,
-    totalRide: currentData.totalRide,
-    totalAlight: currentData.totalAlight,
-    regionName: currentData.regionName,
-    maxDistrictTraffic: heatmapData?.statistics.max_district_traffic || 0,
-    maxDistrictName: heatmapData?.districts.find(
-      (d) => d.total_traffic === heatmapData?.statistics.max_district_traffic
-    )?.district_name || "최고 수치",
-    districtAvg: districtAverageTraffic
-  }), [currentData.totalTraffic, currentData.stationCount, currentData.totalRide, currentData.totalAlight, currentData.regionName, heatmapData?.statistics.max_district_traffic, districtAverageTraffic, heatmapData?.districts]);
+  const basicMetrics = useMemo(
+    () => ({
+      totalTraffic: currentData.totalTraffic,
+      stationCount: currentData.stationCount,
+      totalRide: currentData.totalRide,
+      totalAlight: currentData.totalAlight,
+      regionName: currentData.regionName,
+      maxDistrictTraffic: heatmapData?.statistics.max_district_traffic || 0,
+      maxDistrictName:
+        heatmapData?.districts.find(
+          (d) =>
+            d.total_traffic === heatmapData?.statistics.max_district_traffic
+        )?.district_name || "최고 수치",
+      districtAvg: districtAverageTraffic,
+    }),
+    [
+      currentData.totalTraffic,
+      currentData.stationCount,
+      currentData.totalRide,
+      currentData.totalAlight,
+      currentData.regionName,
+      heatmapData?.statistics.max_district_traffic,
+      districtAverageTraffic,
+      heatmapData?.districts,
+    ]
+  );
 
   // KPI 계산 (동적으로 변경) - useMemo로 메모이제이션하여 무한 렌더링 방지
-  const kpiData = useMemo(() => [
-    // 1. 총 교통량
-    {
-      key: "totalTraffic",
-      title:
-        selectedRegion === "전체" ? "총 교통량" : `${selectedRegion} 교통량`,
-      value: Math.round(basicMetrics.totalTraffic / 1000000).toFixed(1) + "M",
-      subtitle: basicMetrics.regionName,
-      income:
-        Math.round(basicMetrics.totalTraffic / 1000).toLocaleString() + "K",
-      color: "#3B82F6", // 파란색 (총 교통량)
-      icon: <Image src="/icon/총교통량.png" alt="총 교통량" width={20} height={20} />,
-    },
-    // 2. 평균 구별 교통량
-    {
-      title:
-        selectedRegion === "전체"
-          ? "평균 구별 교통량"
-          : `${selectedRegion} 평균 정류장 교통량`,
-      value:
-        selectedRegion === "전체"
-          ? Math.round(districtAverageTraffic / 1000).toLocaleString() + "K"
-          : Math.round(
-              currentData.totalTraffic /
-                Math.max(currentData.stationCount, 1) /
-                1000
-            ).toLocaleString() + "K",
-      subtitle: selectedRegion === "전체" ? "25개 구 평균" : "정류장당 평균",
-      income:
-        selectedRegion === "전체"
-          ? Math.round(districtAverageTraffic).toLocaleString() + "명"
-          : Math.round(
-              currentData.totalTraffic /
-                Math.max(currentData.stationCount, 1)
-            ).toLocaleString() + "명",
-      color: "#10B981", // 초록색 (평균)
-      icon: <Image src="/icon/평균구별교통량.png" alt="평균 구별 교통량" width={20} height={20} />,
-    },
-    // 3. 최대 교통량 구
-    {
-      title:
-        selectedRegion === "전체"
-          ? "최대 교통량 구"
-          : `${selectedRegion} 최대 정류장`,
-      value:
-        selectedRegion === "전체"
-          ? Math.round(
-              (heatmapData?.statistics.max_district_traffic || 0) / 1000
-            ).toLocaleString() + "K"
-          : Math.round(
-              (filteredDistricts[0]?.stations?.reduce(
-                (max, s) => (s.total_traffic > max ? s.total_traffic : max),
+  const kpiData = useMemo(
+    () => [
+      // 1. 총 교통량
+      {
+        key: "totalTraffic",
+        title:
+          selectedRegion === "전체" ? "총 교통량" : `${selectedRegion} 교통량`,
+        value: Math.round(basicMetrics.totalTraffic / 1000000).toFixed(1) + "M",
+        subtitle: basicMetrics.regionName,
+        income:
+          Math.round(basicMetrics.totalTraffic / 1000).toLocaleString() + "K",
+        color: "#3B82F6", // 파란색 (총 교통량)
+        icon: (
+          <Image
+            src="/icon/총교통량.png"
+            alt="총 교통량"
+            width={20}
+            height={20}
+          />
+        ),
+      },
+      // 2. 평균 구별 교통량
+      {
+        title:
+          selectedRegion === "전체"
+            ? "평균 구별 교통량"
+            : `${selectedRegion} 평균 정류장 교통량`,
+        value:
+          selectedRegion === "전체"
+            ? Math.round(districtAverageTraffic / 1000).toLocaleString() + "K"
+            : Math.round(
+                currentData.totalTraffic /
+                  Math.max(currentData.stationCount, 1) /
+                  1000
+              ).toLocaleString() + "K",
+        subtitle: selectedRegion === "전체" ? "25개 구 평균" : "정류장당 평균",
+        income:
+          selectedRegion === "전체"
+            ? Math.round(districtAverageTraffic).toLocaleString() + "명"
+            : Math.round(
+                currentData.totalTraffic / Math.max(currentData.stationCount, 1)
+              ).toLocaleString() + "명",
+        color: "#10B981", // 초록색 (평균)
+        icon: (
+          <Image
+            src="/icon/평균구별교통량.png"
+            alt="평균 구별 교통량"
+            width={20}
+            height={20}
+          />
+        ),
+      },
+      // 3. 최대 교통량 구
+      {
+        title:
+          selectedRegion === "전체"
+            ? "최대 교통량 구"
+            : `${selectedRegion} 최대 정류장`,
+        value:
+          selectedRegion === "전체"
+            ? Math.round(
+                (heatmapData?.statistics.max_district_traffic || 0) / 1000
+              ).toLocaleString() + "K"
+            : Math.round(
+                (filteredDistricts[0]?.stations?.reduce(
+                  (max, s) => (s.total_traffic > max ? s.total_traffic : max),
+                  0
+                ) || 0) / 1000
+              ).toLocaleString() + "K",
+        subtitle:
+          selectedRegion === "전체"
+            ? heatmapData?.districts.find(
+                (d) =>
+                  d.total_traffic ===
+                  heatmapData?.statistics.max_district_traffic
+              )?.district_name || "최고 수치"
+            : "정류장 최고 수치",
+        income:
+          selectedRegion === "전체"
+            ? (
+                heatmapData?.statistics.max_district_traffic || 0
+              ).toLocaleString() + "명"
+            : (
+                filteredDistricts[0]?.stations?.reduce(
+                  (max, s) => (s.total_traffic > max ? s.total_traffic : max),
+                  0
+                ) || 0
+              ).toLocaleString() + "명",
+        color: "#F59E0B", // 주황색 (최대)
+        icon: (
+          <Image
+            src="/icon/최대교통량.png"
+            alt="최대 교통량"
+            width={20}
+            height={20}
+          />
+        ),
+      },
+      // 4. 최소 교통량 구 (기존 8번)
+      {
+        title:
+          selectedRegion === "전체"
+            ? "최소 교통량 구"
+            : `${selectedRegion} 최소 정류장`,
+        value:
+          selectedRegion === "전체"
+            ? Math.round(
+                (heatmapData?.statistics.min_district_traffic || 0) / 1000
+              ).toLocaleString() + "K"
+            : Math.round(
+                (filteredDistricts[0]?.stations?.reduce(
+                  (min, s) => (s.total_traffic < min ? s.total_traffic : min),
+                  Number.MAX_SAFE_INTEGER
+                ) || 0) / 1000
+              ).toLocaleString() + "K",
+        subtitle:
+          selectedRegion === "전체"
+            ? heatmapData?.districts.find(
+                (d) =>
+                  d.total_traffic ===
+                  heatmapData?.statistics.min_district_traffic
+              )?.district_name || "최저 수치"
+            : "정류장 최저 수치",
+        income:
+          selectedRegion === "전체"
+            ? (
+                heatmapData?.statistics.min_district_traffic || 0
+              ).toLocaleString() + "명"
+            : (
+                filteredDistricts[0]?.stations?.reduce(
+                  (min, s) => (s.total_traffic < min ? s.total_traffic : min),
+                  Number.MAX_SAFE_INTEGER
+                ) || 0
+              ).toLocaleString() + "명",
+        color: "#FB7185",
+        icon: (
+          <Image
+            src="/icon/최소교통량.png"
+            alt="최소 교통량"
+            width={20}
+            height={20}
+            priority
+            unoptimized
+          />
+        ),
+      },
+      // 5. 총 정류장 수 (기존 4번)
+      {
+        title:
+          selectedRegion === "전체"
+            ? "총 정류장 수"
+            : `${selectedRegion} 정류장 수`,
+        value:
+          selectedRegion === "전체"
+            ? Math.round(currentData.totalStations / 1000).toFixed(1) + "K"
+            : currentData.stationCount.toLocaleString(),
+        subtitle: selectedRegion === "전체" ? "버스정류장" : "버스정류장",
+        income: currentData.stationCount.toLocaleString() + "개",
+        color: "#8B5CF6", // 보라색 (정류장 수)
+        icon: (
+          <Image
+            src="/icon/총정류장.png"
+            alt="총 정류장 수"
+            width={20}
+            height={20}
+          />
+        ),
+      },
+      // 6. 승하차 비율 (기존 7번)
+      {
+        title: "승하차 비율",
+        value:
+          currentData.totalAlight > 0
+            ? (currentData.totalRide / currentData.totalAlight).toFixed(2)
+            : "0.00",
+        subtitle: "승차/하차",
+        income: `승차 ${Math.round(
+          currentData.totalRide / 1000
+        ).toLocaleString()}K / 하차 ${Math.round(
+          currentData.totalAlight / 1000
+        ).toLocaleString()}K`,
+        color: "#EC4899", // 핑크색 (승하차 비율)
+        icon: (
+          <Image
+            src="/icon/승하차비율.png"
+            alt="승하차 비율"
+            width={20}
+            height={20}
+          />
+        ),
+      },
+      // 7. 교통 집중도 (기존 5번)
+      {
+        title: "교통 집중도",
+        value:
+          (() => {
+            if (selectedRegion === "전체") {
+              // 구별 상위 5개구의 교통량 점유율
+              const districts = heatmapData?.districts || [];
+              if (districts.length === 0) return "0.0";
+              const sortedDistricts = districts.sort(
+                (a, b) => b.total_traffic - a.total_traffic
+              );
+              const top5Traffic = sortedDistricts
+                .slice(0, 5)
+                .reduce((sum, d) => sum + d.total_traffic, 0);
+              const totalTraffic = districts.reduce(
+                (sum, d) => sum + d.total_traffic,
                 0
-              ) || 0) / 1000
-            ).toLocaleString() + "K",
-      subtitle:
-        selectedRegion === "전체"
-          ? heatmapData?.districts.find(
-              (d) =>
-                d.total_traffic === heatmapData?.statistics.max_district_traffic
-            )?.district_name || "최고 수치"
-          : "정류장 최고 수치",
-      income:
-        selectedRegion === "전체"
-          ? (heatmapData?.statistics.max_district_traffic || 0).toLocaleString() + "명"
-          : (filteredDistricts[0]?.stations?.reduce(
-              (max, s) => (s.total_traffic > max ? s.total_traffic : max),
-              0
-            ) || 0).toLocaleString() + "명",
-      color: "#F59E0B", // 주황색 (최대)
-      icon: <Image src="/icon/최대교통량.png" alt="최대 교통량" width={20} height={20} />,
-    },
-    // 4. 최소 교통량 구 (기존 8번)
-    {
-      title:
-        selectedRegion === "전체"
-          ? "최소 교통량 구"
-          : `${selectedRegion} 최소 정류장`,
-      value:
-        selectedRegion === "전체"
-          ? Math.round(
-              (heatmapData?.statistics.min_district_traffic || 0) / 1000
-            ).toLocaleString() + "K"
-          : Math.round(
-              (filteredDistricts[0]?.stations?.reduce(
-                (min, s) => (s.total_traffic < min ? s.total_traffic : min),
-                Number.MAX_SAFE_INTEGER
-              ) || 0) / 1000
-            ).toLocaleString() + "K",
-      subtitle:
-        selectedRegion === "전체"
-          ? heatmapData?.districts.find(
-              (d) =>
-                d.total_traffic === heatmapData?.statistics.min_district_traffic
-            )?.district_name || "최저 수치"
-          : "정류장 최저 수치",
-      income:
-        selectedRegion === "전체"
-          ? (heatmapData?.statistics.min_district_traffic || 0).toLocaleString() + "명"
-          : (filteredDistricts[0]?.stations?.reduce(
-              (min, s) => (s.total_traffic < min ? s.total_traffic : min),
-              Number.MAX_SAFE_INTEGER
-            ) || 0).toLocaleString() + "명",
-      color: "#FB7185",
-      icon: <Image src="/icon/최소교통량.png" alt="최소 교통량" width={20} height={20} priority unoptimized />,
-    },
-    // 5. 총 정류장 수 (기존 4번)
-    {
-      title:
-        selectedRegion === "전체"
-          ? "총 정류장 수"
-          : `${selectedRegion} 정류장 수`,
-      value:
-        selectedRegion === "전체"
-          ? Math.round(currentData.totalStations / 1000).toFixed(1) + "K"
-          : currentData.stationCount.toLocaleString(),
-      subtitle: selectedRegion === "전체" ? "버스정류장" : "버스정류장",
-      income: currentData.stationCount.toLocaleString() + "개",
-      color: "#8B5CF6", // 보라색 (정류장 수)
-      icon: <Image src="/icon/총정류장.png" alt="총 정류장 수" width={20} height={20} />,
-    },
-    // 6. 승하차 비율 (기존 7번)
-    {
-      title: "승하차 비율",
-      value:
-        currentData.totalAlight > 0
-          ? (currentData.totalRide / currentData.totalAlight).toFixed(2)
-          : "0.00",
-      subtitle: "승차/하차",
-      income: `승차 ${Math.round(
-        currentData.totalRide / 1000
-      ).toLocaleString()}K / 하차 ${Math.round(
-        currentData.totalAlight / 1000
-      ).toLocaleString()}K`,
-      color: "#EC4899", // 핑크색 (승하차 비율)
-      icon: <Image src="/icon/승하차비율.png" alt="승하차 비율" width={20} height={20} />,
-    },
-    // 7. 교통 집중도 (기존 5번)
-    {
-      title: "교통 집중도",
-      value:
-        (() => {
+              );
+              return ((top5Traffic / totalTraffic) * 100).toFixed(1);
+            } else {
+              // 정류장별 상위 5개 정류장의 점유율
+              const stations = filteredDistricts[0]?.stations || [];
+              if (stations.length === 0) return "0.0";
+              const sortedStations = stations.sort(
+                (a, b) => b.total_traffic - a.total_traffic
+              );
+              const top5Traffic = sortedStations
+                .slice(0, Math.min(5, stations.length))
+                .reduce((sum, s) => sum + s.total_traffic, 0);
+              const totalTraffic = stations.reduce(
+                (sum, s) => sum + s.total_traffic,
+                0
+              );
+              return ((top5Traffic / totalTraffic) * 100).toFixed(1);
+            }
+          })() + "%",
+        subtitle:
+          selectedRegion === "전체"
+            ? "상위 5개구 점유율"
+            : "상위 5개 정류장 점유율",
+        income: (() => {
           if (selectedRegion === "전체") {
-            // 구별 상위 5개구의 교통량 점유율
             const districts = heatmapData?.districts || [];
-            if (districts.length === 0) return "0.0";
+            if (districts.length === 0) return "데이터 없음";
             const sortedDistricts = districts.sort(
               (a, b) => b.total_traffic - a.total_traffic
             );
             const top5Traffic = sortedDistricts
               .slice(0, 5)
               .reduce((sum, d) => sum + d.total_traffic, 0);
-            const totalTraffic = districts.reduce(
-              (sum, d) => sum + d.total_traffic,
-              0
-            );
-            return ((top5Traffic / totalTraffic) * 100).toFixed(1);
+            return `상위 5개구: ${Math.round(top5Traffic / 1000000).toFixed(
+              1
+            )}M명`;
           } else {
-            // 정류장별 상위 5개 정류장의 점유율
             const stations = filteredDistricts[0]?.stations || [];
-            if (stations.length === 0) return "0.0";
+            if (stations.length === 0) return "데이터 없음";
             const sortedStations = stations.sort(
               (a, b) => b.total_traffic - a.total_traffic
             );
             const top5Traffic = sortedStations
               .slice(0, Math.min(5, stations.length))
               .reduce((sum, s) => sum + s.total_traffic, 0);
-            const totalTraffic = stations.reduce(
-              (sum, s) => sum + s.total_traffic,
-              0
-            );
-            return ((top5Traffic / totalTraffic) * 100).toFixed(1);
+            return `상위 5개: ${Math.round(
+              top5Traffic / 1000
+            ).toLocaleString()}K명`;
           }
-        })() + "%",
-      subtitle:
-        selectedRegion === "전체"
-          ? "상위 5개구 점유율"
-          : "상위 5개 정류장 점유율",
-      income: (() => {
-        if (selectedRegion === "전체") {
-          const districts = heatmapData?.districts || [];
-          if (districts.length === 0) return "데이터 없음";
-          const sortedDistricts = districts.sort(
-            (a, b) => b.total_traffic - a.total_traffic
-          );
-          const top5Traffic = sortedDistricts
-            .slice(0, 5)
-            .reduce((sum, d) => sum + d.total_traffic, 0);
-          return `상위 5개구: ${Math.round(top5Traffic / 1000000).toFixed(
-            1
-          )}M명`;
-        } else {
-          const stations = filteredDistricts[0]?.stations || [];
-          if (stations.length === 0) return "데이터 없음";
-          const sortedStations = stations.sort(
-            (a, b) => b.total_traffic - a.total_traffic
-          );
-          const top5Traffic = sortedStations
-            .slice(0, Math.min(5, stations.length))
-            .reduce((sum, s) => sum + s.total_traffic, 0);
-          return `상위 5개: ${Math.round(
-            top5Traffic / 1000
-          ).toLocaleString()}K명`;
-        }
-      })(),
-      color: "#06B6D4", // 청록색 (집중도)
-      icon: <Image src="/icon/교통집중도.png" alt="교통 집중도" width={20} height={20} />,
-    },
-    // 8. 교통 불평등 지수 (기존 6번)
-    {
-      title: "교통 불평등 지수",
-      value:
-        (() => {
-          if (selectedRegion === "전체") {
-            // 구별 최대/최소 교통량 비율
-            const districts = heatmapData?.districts || [];
-            if (districts.length === 0) return "1.0";
-            const traffics = districts
-              .map((d) => d.total_traffic)
-              .sort((a, b) => b - a);
-            const ratio = traffics[0] / traffics[traffics.length - 1];
-            return ratio.toFixed(1);
-          } else {
-            // 정류장별 최대/최소 교통량 비율
-            const stations = filteredDistricts[0]?.stations || [];
-            if (stations.length === 0) return "1.0";
-            const traffics = stations
-              .map((s) => s.total_traffic)
-              .sort((a, b) => b - a);
-            const ratio = traffics[0] / traffics[traffics.length - 1];
-            return ratio.toFixed(1);
-          }
-        })() + ":1",
-      subtitle:
-        selectedRegion === "전체" ? "구별 격차 비율" : "정류장별 격차 비율",
-      income: (() => {
-        const value = parseFloat(
+        })(),
+        color: "#06B6D4", // 청록색 (집중도)
+        icon: (
+          <Image
+            src="/icon/교통집중도.png"
+            alt="교통 집중도"
+            width={20}
+            height={20}
+          />
+        ),
+      },
+      // 8. 교통 불평등 지수 (기존 6번)
+      {
+        title: "교통 불평등 지수",
+        value:
           (() => {
             if (selectedRegion === "전체") {
+              // 구별 최대/최소 교통량 비율
               const districts = heatmapData?.districts || [];
               if (districts.length === 0) return "1.0";
               const traffics = districts
                 .map((d) => d.total_traffic)
                 .sort((a, b) => b - a);
-              return (traffics[0] / traffics[traffics.length - 1]).toFixed(1);
+              const ratio = traffics[0] / traffics[traffics.length - 1];
+              return ratio.toFixed(1);
             } else {
+              // 정류장별 최대/최소 교통량 비율
               const stations = filteredDistricts[0]?.stations || [];
               if (stations.length === 0) return "1.0";
               const traffics = stations
                 .map((s) => s.total_traffic)
                 .sort((a, b) => b - a);
-              return (traffics[0] / traffics[traffics.length - 1]).toFixed(1);
+              const ratio = traffics[0] / traffics[traffics.length - 1];
+              return ratio.toFixed(1);
             }
-          })()
-        );
+          })() + ":1",
+        subtitle:
+          selectedRegion === "전체" ? "구별 격차 비율" : "정류장별 격차 비율",
+        income: (() => {
+          const value = parseFloat(
+            (() => {
+              if (selectedRegion === "전체") {
+                const districts = heatmapData?.districts || [];
+                if (districts.length === 0) return "1.0";
+                const traffics = districts
+                  .map((d) => d.total_traffic)
+                  .sort((a, b) => b - a);
+                return (traffics[0] / traffics[traffics.length - 1]).toFixed(1);
+              } else {
+                const stations = filteredDistricts[0]?.stations || [];
+                if (stations.length === 0) return "1.0";
+                const traffics = stations
+                  .map((s) => s.total_traffic)
+                  .sort((a, b) => b - a);
+                return (traffics[0] / traffics[traffics.length - 1]).toFixed(1);
+              }
+            })()
+          );
 
-        // DRT 필요성 판단 (PDF 기준)
-        return value > 10
-          ? "DRT 필요성 매우 높음"
-          : value > 5
-          ? "DRT 필요성 높음"
-          : value > 3
-          ? "DRT 필요성 보통"
-          : "DRT 필요성 낮음";
-      })(),
-      color: "#E11D48", // 빨간색 (불평등)
-      icon: <Image src="/icon/불평등.png" alt="교통 불평등 지수" width={20} height={20} />,
-    },
-  ], [selectedRegion, basicMetrics, filteredDistricts]);
+          // DRT 필요성 판단 (PDF 기준)
+          return value > 10
+            ? "DRT 필요성 매우 높음"
+            : value > 5
+            ? "DRT 필요성 높음"
+            : value > 3
+            ? "DRT 필요성 보통"
+            : "DRT 필요성 낮음";
+        })(),
+        color: "#E11D48", // 빨간색 (불평등)
+        icon: (
+          <Image
+            src="/icon/불평등.png"
+            alt="교통 불평등 지수"
+            width={20}
+            height={20}
+          />
+        ),
+      },
+    ],
+    [selectedRegion, basicMetrics, filteredDistricts]
+  );
 
   // 탭 네비게이션 카드들 (기존 카드 뒤에 추가) - useMemo로 메모이제이션
-  const navigationCards = useMemo(() => [
-    {
-      key: "traffic",
-      title: "교통 패턴 분석",
-      value: "24시간",
-      subtitle: "주중/주말 패턴",
-      income: `피크: 8시, 18시`,
-      color: "#8B5CF6",
-      tabId: "traffic",
-      description: "시간대별 교통 흐름 분석",
-      icon: <Image src="/navigation_icon/교통패턴분석.png" alt="교통 패턴 분석" width={20} height={20} />,
-    },
-    {
-      key: "heatmap",
-      title: "교통량 분석",
-      value: selectedRegion === "전체" ? "25개구" : "정류장별",
-      subtitle: "교통량 분포 분석",
-      income: "이상 패턴 6가지 분석",
-      color: "#F97316",
-      tabId: "heatmap",
-      description: "지역별 교통량 히트맵",
-      icon: <Image src="/navigation_icon/교통량분석.png" alt="교통량 분석" width={20} height={20} />,
-    },
-    {
-      key: "traffic-analysis",
-      title: "이상 패턴 분석",
-      value: "6가지",
-      subtitle: "특수 패턴 랭킹",
-      income: "야간/주말/지역별 등",
-      color: "#DC2626",
-      tabId: "traffic-analysis",
-      description: "교통 패턴 & 최적화",
-      icon: <Image src="/navigation_icon/이상패턴분석.png" alt="이상 패턴 분석" width={20} height={20} />,
-    },
-    {
-      key: "drt-analysis",
-      title: "DRT 적합성",
-      value: selectedRegion === "전체" ? "3모델" : "스코어",
-      subtitle: "수요응답형 교통",
-      income: "교통취약지/출퇴근/관광",
-      color: "#059669",
-      tabId: "drt-analysis",
-      description: "DRT 적합도 분석",
-      icon: <Image src="/navigation_icon/DRT분석.png" alt="DRT 분석" width={20} height={20} />,
-    },
-  ], [selectedRegion]);
-
+  const navigationCards = useMemo(
+    () => [
+      {
+        key: "traffic",
+        title: "교통 패턴 분석",
+        value: "24시간",
+        subtitle: "주중/주말 패턴",
+        income: `피크: 8시, 18시`,
+        color: "#8B5CF6",
+        tabId: "traffic",
+        description: "시간대별 교통 흐름 분석",
+        icon: (
+          <Image
+            src="/navigation_icon/교통패턴분석.png"
+            alt="교통 패턴 분석"
+            width={20}
+            height={20}
+          />
+        ),
+      },
+      {
+        key: "heatmap",
+        title: "교통량 분석",
+        value: selectedRegion === "전체" ? "25개구" : "정류장별",
+        subtitle: "교통량 분포 분석",
+        income: "이상 패턴 6가지 분석",
+        color: "#F97316",
+        tabId: "heatmap",
+        description: "지역별 교통량 히트맵",
+        icon: (
+          <Image
+            src="/navigation_icon/교통량분석.png"
+            alt="교통량 분석"
+            width={20}
+            height={20}
+          />
+        ),
+      },
+      {
+        key: "traffic-analysis",
+        title: "이상 패턴 분석",
+        value: "6가지",
+        subtitle: "특수 패턴 랭킹",
+        income: "야간/주말/지역별 등",
+        color: "#DC2626",
+        tabId: "traffic-analysis",
+        description: "교통 패턴 & 최적화",
+        icon: (
+          <Image
+            src="/navigation_icon/이상패턴분석.png"
+            alt="이상 패턴 분석"
+            width={20}
+            height={20}
+          />
+        ),
+      },
+      {
+        key: "drt-analysis",
+        title: "DRT 분석",
+        value: selectedRegion === "전체" ? "3모델" : "스코어",
+        subtitle: "수요응답형 교통",
+        income: "교통취약지/출퇴근/관광",
+        color: "#059669",
+        tabId: "drt-analysis",
+        description: "DRT 적합도 분석",
+        icon: (
+          <Image
+            src="/navigation_icon/DRT분석.png"
+            alt="DRT 분석"
+            width={20}
+            height={20}
+          />
+        ),
+      },
+    ],
+    [selectedRegion]
+  );
 
   // 로딩 상태
   if (loading) {
@@ -643,10 +778,13 @@ export function DashboardOverviewContent({
         {/* 기본 정보 카드들 */}
         <div>
           <div className="flex items-center gap-2 mb-4">
-            <Image src="/icon/기본현황.png" alt="기본 현황" width={24} height={24} />
-            <h2 className="text-lg font-semibold text-gray-900">
-              기본 현황
-            </h2>
+            <Image
+              src="/icon/기본현황.png"
+              alt="기본 현황"
+              width={24}
+              height={24}
+            />
+            <h2 className="text-lg font-semibold text-gray-900">기본 현황</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {kpiData.map((kpi) => (
@@ -692,7 +830,12 @@ export function DashboardOverviewContent({
         {/* 탭 네비게이션 카드들 */}
         <div>
           <div className="flex items-center gap-2 mb-4">
-            <Image src="/icon/상세분석바로가기.png" alt="상세 분석 바로가기" width={24} height={24} />
+            <Image
+              src="/icon/상세분석바로가기.png"
+              alt="상세 분석 바로가기"
+              width={24}
+              height={24}
+            />
             <h2 className="text-lg font-semibold text-gray-900">
               상세 분석 바로가기
             </h2>
@@ -772,7 +915,7 @@ export function DashboardOverviewContent({
                     ? "서울시 전체 교통량 현황"
                     : `${selectedRegion} 인기 정류장 지도`}
                 </h3>
-                <InteractiveMap 
+                <InteractiveMap
                   selectedRegion={selectedRegion}
                   topStations={topStations}
                   highlightedStationId={highlightedStationId || undefined}
@@ -786,9 +929,15 @@ export function DashboardOverviewContent({
               {/* 오른쪽: 교통량 상위 정류장 (랭킹 사이트 스타일) */}
               <div className="relative z-50">
                 <div className="flex items-center justify-center gap-3 mb-6">
-                  <Image src="/icon/인기정류장.png" alt="인기 정류장" width={28} height={28} />
+                  <Image
+                    src="/icon/인기정류장.png"
+                    alt="인기 정류장"
+                    width={28}
+                    height={28}
+                  />
                   <h3 className="text-2xl font-bold">
-                    {selectedRegion === "전체" ? "전국" : selectedRegion} 인기 정류장 TOP 5
+                    {selectedRegion === "전체" ? "전국" : selectedRegion} 인기
+                    정류장 TOP 5
                   </h3>
                 </div>
                 <div className="space-y-4">
@@ -801,78 +950,93 @@ export function DashboardOverviewContent({
                             )
                           )
                         : filteredDistricts[0];
-                    
+
                     // 랭킹별 스타일
                     const getRankStyle = (rank: number) => {
                       switch (rank) {
                         case 0: // 1위
                           return {
-                            bgColor: "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)", // 골드
+                            bgColor:
+                              "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)", // 골드
                             textColor: "#8B4513",
                             medal: "🥇",
                             scale: "1.05",
-                            shadow: "0 8px 20px rgba(255, 215, 0, 0.3)"
+                            shadow: "0 8px 20px rgba(255, 215, 0, 0.3)",
                           };
                         case 1: // 2위
                           return {
-                            bgColor: "linear-gradient(135deg, #C0C0C0 0%, #A8A8A8 100%)", // 실버
+                            bgColor:
+                              "linear-gradient(135deg, #C0C0C0 0%, #A8A8A8 100%)", // 실버
                             textColor: "#4A4A4A",
                             medal: "🥈",
                             scale: "1.02",
-                            shadow: "0 6px 15px rgba(192, 192, 192, 0.3)"
+                            shadow: "0 6px 15px rgba(192, 192, 192, 0.3)",
                           };
                         case 2: // 3위
                           return {
-                            bgColor: "linear-gradient(135deg, #CD7F32 0%, #B87333 100%)", // 브론즈
+                            bgColor:
+                              "linear-gradient(135deg, #CD7F32 0%, #B87333 100%)", // 브론즈
                             textColor: "#2C1810",
                             medal: "🥉",
                             scale: "1.01",
-                            shadow: "0 4px 12px rgba(205, 127, 50, 0.3)"
+                            shadow: "0 4px 12px rgba(205, 127, 50, 0.3)",
                           };
                         default:
                           return {
-                            bgColor: "linear-gradient(135deg, #F3F4F6 0%, #E5E7EB 100%)",
+                            bgColor:
+                              "linear-gradient(135deg, #F3F4F6 0%, #E5E7EB 100%)",
                             textColor: "#374151",
                             medal: `${rank + 1}️⃣`,
                             scale: "1.0",
-                            shadow: "0 2px 8px rgba(0, 0, 0, 0.1)"
+                            shadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
                           };
                       }
                     };
-                    
+
                     const rankStyle = getRankStyle(index);
 
                     return (
                       <div
                         key={station.station_id}
                         className={`relative transform transition-all duration-300 cursor-pointer z-50 ${
-                          highlightedStationId === station.station_id 
-                            ? 'hover:scale-105 scale-105 ring-4 ring-blue-300' 
-                            : 'hover:scale-102'
+                          highlightedStationId === station.station_id
+                            ? "hover:scale-105 scale-105 ring-4 ring-blue-300"
+                            : "hover:scale-102"
                         } ${
-                          openPopupStationId === station.station_id 
-                            ? 'ring-2 ring-orange-400' 
-                            : ''
+                          openPopupStationId === station.station_id
+                            ? "ring-2 ring-orange-400"
+                            : ""
                         }`}
                         style={{
-                          background: highlightedStationId === station.station_id 
-                            ? `linear-gradient(135deg, #FF1493, #FF1493dd)` 
-                            : openPopupStationId === station.station_id
-                            ? `linear-gradient(135deg, ${rankStyle.bgColor.replace('100%', '80%')}, #FFA500)`
-                            : rankStyle.bgColor,
-                          transform: highlightedStationId === station.station_id 
-                            ? `scale(1.05)` 
-                            : `scale(${rankStyle.scale})`,
-                          boxShadow: highlightedStationId === station.station_id 
-                            ? "0 12px 32px rgba(255, 20, 147, 0.4)" 
-                            : openPopupStationId === station.station_id
-                            ? "0 8px 24px rgba(255, 165, 0, 0.3)"
-                            : rankStyle.shadow,
+                          background:
+                            highlightedStationId === station.station_id
+                              ? `linear-gradient(135deg, #FF1493, #FF1493dd)`
+                              : openPopupStationId === station.station_id
+                              ? `linear-gradient(135deg, ${rankStyle.bgColor.replace(
+                                  "100%",
+                                  "80%"
+                                )}, #FFA500)`
+                              : rankStyle.bgColor,
+                          transform:
+                            highlightedStationId === station.station_id
+                              ? `scale(1.05)`
+                              : `scale(${rankStyle.scale})`,
+                          boxShadow:
+                            highlightedStationId === station.station_id
+                              ? "0 12px 32px rgba(255, 20, 147, 0.4)"
+                              : openPopupStationId === station.station_id
+                              ? "0 8px 24px rgba(255, 165, 0, 0.3)"
+                              : rankStyle.shadow,
                           borderRadius: "16px",
-                          border: index < 3 ? "3px solid rgba(255, 255, 255, 0.3)" : "2px solid rgba(0, 0, 0, 0.1)"
+                          border:
+                            index < 3
+                              ? "3px solid rgba(255, 255, 255, 0.3)"
+                              : "2px solid rgba(0, 0, 0, 0.1)",
                         }}
                         onClick={() => handleCardClick(station.station_id)}
-                        onMouseEnter={() => handleMouseEnter(station.station_id)}
+                        onMouseEnter={() =>
+                          handleMouseEnter(station.station_id)
+                        }
                         onMouseLeave={handleMouseLeave}
                       >
                         <div className="p-5">
@@ -884,83 +1048,93 @@ export function DashboardOverviewContent({
                                 <div className="text-4xl mb-1">
                                   {rankStyle.medal}
                                 </div>
-                                <div 
+                                <div
                                   className="text-3xl font-black tracking-wider"
                                   style={{ color: rankStyle.textColor }}
                                 >
                                   #{index + 1}
                                 </div>
                               </div>
-                              
+
                               {/* 정류장 정보 */}
                               <div className="flex-1">
-                                <div 
+                                <div
                                   className="text-xl font-bold mb-1 leading-tight"
                                   style={{ color: rankStyle.textColor }}
                                 >
-                                  {stationDisplayNames.get(station.station_id) || station.station_name}
+                                  {stationDisplayNames.get(
+                                    station.station_id
+                                  ) || station.station_name}
                                 </div>
-                                <div 
+                                <div
                                   className="text-xs opacity-60 mb-1"
                                   style={{ color: rankStyle.textColor }}
                                 >
                                   ID: {station.station_id}
                                 </div>
-                                <div 
+                                <div
                                   className="text-lg font-medium opacity-80"
                                   style={{ color: rankStyle.textColor }}
                                 >
-                                  📍 {selectedRegion === "전체"
+                                  📍{" "}
+                                  {selectedRegion === "전체"
                                     ? stationDistrict?.district_name
                                     : selectedRegion}
                                 </div>
-                                <div 
+                                <div
                                   className="text-base mt-2 font-semibold"
                                   style={{ color: rankStyle.textColor }}
                                 >
-                                  일일 이용객: {station.total_traffic.toLocaleString()}명
+                                  일일 이용객:{" "}
+                                  {station.total_traffic.toLocaleString()}명
                                 </div>
                               </div>
                             </div>
 
                             {/* 오른쪽: 수치 정보 */}
                             <div className="text-right ml-4">
-                              <div 
+                              <div
                                 className="text-3xl font-black mb-2"
                                 style={{ color: rankStyle.textColor }}
                               >
-                                {station.total_traffic > 10000 
-                                  ? `${(station.total_traffic / 1000).toFixed(0)}K`
-                                  : station.total_traffic.toLocaleString()
-                                }
+                                {station.total_traffic > 10000
+                                  ? `${(station.total_traffic / 1000).toFixed(
+                                      0
+                                    )}K`
+                                  : station.total_traffic.toLocaleString()}
                               </div>
-                              <div 
+                              <div
                                 className="text-lg font-bold px-3 py-1 rounded-full"
-                                style={{ 
+                                style={{
                                   color: rankStyle.textColor,
-                                  backgroundColor: "rgba(255, 255, 255, 0.3)"
+                                  backgroundColor: "rgba(255, 255, 255, 0.3)",
                                 }}
                               >
-                                {index === 0 ? "🔥 최고" : 
-                                 index === 1 ? "⚡ 우수" : 
-                                 index === 2 ? "✨ 양호" : 
-                                 `TOP ${index + 1}`}
+                                {index === 0
+                                  ? "🔥 최고"
+                                  : index === 1
+                                  ? "⚡ 우수"
+                                  : index === 2
+                                  ? "✨ 양호"
+                                  : `TOP ${index + 1}`}
                               </div>
-                              <div 
+                              <div
                                 className="text-base mt-1 font-medium opacity-90"
                                 style={{ color: rankStyle.textColor }}
                               >
-                                승차: {(station.total_ride || 0).toLocaleString()}
+                                승차:{" "}
+                                {(station.total_ride || 0).toLocaleString()}
                               </div>
-                              <div 
+                              <div
                                 className="text-base font-medium opacity-90"
                                 style={{ color: rankStyle.textColor }}
                               >
-                                하차: {(station.total_alight || 0).toLocaleString()}
+                                하차:{" "}
+                                {(station.total_alight || 0).toLocaleString()}
                               </div>
                             </div>
                           </div>
-                          
+
                           {/* 1위 특별 효과 */}
                           {index === 0 && !openPopupStationId && (
                             <div className="absolute -top-1 -right-1">
@@ -971,7 +1145,7 @@ export function DashboardOverviewContent({
                               </div>
                             </div>
                           )}
-                          
+
                           {/* 팝업 열린 상태 표시 */}
                           {openPopupStationId === station.station_id && (
                             <div className="absolute -top-1 -right-1">

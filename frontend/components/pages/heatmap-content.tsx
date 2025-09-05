@@ -8,27 +8,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { MapPin, Navigation, Activity, Globe } from "lucide-react";
 import {
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { MapPin, Users, Navigation, Activity } from "lucide-react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
   Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useState, useEffect, useRef } from "react";
 import {
   apiService,
   HeatmapResponse,
-  DistrictData,
-  StationData,
   utils,
 } from "@/lib/api";
 import {
@@ -177,10 +167,6 @@ export function HeatmapContent({
       selectedRegion === "전체" ? true : d.district_name === selectedRegion
     ) || [];
 
-  // 랭킹을 위한 정렬된 구 데이터
-  const rankedDistricts = [...filteredDistricts]
-    .sort((a, b) => b.total_traffic - a.total_traffic)
-    .map((district, index) => ({ ...district, rank: index + 1 }));
 
   // 상위 정류장 데이터 (모든 구의 정류장 중 상위 5개)
   const topStations =
@@ -285,6 +271,39 @@ export function HeatmapContent({
   };
 
   const patternStations = getPatternStations();
+
+  // 중복된 정류장 이름을 감지하고 구분 표시하는 함수
+  const checkDuplicateStationNames = (stations: any[]) => {
+    const nameCount: Record<string, number> = {};
+    stations.forEach(station => {
+      nameCount[station.station_name] = (nameCount[station.station_name] || 0) + 1;
+    });
+    return nameCount;
+  };
+
+  // 정류장 이름 표시 함수
+  const formatStationName = (station: any, allStations: any[]) => {
+    const duplicateNames = checkDuplicateStationNames(allStations);
+    const isDuplicate = duplicateNames[station.station_name] > 1;
+    
+    if (isDuplicate) {
+      // 6자리 ID (station_id의 마지막 6자리 또는 전체가 6자리 미만이면 전체)
+      const shortId = station.station_id?.toString().slice(-6) || 'N/A';
+      return {
+        displayName: `${station.station_name} (${shortId})`,
+        showFullId: true,
+        fullId: station.station_id?.toString() || 'N/A',
+        districtInfo: station.district_name || selectedDistrict || '위치정보'
+      };
+    }
+    
+    return {
+      displayName: station.station_name,
+      showFullId: false,
+      fullId: '',
+      districtInfo: station.district_name || selectedDistrict || '위치정보'
+    };
+  };
 
   // 지도에서 구 클릭 시 호출
   const handleDistrictClick = (districtName: string, districtCode: string) => {
@@ -399,264 +418,241 @@ export function HeatmapContent({
   return (
     <div className="space-y-8">
       {/* 개선된 헤더 섹션 */}
-      <div className="space-y-6">
+      <div className="space-y-4">
         {/* 메인 타이틀 & 설명 */}
-        <div className="text-center space-y-3">
-          <div className="flex items-center justify-center gap-3">
-            <MapPin className="h-8 w-8 text-blue-600" />
-            <h1 className="text-4xl font-bold text-gray-900">교통량 분석</h1>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <MapPin className="h-6 w-6 text-blue-600" />
+            <h1 className="text-2xl font-bold text-gray-900">교통량 분석</h1>
           </div>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            서울시 지역별 교통 흐름과 패턴을 시각적으로 분석하고 탐색합니다
+          <p className="text-sm text-gray-600">
+            서울시 교통 패턴 시각화
           </p>
-          <div className="flex items-center justify-center gap-2 text-lg text-gray-500">
-            <Activity className="h-5 w-5" />
-            <span>{monthNames[Number.parseInt(selectedMonth) - 1]} 데이터 분석</span>
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <span>{monthNames[Number.parseInt(selectedMonth) - 1]}</span>
             {selectedRegion !== "전체" && (
               <>
-                <span className="mx-2">•</span>
-                <span className="text-blue-600 font-medium">{selectedRegion} 중심</span>
+                <span className="mx-1">•</span>
+                <span className="text-blue-600 font-medium">{selectedRegion}</span>
               </>
             )}
           </div>
         </div>
-        
-        {/* 컨트롤 패널 */}
-        <Card className="shadow-lg border-0 bg-gradient-to-r from-blue-50 to-indigo-50">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-2xl font-bold text-gray-800 text-center">
-              📊 시각화 제어판
-            </CardTitle>
-            <CardDescription className="text-center text-lg text-gray-600">
-              지도 보기 모드와 분석 패턴을 선택하세요
-            </CardDescription>
-          </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            {/* 보기 모드 선택 */}
-            <div className="flex flex-col space-y-3">
-              <label className="text-lg font-semibold text-gray-700 flex items-center gap-2">
-                🎆 보기 모드
-              </label>
-              <div className="flex gap-3">
-                <Button
-                  variant={viewMode === "district" ? "default" : "outline"}
-                  size="lg"
-                  onClick={() => setViewMode("district")}
-                  className="flex-1 h-14 text-lg font-medium"
-                >
-                  🏢 구별 집계
-                </Button>
-                <Button
-                  variant={viewMode === "station" ? "default" : "outline"}
-                  size="lg"
-                  onClick={() => setViewMode("station")}
-                  className="flex-1 h-14 text-lg font-medium"
-                >
-                  🎆 정류장별
-                </Button>
-              </div>
-            </div>
-
-            {/* 컨트롤 버튼들 */}
-            <div className="flex gap-3 flex-wrap">
-              <Button 
-                variant="outline" 
-                size="lg" 
-                onClick={handleResetMapCenter}
-                className="h-12 px-6 text-base font-medium"
-              >
-                <Navigation className="h-5 w-5 mr-2" />
-                🧭 지도 중심 이동
-              </Button>
-              {viewMode === "station" && selectedDistrict && (
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={() => {
-                    setSelectedDistrict(null);
-                    setSelectedPattern(null);
-                    console.log("🔄 패턴 선택 초기화 - 전체 정류장 보기");
-                  }}
-                  className="h-12 px-6 text-base font-medium bg-blue-50 hover:bg-blue-100 border-blue-200"
-                >
-                  🌐 전체 정류장 보기
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      </div>
 
       {/* 개선된 3열 레이아웃: 좌측 패턴 + 중앙 지도 + 우측 상세정보 */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-[800px]">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-[800px]">
         {/* 좌측 - 패턴 분석 제어판 */}
-        <div className="lg:col-span-3 order-2 lg:order-1">
-          <Card className="h-fit shadow-lg border-0 bg-gradient-to-br from-purple-50 to-pink-50">
-            <CardHeader className="pb-6">
-              <CardTitle className="flex items-center gap-3 text-2xl font-bold text-gray-800">
-                <Activity className="h-7 w-7 text-purple-600" />
-                🔍 패턴 분석
+        <div className="lg:col-span-1 order-2 lg:order-1">
+          <Card className="h-fit shadow-lg border-0 bg-gradient-to-br from-gray-50 to-slate-100">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base font-bold text-gray-800">
+                <Activity className="h-5 w-5 text-purple-600" />
+                패턴 분석
               </CardTitle>
-              <CardDescription className="text-lg text-gray-600">
+              <CardDescription className="text-sm text-gray-600">
                 {selectedRegion === "전체" && !selectedDistrict
-                  ? "구를 선택하여 패턴 분석을 시작하세요"
-                  : `${selectedDistrict || selectedRegion} 지역의 특이 패턴 분석`}
+                  ? "구 선택 필요"
+                  : `${selectedDistrict || selectedRegion}`}
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
               {selectedRegion === "전체" && !selectedDistrict ? (
-                <div className="text-center text-gray-400 py-12">
-                  <Activity className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                  <p className="text-xl font-medium mb-2">구 선택 필요</p>
-                  <p className="text-base">지도에서 구를 클릭하여<br/>패턴 분석을 시작하세요</p>
+                <div className="text-center text-gray-400 py-8">
+                  <Activity className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm">지도에서 구 클릭</p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {/* 주말 우세 정류장 */}
-                  <button
-                    onClick={() => {
-                      setSelectedPattern(
-                        selectedPattern === "weekend" ? null : "weekend"
-                      );
-                      setViewMode("station");
-                    }}
-                    className={`w-full p-4 text-base font-medium rounded-xl transition-all transform hover:scale-105 ${
-                      selectedPattern === "weekend"
-                        ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-xl"
-                        : "bg-white text-gray-700 hover:bg-blue-50 border-2 border-gray-200 hover:border-blue-300 shadow-md"
-                    }`}
-                  >
-                    <div className="flex flex-col items-center gap-2">
-                      <span className="text-2xl">🏖️</span>
-                      <span className="text-lg font-semibold">주말 우세</span>
-                      <span className="text-sm opacity-75">
-                        {weekendData?.data?.length || 0}개 정류장
-                      </span>
-                    </div>
-                  </button>
+                <div className="space-y-3">
+                  <TooltipProvider>
+                    {/* 주말 우세 정류장 */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => {
+                            setSelectedPattern(
+                              selectedPattern === "weekend" ? null : "weekend"
+                            );
+                            setViewMode("station");
+                          }}
+                          className={`w-full py-3 px-4 text-sm font-medium rounded transition-all ${
+                            selectedPattern === "weekend"
+                              ? "bg-blue-600 text-white"
+                              : "bg-white text-gray-700 hover:bg-blue-50 border border-gray-200"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <img src="/heatmap_icon/주말패턴_히트맵.png" alt="주말 패턴" className="h-4 w-4" />
+                            <span>주말</span>
+                          </div>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="right">
+                        <div className="text-xs">
+                          <p className="font-semibold">주말 우세 정류장</p>
+                          <p className="text-gray-400">주말 고수요 관광지/레저 정류장</p>
+                          <p className="mt-1">{weekendData?.data?.length || 0}개 정류장 발견</p>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
 
-                  {/* 심야 고수요 */}
-                  <button
-                    onClick={() => {
-                      setSelectedPattern(
-                        selectedPattern === "night" ? null : "night"
-                      );
-                      setViewMode("station");
-                    }}
-                    className={`w-full p-4 text-base font-medium rounded-xl transition-all transform hover:scale-105 ${
-                      selectedPattern === "night"
-                        ? "bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-xl"
-                        : "bg-white text-gray-700 hover:bg-purple-50 border-2 border-gray-200 hover:border-purple-300 shadow-md"
-                    }`}
-                  >
-                    <div className="flex flex-col items-center gap-2">
-                      <span className="text-2xl">🌙</span>
-                      <span className="text-lg font-semibold">심야 고수요</span>
-                      <span className="text-sm opacity-75">
-                        {nightData?.data?.length || 0}개 정류장
-                      </span>
-                    </div>
-                  </button>
+                    {/* 심야 고수요 */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => {
+                            setSelectedPattern(
+                              selectedPattern === "night" ? null : "night"
+                            );
+                            setViewMode("station");
+                          }}
+                          className={`w-full py-3 px-4 text-sm font-medium rounded transition-all ${
+                            selectedPattern === "night"
+                              ? "bg-purple-600 text-white"
+                              : "bg-white text-gray-700 hover:bg-purple-50 border border-gray-200"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <img src="/heatmap_icon/심야패턴_히트맵.png" alt="심야 패턴" className="h-4 w-4" />
+                            <span>심야</span>
+                          </div>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="right">
+                        <div className="text-xs">
+                          <p className="font-semibold">심야시간 고수요</p>
+                          <p className="text-gray-400">24시간 활성화된 상업지역 정류장</p>
+                          <p className="mt-1">{nightData?.data?.length || 0}개 정류장 발견</p>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
 
-                  {/* 저활용 정류장 */}
-                  <button
-                    onClick={() => {
-                      setSelectedPattern(
-                        selectedPattern === "underutilized"
-                          ? null
-                          : "underutilized"
-                      );
-                      setViewMode("station");
-                    }}
-                    className={`w-full p-2 text-base font-medium rounded transition-all ${
-                      selectedPattern === "underutilized"
-                        ? "bg-blue-600 text-white shadow-md"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
-                  >
-                    <div className="flex flex-col items-center gap-1">
-                      <span className="text-lg">⚡</span>
-                      <span className="text-sm">저활용</span>
-                      <span className="text-sm opacity-75">
-                        {underutilizedData?.data?.length || 0}개
-                      </span>
-                    </div>
-                  </button>
+                    {/* 저활용 정류장 */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => {
+                            setSelectedPattern(
+                              selectedPattern === "underutilized"
+                                ? null
+                                : "underutilized"
+                            );
+                            setViewMode("station");
+                          }}
+                          className={`w-full py-3 px-4 text-sm font-medium rounded transition-all ${
+                            selectedPattern === "underutilized"
+                              ? "bg-red-600 text-white"
+                              : "bg-white text-gray-700 hover:bg-red-50 border border-gray-200"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <img src="/heatmap_icon/저활용_히트맵.png" alt="저활용 패턴" className="h-4 w-4" />
+                            <span>저활용</span>
+                          </div>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="right">
+                        <div className="text-xs">
+                          <p className="font-semibold">저활용 정류장</p>
+                          <p className="text-gray-400">운영 최적화 대상 정류장</p>
+                          <p className="mt-1">{underutilizedData?.data?.length || 0}개 정류장 발견</p>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
 
-                  {/* 점심시간 특화 */}
-                  <button
-                    onClick={() => {
-                      setSelectedPattern(
-                        selectedPattern === "lunchtime" ? null : "lunchtime"
-                      );
-                      setViewMode("station");
-                    }}
-                    className={`w-full p-2 text-base font-medium rounded transition-all ${
-                      selectedPattern === "lunchtime"
-                        ? "bg-blue-600 text-white shadow-md"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
-                  >
-                    <div className="flex flex-col items-center gap-1">
-                      <span className="text-lg">🍽️</span>
-                      <span className="text-sm">점심시간</span>
-                      <span className="text-sm opacity-75">
-                        {lunchTimeData?.data?.length || 0}개
-                      </span>
-                    </div>
-                  </button>
+                    {/* 점심시간 특화 */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => {
+                            setSelectedPattern(
+                              selectedPattern === "lunchtime" ? null : "lunchtime"
+                            );
+                            setViewMode("station");
+                          }}
+                          className={`w-full py-3 px-4 text-sm font-medium rounded transition-all ${
+                            selectedPattern === "lunchtime"
+                              ? "bg-green-600 text-white"
+                              : "bg-white text-gray-700 hover:bg-green-50 border border-gray-200"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <img src="/heatmap_icon/점심패턴_히트맵.png" alt="점심 패턴" className="h-4 w-4" />
+                            <span>점심</span>
+                          </div>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="right">
+                        <div className="text-xs">
+                          <p className="font-semibold">점심시간 특화</p>
+                          <p className="text-gray-400">음식점가/상업지구 점심 정류장</p>
+                          <p className="mt-1">{lunchTimeData?.data?.length || 0}개 정류장 발견</p>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
 
-                  {/* 러시아워 핫스팟 */}
-                  <button
-                    onClick={() => {
-                      setSelectedPattern(
-                        selectedPattern === "rushhour" ? null : "rushhour"
-                      );
-                      setViewMode("station");
-                    }}
-                    className={`w-full p-2 text-base font-medium rounded transition-all ${
-                      selectedPattern === "rushhour"
-                        ? "bg-blue-600 text-white shadow-md"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
-                  >
-                    <div className="flex flex-col items-center gap-1">
-                      <span className="text-lg">🚗</span>
-                      <span className="text-sm">러시아워</span>
-                      <span className="text-sm opacity-75">
-                        {(rushHourData?.data?.morning_rush?.length || 0) +
-                          (rushHourData?.data?.evening_rush?.length || 0)}
-                        개
-                      </span>
-                    </div>
-                  </button>
+                    {/* 러시아워 핫스팟 */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => {
+                            setSelectedPattern(
+                              selectedPattern === "rushhour" ? null : "rushhour"
+                            );
+                            setViewMode("station");
+                          }}
+                          className={`w-full py-3 px-4 text-sm font-medium rounded transition-all ${
+                            selectedPattern === "rushhour"
+                              ? "bg-orange-600 text-white"
+                              : "bg-white text-gray-700 hover:bg-orange-50 border border-gray-200"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <img src="/heatmap_icon/러시아워_히트맵.png" alt="러시아워 패턴" className="h-4 w-4" />
+                            <span>러시</span>
+                          </div>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="right">
+                        <div className="text-xs">
+                          <p className="font-semibold">러시아워 고수요</p>
+                          <p className="text-gray-400">출퇴근 시간대 집중 정류장</p>
+                          <p className="mt-1">{(rushHourData?.data?.morning_rush?.length || 0) + (rushHourData?.data?.evening_rush?.length || 0)}개 정류장 발견</p>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
 
-                  {/* 지역 특성 분석 */}
-                  <button
-                    onClick={() => {
-                      setSelectedPattern(
-                        selectedPattern === "areatype" ? null : "areatype"
-                      );
-                      setViewMode("station");
-                    }}
-                    className={`w-full p-2 text-base font-medium rounded transition-all ${
-                      selectedPattern === "areatype"
-                        ? "bg-blue-600 text-white shadow-md"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
-                  >
-                    <div className="flex flex-col items-center gap-1">
-                      <span className="text-lg">🏢</span>
-                      <span className="text-sm">지역 특성</span>
-                      <span className="text-sm opacity-75">
-                        {(areaTypeData?.data?.residential_stations?.length ||
-                          0) +
-                          (areaTypeData?.data?.business_stations?.length || 0)}
-                        개
-                      </span>
-                    </div>
-                  </button>
+                    {/* 지역 특성 분석 */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => {
+                            setSelectedPattern(
+                              selectedPattern === "areatype" ? null : "areatype"
+                            );
+                            setViewMode("station");
+                          }}
+                          className={`w-full py-3 px-4 text-sm font-medium rounded transition-all ${
+                            selectedPattern === "areatype"
+                              ? "bg-sky-600 text-white"
+                              : "bg-white text-gray-700 hover:bg-sky-50 border border-gray-200"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <img src="/heatmap_icon/지역특성_히트맵.png" alt="지역 특성 패턴" className="h-4 w-4" />
+                            <span>지역</span>
+                          </div>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="right">
+                        <div className="text-xs">
+                          <p className="font-semibold">지역 특성별</p>
+                          <p className="text-gray-400">주거지역 vs 업무지역 정류장 구분</p>
+                          <p className="mt-1">{(areaTypeData?.data?.residential_stations?.length || 0) + (areaTypeData?.data?.business_stations?.length || 0)}개 정류장 발견</p>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               )}
             </CardContent>
@@ -664,16 +660,110 @@ export function HeatmapContent({
         </div>
 
         {/* 중앙 - 메인 히트맵 시각화 */}
-        <div className="lg:col-span-6 order-1 lg:order-2">
-          <Card className="shadow-xl border-0 bg-gradient-to-br from-blue-50 to-cyan-50 overflow-hidden">
-            <CardHeader className="bg-white/80 backdrop-blur-sm">
-              <CardTitle className="flex items-center gap-3 text-3xl font-bold text-gray-800">
-                🗺️ 서울시 교통량 히트맵
-              </CardTitle>
-              <CardDescription className="text-lg text-gray-600">
-                {viewMode === "district" ? "🏢 25개 자치구별" : "🎆 정류장별"} 교통량 시각화
-                시각화
-              </CardDescription>
+        <div className="lg:col-span-7 order-1 lg:order-2">
+          <Card className="shadow-xl border-0 bg-gradient-to-br from-gray-50 to-slate-100 overflow-hidden relative">
+            <CardHeader className="bg-gray-50/90 backdrop-blur-sm">
+              <div className="flex items-start justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-3 text-3xl font-bold text-gray-800">
+                    <img src="/heatmap_icon/지도_히트맵.png" alt="지도 히트맵" className="h-8 w-8" />
+                    서울시 교통량 히트맵
+                  </CardTitle>
+                  <CardDescription className="text-lg text-gray-600 mt-1 flex items-center gap-2">
+                    {viewMode === "district" ? (
+                      <>
+                        <img src="/heatmap_icon/지도_구별_히트맵.png" alt="구별 히트맵" className="h-5 w-5" />
+                        25개 자치구별
+                      </>
+                    ) : (
+                      <>
+                        <img src="/heatmap_icon/지도_정류장별_히트맵.png" alt="정류장별 히트맵" className="h-5 w-5" />
+                        정류장별
+                      </>
+                    )} 교통량 시각화
+                  </CardDescription>
+                </div>
+                {/* 컨트롤 버튼들 - 우측 상단 */}
+                <TooltipProvider>
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-2">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant={viewMode === "district" ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setViewMode("district")}
+                            className="h-8 px-3 text-sm"
+                          >
+                            구별
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>25개 자치구별 교통량 집계</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant={viewMode === "station" ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setViewMode("station")}
+                            className="h-8 px-3 text-sm"
+                          >
+                            정류장
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>개별 정류장별 교통량 표시</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={handleResetMapCenter}
+                          className="h-8 px-3 text-sm"
+                        >
+                          <Navigation className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>서울시 전체 보기로 지도 중심 이동</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    {((viewMode === "station" && selectedDistrict) || (viewMode === "district" && (selectedRegion !== "전체" || selectedDistrict))) && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              if (viewMode === "station") {
+                                setSelectedDistrict(null);
+                                setSelectedPattern(null);
+                                handleResetMapCenter();
+                              } else if (viewMode === "district") {
+                                // 구별 모드에서는 선택된 구를 해제하여 전체 구 보기
+                                setSelectedDistrict(null);
+                                setSelectedPattern(null);
+                                handleResetMapCenter();
+                              }
+                            }}
+                            className="h-8 px-3 text-sm"
+                          >
+                            <Globe className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{viewMode === "station" ? "전체 정류장 보기" : "전체 구 보기"}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+                </TooltipProvider>
+              </div>
             </CardHeader>
             <CardContent>
               <HeatmapSeoulMap
@@ -705,25 +795,33 @@ export function HeatmapContent({
         </div>
 
         {/* 우측 - 상세 정보 및 통계 대시보드 */}
-        <div className="lg:col-span-3 space-y-6 order-3 lg:order-3">
+        <div className="lg:col-span-4 space-y-4 order-3 lg:order-3">
           {/* 주요 정류장 정보 */}
-          <Card className="shadow-lg border-0 bg-gradient-to-br from-green-50 to-emerald-50">
+          <Card className={`shadow-lg border-0 ${
+            selectedPattern === "weekend" ? "bg-gradient-to-br from-blue-50 to-blue-100" :
+            selectedPattern === "night" ? "bg-gradient-to-br from-purple-50 to-purple-100" :
+            selectedPattern === "underutilized" ? "bg-gradient-to-br from-red-50 to-red-100" :
+            selectedPattern === "lunchtime" ? "bg-gradient-to-br from-green-50 to-green-100" :
+            selectedPattern === "rushhour" ? "bg-gradient-to-br from-orange-50 to-orange-100" :
+            selectedPattern === "areatype" ? "bg-gradient-to-br from-sky-50 to-sky-100" :
+            "bg-gradient-to-br from-green-50 to-emerald-50"
+          }`}>
             <CardHeader className="pb-6">
               <CardTitle className="text-2xl font-bold flex items-center gap-3 text-gray-800">
-                <Users className="h-7 w-7 text-green-600" />
+                <img src="/heatmap_icon/정류장(월별)_히트맵.png" alt="정류장 월별" className="h-7 w-7" />
                 {selectedPattern ? (
                   <>
-                    {selectedPattern === "weekend" && "🏖️ 주말 우세"}
-                    {selectedPattern === "night" && "🌙 심야 고수요"}
-                    {selectedPattern === "underutilized" && "⚡ 저활용"}
-                    {selectedPattern === "lunchtime" && "🍽️ 점심시간"}
-                    {selectedPattern === "rushhour" && "🚗 러시아워"}
-                    {selectedPattern === "areatype" && "🏢 지역 특성"}
+                    {selectedPattern === "weekend" && "주말 우세"}
+                    {selectedPattern === "night" && "심야 고수요"}
+                    {selectedPattern === "underutilized" && "저활용"}
+                    {selectedPattern === "lunchtime" && "점심시간"}
+                    {selectedPattern === "rushhour" && "러시아워"}
+                    {selectedPattern === "areatype" && "지역 특성"}
                   </>
                 ) : selectedDistrict ? (
-                  `🎯 ${selectedDistrict} 주요`
+                  `${selectedDistrict} 주요 정류장 (월별)`
                 ) : (
-                  "🌐 서울시 주요"
+                  "서울시 주요 정류장 (월별)"
                 )}
               </CardTitle>
             </CardHeader>
@@ -912,42 +1010,55 @@ export function HeatmapContent({
                       </div>
                     ) : (
                       // 다른 패턴들은 기존 방식
-                      displayStations.map((station: any, index: number) => (
-                        <div
-                          key={station.station_id}
-                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`text-base font-bold ${
-                                station.color?.replace("text-", "text-") ||
-                                "text-blue-600"
-                              }`}
-                            >
-                              #{index + 1}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="font-medium text-base truncate">
-                                {station.station_name}
+                      displayStations.map((station: any, index: number) => {
+                        const stationFormat = formatStationName(station, displayStations);
+                        const isTop3 = index < 3;
+                        const rankColors = ["bg-gradient-to-r from-yellow-400 to-yellow-500", "bg-gradient-to-r from-gray-300 to-gray-400", "bg-gradient-to-r from-amber-600 to-amber-700"];
+                        const rankTextColors = ["text-yellow-800", "text-gray-800", "text-amber-100"];
+                        
+                        return (
+                          <div
+                            key={station.station_id}
+                            className={`flex items-center justify-between p-3 rounded-lg border-l-4 ${
+                              isTop3 
+                                ? `bg-gradient-to-r ${rankColors[index]?.replace('bg-gradient-to-r ', '') || 'from-blue-100 to-blue-200'} border-l-yellow-500 shadow-md`
+                                : `bg-gray-50 border-l-gray-300 hover:bg-gray-100 transition-colors`
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={`relative flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm ${
+                                isTop3 
+                                  ? `${rankTextColors[index] || 'text-white'} ${rankColors[index] || 'bg-blue-500'} shadow-sm`
+                                  : 'bg-white text-gray-600 border-2 border-gray-300'
+                              }`}>
+                                {index + 1}
+                                {index === 0 && <span className="absolute -top-1 -right-1 text-xs">🏆</span>}
+                                {index === 1 && <span className="absolute -top-1 -right-1 text-xs">🥈</span>}
+                                {index === 2 && <span className="absolute -top-1 -right-1 text-xs">🥉</span>}
                               </div>
-                              <div className="text-sm text-gray-600 truncate">
-                                {station.district_name ||
-                                  selectedDistrict ||
-                                  "위치정보"}
+                              <div className="min-w-0 flex-1">
+                                <div className={`font-medium truncate ${isTop3 ? 'text-gray-900 text-base' : 'text-gray-800 text-sm'}`}>
+                                  {stationFormat.displayName}
+                                </div>
+                                <div className={`truncate ${isTop3 ? 'text-gray-700 text-sm' : 'text-gray-600 text-xs'}`}>
+                                  {stationFormat.showFullId ? (
+                                    <>ID: {stationFormat.fullId} • {stationFormat.districtInfo}</>
+                                  ) : (
+                                    stationFormat.districtInfo
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className={`font-bold ${
+                                isTop3 ? 'text-gray-900 text-lg' : 'text-gray-700 text-base'
+                              }`}>
+                                {station.displayValue}
                               </div>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <div
-                              className={`font-medium text-base ${
-                                station.color || "text-green-600"
-                              }`}
-                            >
-                              {station.displayValue}
-                            </div>
-                          </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )
                   ) : (
                     <div className="text-center py-6 text-gray-500 text-base">
@@ -966,8 +1077,8 @@ export function HeatmapContent({
           {/* 통계 */}
           <Card>
             <CardHeader className="pb-4">
-              <CardTitle className="text-xl">
-                📊{" "}
+              <CardTitle className="text-2xl font-bold flex items-center gap-3">
+                <img src="/heatmap_icon/통계_히트맵.png" alt="통계" className="h-6 w-6" />
                 {selectedPattern
                   ? "패턴별 통계"
                   : selectedDistrict
@@ -976,29 +1087,29 @@ export function HeatmapContent({
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="space-y-2">
+              <div className="space-y-4">
                 {selectedPattern ? (
                   // 패턴별 통계
                   <>
                     {selectedPattern === "weekend" && weekendData && (
                       <>
-                        <div className="flex justify-between p-3 bg-blue-50 rounded">
-                          <span className="text-base">주말 특화 정류장:</span>
-                          <span className="font-medium text-blue-600 text-base">
+                        <div className="flex justify-between p-4 bg-blue-50 rounded">
+                          <span className="text-lg font-medium">주말 특화 정류장:</span>
+                          <span className="font-bold text-blue-600 text-lg">
                             {weekendData.data?.length || 0}개
                           </span>
                         </div>
-                        <div className="flex justify-between p-3 bg-blue-50 rounded">
-                          <span className="text-sm">최고 주말 교통량:</span>
-                          <span className="font-medium text-blue-600 text-sm">
+                        <div className="flex justify-between p-4 bg-blue-50 rounded">
+                          <span className="text-base">최고 주말 교통량:</span>
+                          <span className="font-bold text-blue-600 text-base">
                             {weekendData.data?.[0]?.weekend_total_traffic?.toLocaleString() ||
                               "N/A"}
                             명
                           </span>
                         </div>
-                        <div className="flex justify-between p-3 bg-blue-50 rounded">
-                          <span className="text-sm">평일 대비:</span>
-                          <span className="font-medium text-blue-600 text-sm">
+                        <div className="flex justify-between p-4 bg-blue-50 rounded">
+                          <span className="text-base">평일 대비:</span>
+                          <span className="font-bold text-blue-600 text-base">
                             +15.2%
                           </span>
                         </div>
@@ -1212,70 +1323,41 @@ export function HeatmapContent({
             </CardContent>
           </Card>
 
-          {/* 상세 분석 (기존에 하단에 있던 큰 카드 내용을 우측에 컴팩트하게) */}
-          {(selectedDistrict || selectedPattern) && (
+          {/* 패턴 상세 분석 (패턴 선택 시에만 표시) */}
+          {selectedPattern && (
             <Card>
               <CardHeader className="pb-4">
                 <CardTitle className="text-xl flex items-center gap-2">
-                  {selectedPattern ? (
-                    <>
-                      <Activity className="h-4 w-4" />
-                      패턴 상세 분석
-                    </>
-                  ) : (
-                    <>
-                      <MapPin className="h-4 w-4" />
-                      지역 상세 분석
-                    </>
-                  )}
+                  <Activity className="h-4 w-4" />
+                  패턴 상세 분석
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
                 <div className="text-base text-gray-600">
-                  {selectedPattern
-                    ? `${
-                        selectedDistrict || selectedRegion
-                      } 지역의 ${selectedPattern} 패턴 분석 결과입니다.`
-                    : `${selectedDistrict} 지역의 교통량 현황과 주요 특징입니다.`}
+                  {`${selectedDistrict || selectedRegion} 지역의 ${selectedPattern} 패턴 분석 결과입니다.`}
                 </div>
 
-                {selectedPattern ? (
-                  // 패턴별 간단 요약
-                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                    <div className="text-base">
-                      {selectedPattern === "weekend" &&
-                        "🏖️ 주말 교통량이 평일보다 높은 지역으로 레저·쇼핑 시설이 집중된 특징을 보입니다."}
-                      {selectedPattern === "weekend" &&
-                        "🏖️ 주말 교통량이 평일보다 높은 지역으로 레저·쇼핑 시설이 집중된 특징을 보입니다."}
-                      {selectedPattern === "night" &&
-                        "🌙 심야시간 대중교통 수요가 높은 지역으로 유흥가, 병원, 교통허브 근처가 주를 이룹니다."}
-                      {selectedPattern === "underutilized" &&
-                        "⚡ 이용률이 저조한 정류장들로 노선 개선이나 정류장 통폐합 검토가 필요한 지역입니다."}
-                      {selectedPattern === "lunchtime" &&
-                        "🍽️ 점심시간 특화 정류장으로 업무지구, 대학가, 상업지역에 집중되어 있습니다."}
-                      {selectedPattern === "rushhour" &&
-                        "🚗 출퇴근 시간대 교통 집중으로 인한 혼잡과 지연이 발생하는 핫스팟 지역입니다."}
-                      {selectedPattern === "areatype" &&
-                        "🏢 주거지역과 업무지역으로 구분되며 각각 다른 교통 패턴을 보이는 특성이 있습니다."}
-                    </div>
+                {/* 패턴별 간단 요약 */}
+                <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                  <div className="text-base">
+                    {selectedPattern === "weekend" &&
+                      "🏖️ 주말 교통량이 평일보다 높은 지역으로 레저·쇼핑 시설이 집중된 특징을 보입니다."}
+                    {selectedPattern === "night" &&
+                      "🌙 심야시간 대중교통 수요가 높은 지역으로 유흥가, 병원, 교통허브 근처가 주를 이룹니다."}
+                    {selectedPattern === "underutilized" &&
+                      "⚡ 이용률이 저조한 정류장들로 노선 개선이나 정류장 통폐합 검토가 필요한 지역입니다."}
+                    {selectedPattern === "lunchtime" &&
+                      "🍽️ 점심시간 특화 정류장으로 업무지구, 대학가, 상업지역에 집중되어 있습니다."}
+                    {selectedPattern === "rushhour" &&
+                      "🚗 출퇴근 시간대 교통 집중으로 인한 혼잡과 지연이 발생하는 핫스팟 지역입니다."}
+                    {selectedPattern === "areatype" &&
+                      "🏢 주거지역과 업무지역으로 구분되며 각각 다른 교통 패턴을 보이는 특성이 있습니다."}
                   </div>
-                ) : (
-                  selectedDistrict && (
-                    // 구별 간단 요약
-                    <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                      <div className="text-base">
-                        {selectedDistrict}는 서울시 25개 자치구 중 교통량 기준
-                        상위권 지역으로, 주요 교통 허브 정류장들이 집중되어 있어
-                        대중교통 접근성이 우수합니다.
-                      </div>
-                    </div>
-                  )
-                )}
+                </div>
               </CardContent>
             </Card>
           )}
         </div>
-      </div>
       </div>
     </div>
   );

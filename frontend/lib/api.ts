@@ -402,9 +402,10 @@ analysisMonth: string,
   // 통합 이상 패턴 분석 (6개 패턴 종합)
   async getIntegratedAnomalyAnalysis(
     districtName: string,
-analysisMonth: string
+    analysisMonth: string,
+    topN: number = 10
   ): Promise<any> {
-    const url = `${API_BASE_URL}/anomaly-pattern/integration?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}`;
+    const url = `${API_BASE_URL}/anomaly-pattern/integration?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}&top_n=${topN}`;
     return this.fetchWithErrorHandling(url);
   }
 }

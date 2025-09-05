@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, lazy, Suspense } from "react";
+import { useState, lazy, Suspense, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -31,6 +31,8 @@ import {
   ChevronRight,
   Bell,
   Target,
+  ChevronDown,
+  MapPin,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -195,6 +197,25 @@ export function DDFDashboard() {
   const [selectedRegion, setSelectedRegion] = useState(
     getDefaultRegionForPage(activePage)
   );
+  const [showRegionSelector, setShowRegionSelector] = useState(false);
+  const regionSelectorRef = useRef<HTMLDivElement>(null);
+
+  // 외부 클릭 시 드롭다운 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (regionSelectorRef.current && !regionSelectorRef.current.contains(event.target as Node)) {
+        setShowRegionSelector(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleRegionSelect = (region: string) => {
+    setSelectedRegion(region);
+    setShowRegionSelector(false);
+  };
 
   // 페이지 변경시 해당 페이지의 기본 지역으로 리셋
   const handlePageChange = (pageId: ActivePage) => {
@@ -442,19 +463,58 @@ export function DDFDashboard() {
               </h1>
             </div>
             <div className="flex items-center gap-3">
-              <Select value={selectedRegion} onValueChange={setSelectedRegion}>
-                <SelectTrigger className="w-[120px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="전체">전체 지역</SelectItem>
-                  {seoulDistricts.map((district) => (
-                    <SelectItem key={district} value={district}>
-                      {district}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* 지역 선택 버튼 그리드 */}
+              <div className="relative" ref={regionSelectorRef}>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowRegionSelector(!showRegionSelector)}
+                  className="w-[140px] justify-between"
+                >
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    <span>{selectedRegion === "전체" ? "전체 지역" : selectedRegion}</span>
+                  </div>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${
+                    showRegionSelector ? 'rotate-180' : ''
+                  }`} />
+                </Button>
+                
+                {showRegionSelector && (
+                  <div className="absolute top-full left-0 mt-2 p-4 bg-white border rounded-lg shadow-xl z-50 min-w-[400px]">
+                    <div className="mb-3">
+                      <h3 className="text-sm font-medium text-gray-700 mb-2">지역 선택</h3>
+                      <div className="grid grid-cols-1 gap-2">
+                        <Button
+                          variant={selectedRegion === "전체" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handleRegionSelect("전체")}
+                          className="justify-start"
+                        >
+                          <MapPin className="h-3 w-3 mr-2" />
+                          전체 지역
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="border-t pt-3">
+                      <h4 className="text-xs font-medium text-gray-500 mb-2">서울시 25개 자치구</h4>
+                      <div className="grid grid-cols-5 gap-1">
+                        {seoulDistricts.map((district) => (
+                          <Button
+                            key={district}
+                            variant={selectedRegion === district ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handleRegionSelect(district)}
+                            className="text-xs h-8 px-2"
+                          >
+                            {district}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
               <Select value={selectedMonth} onValueChange={setSelectedMonth}>
                 <SelectTrigger className="w-[120px]">
                   <SelectValue />
@@ -468,18 +528,8 @@ export function DDFDashboard() {
                 </SelectContent>
               </Select>
               <div className="flex items-center gap-2">
-                <Switch
-                  checked={isRealTimeMode}
-                  onCheckedChange={setIsRealTimeMode}
-                />
-                <span className="text-base">자동 업데이트</span>
+                <span className="text-base">최신업데이트 (07-31)</span>
               </div>
-              <Button variant="outline" size="icon">
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="icon">
-                <Bell className="h-4 w-4" />
-              </Button>
             </div>
           </div>
         </header>
