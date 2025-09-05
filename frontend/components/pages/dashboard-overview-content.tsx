@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import {
@@ -9,19 +10,7 @@ import {
 } from "@/components/ui/card";
 import { HelpCircle } from "lucide-react";
 import Image from "next/image";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-} from "recharts";
+// Recharts components removed as they were unused
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { apiService, HeatmapResponse, DistrictData, utils } from "@/lib/api";
 import dynamic from "next/dynamic";
@@ -73,15 +62,7 @@ interface DashboardOverviewContentProps {
   onNavigateToTab?: (tabId: string) => void;
 }
 
-// 색상 팔레트 (참고 이미지와 유사하게)
-const kpiColors = [
-  "#60A5FA", // 파란색
-  "#34D399", // 민트
-  "#A78BFA", // 보라색
-  "#F87171", // 빨간색
-  "#FBBF24", // 노란색
-  "#FB7185", // 핑크색
-];
+// KPI colors removed as they were unused
 
 export function DashboardOverviewContent({
   selectedMonth,

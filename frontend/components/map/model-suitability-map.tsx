@@ -1,15 +1,24 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { apiService, DRTModelType, DRTStationData, utils } from '@/lib/api'
 
-// Dynamically import Leaflet to avoid SSR issues
-const L = typeof window !== 'undefined' ? require('leaflet') : null
+// District analysis 타입 정의
+interface DistrictAnalysis {
+  total_stations: number;
+  avg_score: number;
+  high_score_stations: number;
+  stations: DRTStationData[];
+}
+
+// Import leaflet
+import L from 'leaflet';
 
 // Fix for default markers in Leaflet - only on client side
 if (typeof window !== 'undefined' && L) {
-  delete (L.Icon.Default.prototype as any)._getIconUrl
+  delete (L.Icon.Default.prototype as any)._getIconUrl // eslint-disable-line @typescript-eslint/no-explicit-any
   L.Icon.Default.mergeOptions({
     iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
     iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
@@ -44,7 +53,7 @@ interface ModelSuitabilityMapProps {
   selectedModel: string
   selectedMonth?: string
   initialDistrictName?: string
-  onDistrictAnalysis?: (districtName: string, analysis: any) => void
+  onDistrictAnalysis?: (districtName: string, analysis: DistrictAnalysis) => void
   height?: string
   focusStation?: { lat: number; lng: number; stationName: string } | null
 }
@@ -347,7 +356,7 @@ function ModelSuitabilityMapComponent({
                 const layer = e.target
                 layer.setStyle(getFeatureStyle(feature))
               },
-              click: (_e: any) => {
+              click: () => {
                 const districtName = feature.properties.sggnm
                 
                 // Zoom to district

@@ -163,6 +163,13 @@ export interface TourismFeatureScores {
 
 export type FeatureScores = VulnerableFeatureScores | CommuterFeatureScores | TourismFeatureScores;
 
+// Health check 응답 타입
+export interface HealthResponse {
+  status: string;
+  timestamp?: string;
+  message?: string;
+}
+
 // API 함수들
 class ApiService {
   private async fetchWithErrorHandling<T>(url: string): Promise<T> {
@@ -239,14 +246,14 @@ class ApiService {
   }
 
   // API 상태 확인
-  async getTrafficHealth(): Promise<any> {
+  async getTrafficHealth(): Promise<HealthResponse> {
     const url = `${API_BASE_URL}/traffic/hourly/health`;
-    return this.fetchWithErrorHandling(url);
+    return this.fetchWithErrorHandling<HealthResponse>(url);
   }
 
-  async getHeatmapHealth(): Promise<any> {
+  async getHeatmapHealth(): Promise<HealthResponse> {
     const url = `${API_BASE_URL}/heatmap/health`;
-    return this.fetchWithErrorHandling(url);
+    return this.fetchWithErrorHandling<HealthResponse>(url);
   }
 
   // DRT Score 관련 API 함수들
@@ -354,7 +361,8 @@ analysisMonth: string,
   async getAnomalyPatterns(
     districtName: string,
 analysisMonth: string
-  ): Promise<any> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): Promise<any> { // eslint-disable-line @typescript-eslint/no-explicit-any
     const url = `${API_BASE_URL}/anomaly-pattern/integration?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}`;
     
     console.log('🌐 Anomaly Pattern API Request:', { url, districtName, analysisMonth });
@@ -370,6 +378,7 @@ analysisMonth: string
     districtName: string,
 analysisMonth: string,
     topN: number = 5
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> {
     const url = `${API_BASE_URL}/anomaly-pattern/weekend-dominant?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}&top_n=${topN}`;
     return this.fetchWithErrorHandling(url);
@@ -380,6 +389,7 @@ analysisMonth: string,
     districtName: string,
 analysisMonth: string,
     topN: number = 5
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> {
     const url = `${API_BASE_URL}/anomaly-pattern/night-demand?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}&top_n=${topN}`;
     return this.fetchWithErrorHandling(url);
@@ -389,6 +399,7 @@ analysisMonth: string,
   async getRushHourAnalysis(
     districtName: string,
 analysisMonth: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> {
     const url = `${API_BASE_URL}/anomaly-pattern/rush-hour?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}`;
     return this.fetchWithErrorHandling(url);
@@ -399,6 +410,7 @@ analysisMonth: string
     districtName: string,
 analysisMonth: string,
     topN: number = 5
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> {
     const url = `${API_BASE_URL}/anomaly-pattern/lunch-time?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}&top_n=${topN}`;
     return this.fetchWithErrorHandling(url);
@@ -408,6 +420,7 @@ analysisMonth: string,
   async getAreaTypeAnalysis(
     districtName: string,
 analysisMonth: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> {
     const url = `${API_BASE_URL}/anomaly-pattern/area-type?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}`;
     return this.fetchWithErrorHandling(url);
@@ -418,6 +431,7 @@ analysisMonth: string
     districtName: string,
 analysisMonth: string,
     topN: number = 5
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> {
     const url = `${API_BASE_URL}/anomaly-pattern/underutilized?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}&top_n=${topN}`;
     return this.fetchWithErrorHandling(url);
@@ -428,6 +442,7 @@ analysisMonth: string,
     districtName: string,
     analysisMonth: string,
     topN: number = 10
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> {
     const url = `${API_BASE_URL}/anomaly-pattern/integration?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}&top_n=${topN}`;
     return this.fetchWithErrorHandling(url);

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import {
@@ -11,12 +12,24 @@ import {
 import dynamic from "next/dynamic";
 import { DistrictData } from "@/lib/api";
 
-// Dynamically import Leaflet to avoid SSR issues
-const L = typeof window !== "undefined" ? require("leaflet") : null;
+// 패턴별 정류장 데이터 타입 정의
+interface PatternStation {
+  station_id: string;
+  station_name: string;
+  coordinate: {
+    latitude: number;
+    longitude: number;
+  };
+  pattern_score?: number;
+  traffic_volume?: number;
+}
+
+// Import leaflet
+import L from 'leaflet';
 
 // Fix for default markers in Leaflet - only on client side
 if (typeof window !== "undefined" && L) {
-  delete (L.Icon.Default.prototype as any)._getIconUrl;
+  delete (L.Icon.Default.prototype as any)._getIconUrl; // eslint-disable-line @typescript-eslint/no-explicit-any
   L.Icon.Default.mergeOptions({
     iconRetinaUrl:
       "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
@@ -34,7 +47,7 @@ interface HeatmapSeoulMapProps {
   viewMode: "district" | "station";
   loading?: boolean;
   selectedPattern?: string | null; // 선택된 이상 패턴
-  patternStations?: any[]; // 패턴별 정류장 데이터
+  patternStations?: PatternStation[]; // 패턴별 정류장 데이터
 }
 
 export interface HeatmapSeoulMapRef {
@@ -162,11 +175,6 @@ const HeatmapSeoulMapComponent = forwardRef<
     }, [districts]);
 
 
-    // 패턴 정류장 여부 확인 함수
-    const getPatternStation = (stationId: string) => {
-      if (!selectedPattern || !patternStations.length) return null;
-      return patternStations.find(station => station.station_id === stationId);
-    };
 
     // 줌인 기능 제거 - 단순 표시만
 
@@ -327,7 +335,7 @@ const HeatmapSeoulMapComponent = forwardRef<
                   const layer = e.target;
                   layer.setStyle(getFeatureStyle(feature));
                 },
-                click: (_e: any) => {
+                click: () => {
                   const districtName = feature.properties.sggnm;
                   const districtCode = feature.properties.sgg;
 
@@ -403,7 +411,7 @@ const HeatmapSeoulMapComponent = forwardRef<
                 const patternStation = patternStationMap.get(stationId);
                 
                 // 크기 재계산 - 더 극적인 변화
-                let baseIconSize = Math.min(
+                const baseIconSize = Math.min(
                   Math.max(stationData.total_traffic / 30000, 2.5), // 기본 크기 더 작게
                   12 // 기본 최대 크기 더 작게
                 );
@@ -552,8 +560,7 @@ const HeatmapSeoulMapComponent = forwardRef<
         const currentZoom = mapInstanceRef.current.getZoom();
         const zoomFactor = Math.max(0.1, Math.min(2.5, (currentZoom - 9) * 0.35));
         
-        // 패턴 정류장 ID 세트로 변환 (빠른 조회)
-        const patternStationIds = new Set(patternStations.map(ps => ps.station_id));
+        // 패턴 정류장 맵으로 변환 (빠른 조회)
         const patternStationMap = new Map(patternStations.map(ps => [ps.station_id, ps]));
         
         districtsToShow.forEach((district) => {
@@ -570,7 +577,7 @@ const HeatmapSeoulMapComponent = forwardRef<
                 // 줄 레벨 계산은 이미 위에서 수행됨
                 
                 // Create custom icon based on traffic + zoom level
-                let baseIconSize = Math.min(
+                const baseIconSize = Math.min(
                   Math.max(station.total_traffic / 30000, 2.5), // 기본 최소 크기 더 작게
                   12 // 기본 최대 크기 더 작게
                 );
@@ -976,3 +983,5 @@ export const HeatmapSeoulMap = dynamic(
     ),
   }
 );
+
+HeatmapSeoulMapComponent.displayName = 'HeatmapSeoulMapComponent';

@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import { useEffect, useRef, useState, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 
-// Dynamically import Leaflet to avoid SSR issues
-const L = typeof window !== 'undefined' ? require('leaflet') : null
+// Import leaflet
+import L from 'leaflet';
 
 // Fix for default markers in Leaflet - only on client side
 if (typeof window !== 'undefined' && L) {
@@ -153,7 +154,7 @@ function SeoulMapComponent({ onDistrictClick, selectedDistrict, trafficData = []
                 const layer = e.target
                 layer.setStyle(getFeatureStyle(feature))
               },
-              click: (_e: any) => {
+              click: () => {
                 const districtName = feature.properties.sggnm
                 const districtCode = feature.properties.sgg
                 

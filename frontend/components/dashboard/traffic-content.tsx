@@ -768,8 +768,13 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
     };
 
     // 차트 데이터 준비 (승차/하차 분리)
-    const boardingChartData = Array.from({ length: 24 }, (_, hour) => {
-      const data: any = { hour: `${hour.toString().padStart(2, '0')}:00` };
+    interface ChartDataPoint {
+      hour: string;
+      [district: string]: string | number;
+    }
+    
+    const boardingChartData: ChartDataPoint[] = Array.from({ length: 24 }, (_, hour) => {
+      const data: ChartDataPoint = { hour: `${hour.toString().padStart(2, '0')}:00` };
       selectedDistricts.forEach(district => {
         if (districtData[district]) {
           const patterns = patternType === 'weekday' 
@@ -781,8 +786,8 @@ export const TrafficContent = memo(function TrafficContent({ selectedMonth, sele
       return data;
     });
 
-    const alightingChartData = Array.from({ length: 24 }, (_, hour) => {
-      const data: any = { hour: `${hour.toString().padStart(2, '0')}:00` };
+    const alightingChartData: ChartDataPoint[] = Array.from({ length: 24 }, (_, hour) => {
+      const data: ChartDataPoint = { hour: `${hour.toString().padStart(2, '0')}:00` };
       selectedDistricts.forEach(district => {
         if (districtData[district]) {
           const patterns = patternType === 'weekday' 

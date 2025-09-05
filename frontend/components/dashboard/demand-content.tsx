@@ -28,7 +28,7 @@ import {
   Legend,
 } from "recharts";
 import { memo, useState, useEffect } from "react";
-import { apiService, DRTScoreResponse, DRTModelType, DRTStationData, DRTStationDetailResponse, utils } from "@/lib/api";
+import { apiService, DRTScoreResponse, DRTModelType, DRTStationData, DRTStationDetailResponse, VulnerableFeatureScores, CommuterFeatureScores, TourismFeatureScores, utils } from "@/lib/api";
 import { ModelSuitabilityMap } from "@/components/map/model-suitability-map";
 
 // 모델 타입 매핑
@@ -291,7 +291,10 @@ export const DemandContent = memo(function DemandContent({
         
         // 필수 필드 검사
         const requiredFields = ['current_score', 'peak_hour', 'monthly_average'];
-        const missingFields = requiredFields.filter(field => (detail as any)[field] === undefined || (detail as any)[field] === null);
+        const missingFields = requiredFields.filter(field => {
+          const value = detail[field as keyof typeof detail];
+          return value === undefined || value === null;
+        });
         
         if (missingFields.length > 0) {
           console.error("❌ Missing required fields:", missingFields);
@@ -372,9 +375,18 @@ export const DemandContent = memo(function DemandContent({
   const getStationCharacteristics = () => {
     if (!stationDetail) return null;
     
-    const feature_scores = stationDetail.feature_scores as any;
+    const feature_scores = stationDetail.feature_scores;
     
     if (selectedModel === "교통취약지") {
+      // 교통취약지 모델 타입 가드
+      const isVulnerableScores = (scores: unknown): scores is VulnerableFeatureScores => {
+        return 'var_t_score' in scores && 'sed_t_score' in scores && 'mdi_t_score' in scores;
+      };
+      
+      if (!isVulnerableScores(feature_scores)) {
+        return null;
+      }
+      
       return {
         title: "교통취약지 특성 분석",
         items: [
@@ -399,6 +411,15 @@ export const DemandContent = memo(function DemandContent({
         ]
       };
     } else if (selectedModel === "출퇴근") {
+      // 출퇴근 모델 타입 가드
+      const isCommuterScores = (scores: unknown): scores is CommuterFeatureScores => {
+        return 'tc_score' in scores && 'pdr_score' in scores && 'ru_score' in scores;
+      };
+      
+      if (!isCommuterScores(feature_scores)) {
+        return null;
+      }
+      
       return {
         title: "출퇴근형 특성 분석",
         items: [
@@ -423,6 +444,15 @@ export const DemandContent = memo(function DemandContent({
         ]
       };
     } else {
+      // 관광 모델 타입 가드
+      const isTourismScores = (scores: unknown): scores is TourismFeatureScores => {
+        return 'tc_t_score' in scores && 'tdr_t_score' in scores && 'ru_t_score' in scores;
+      };
+      
+      if (!isTourismScores(feature_scores)) {
+        return null;
+      }
+      
       return {
         title: "관광특화형 특성 분석",
         items: [
