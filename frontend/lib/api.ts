@@ -261,7 +261,7 @@ analysisMonth: string
       analysis_month: analysisMonth,
     });
 
-    const url = `${API_BASE_URL}/drt-score/stations/${stationId}?${params.toString()}`;
+    const url = `${API_BASE_URL}/drt-score/stations/${encodeURIComponent(stationId)}?${params.toString()}`;
     
     console.log('🌐 Station Detail API Request:', { url, stationId, modelType, analysisMonth });
     

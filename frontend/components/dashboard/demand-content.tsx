@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Search, Brain } from "lucide-react";
+import { Search, Brain, HelpCircle } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -44,6 +44,37 @@ const mstGcnModels = [
   { model: "관광형", icon: "🗽", accuracy: 91.5 },
 ];
 
+// 모델별 색상 테마
+const modelColorThemes = {
+  "교통취약지": {
+    primary: "text-red-800",
+    secondary: "text-red-600", 
+    background: "from-red-50 to-pink-50",
+    border: "border-red-200",
+    spinner: "border-red-600",
+    button: "bg-red-100 text-red-700 hover:bg-red-200",
+    score: "text-red-600"
+  },
+  "출퇴근": {
+    primary: "text-blue-800",
+    secondary: "text-blue-600",
+    background: "from-blue-50 to-indigo-50", 
+    border: "border-blue-200",
+    spinner: "border-blue-600",
+    button: "bg-blue-100 text-blue-700 hover:bg-blue-200",
+    score: "text-blue-600"
+  },
+  "관광형": {
+    primary: "text-green-800",
+    secondary: "text-green-600",
+    background: "from-green-50 to-emerald-50",
+    border: "border-green-200", 
+    spinner: "border-green-600",
+    button: "bg-green-100 text-green-700 hover:bg-green-200",
+    score: "text-green-600"
+  }
+};
+
 interface DemandContentProps {
   selectedModel: string;
   setSelectedModel: (model: string) => void;
@@ -68,11 +99,15 @@ export const DemandContent = memo(function DemandContent({
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [searchResults, setSearchResults] = useState<DRTStationData[]>([]);
   const [focusStation, setFocusStation] = useState<{ lat: number; lng: number; stationName: string } | null>(null);
+  
+  // 현재 선택된 모델의 색상 테마
+  const currentTheme = modelColorThemes[selectedModel as keyof typeof modelColorThemes] || modelColorThemes["출퇴근"];
+  
   // 구별 DRT 데이터 로드
   useEffect(() => {
     const loadDRTData = async () => {
       try {
-        const apiModelType = modelTypeMapping[selectedModel] || "vulnerable";
+        const apiModelType = modelTypeMapping[selectedModel as keyof typeof modelTypeMapping] || "vulnerable";
         let targetRegion = selectedRegion;
         let response;
         let didFallback = false; // fallback 발생 여부 추적
@@ -229,9 +264,9 @@ export const DemandContent = memo(function DemandContent({
     console.log("🔄 Loading station detail for:", selectedStation.station_name, "ID:", selectedStation.station_id);
     
     const loadStationDetail = async () => {
+      const apiModelType = modelTypeMapping[selectedModel as keyof typeof modelTypeMapping] || "vulnerable";
       try {
         setLoadingStationDetail(true);
-        const apiModelType = modelTypeMapping[selectedModel] || "vulnerable";
         
         console.log("📡 Calling API with:", {
           station_id: selectedStation.station_id,
@@ -246,9 +281,36 @@ export const DemandContent = memo(function DemandContent({
         );
         
         console.log("✅ Station detail loaded:", detail);
+        
+        // 응답 데이터 유효성 검사
+        if (!detail || !detail.feature_scores) {
+          console.error("❌ Invalid station detail response:", detail);
+          throw new Error("Invalid station detail response - missing feature_scores");
+        }
+        
+        // 필수 필드 검사
+        const requiredFields = ['current_score', 'peak_hour', 'monthly_average'];
+        const missingFields = requiredFields.filter(field => (detail as any)[field] === undefined || (detail as any)[field] === null);
+        
+        if (missingFields.length > 0) {
+          console.error("❌ Missing required fields:", missingFields);
+          throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+        }
+        
         setStationDetail(detail);
       } catch (err) {
         console.error("🚨 Failed to load station detail:", err);
+        console.error("🚨 Station info:", {
+          station_name: selectedStation.station_name,
+          station_id: selectedStation.station_id,
+          coordinate: selectedStation.coordinate,
+          drt_score: selectedStation.drt_score
+        });
+        console.error("🚨 API parameters:", {
+          model: apiModelType,
+          month: utils.formatSelectedMonth(selectedMonth),
+          original_selectedModel: selectedModel
+        });
         setStationDetail(null);
       } finally {
         setLoadingStationDetail(false);
@@ -309,7 +371,7 @@ export const DemandContent = memo(function DemandContent({
   const getStationCharacteristics = () => {
     if (!stationDetail) return null;
     
-    const { feature_scores } = stationDetail;
+    const feature_scores = stationDetail.feature_scores as any;
     
     if (selectedModel === "교통취약지") {
       return {
@@ -508,7 +570,7 @@ export const DemandContent = memo(function DemandContent({
                             <span>•</span>
                             <span>DRT: {station.drt_score.toFixed(1)}점</span>
                             <span>•</span>
-                            <span className="text-blue-600">{selectedDistrictName}</span>
+                            <span className={currentTheme.secondary}>{selectedDistrictName}</span>
                           </div>
                         </button>
                       ))}
@@ -537,7 +599,7 @@ export const DemandContent = memo(function DemandContent({
                     
                     // 새 구의 DRT 데이터 로딩
                     try {
-                      const apiModelType = modelTypeMapping[selectedModel] || "vulnerable";
+                      const apiModelType = modelTypeMapping[selectedModel as keyof typeof modelTypeMapping] || "vulnerable";
                       console.log("📡 Loading DRT data for new district:", districtName);
                       
                       const response = await apiService.getDRTScores(
@@ -615,29 +677,46 @@ export const DemandContent = memo(function DemandContent({
         {/* 모델별 특성 분석 (정류장 기준) */}
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle>정류장 피크 특성 분석</CardTitle>
-            <CardDescription>
-              {selectedStation 
-                ? `${selectedStation.station_name} 정류장의 ${selectedModel} 모델 특성`
-                : "정류장을 선택하여 피크 특성을 분석하세요"}
-            </CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              정류장 피크 특성 분석
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-sm p-4">
+                    <div className="space-y-2">
+                      <div className="font-semibold text-sm">정류장 피크 특성 분석</div>
+                      <div className="text-xs text-gray-600 space-y-1">
+                        <div><strong>출퇴근형:</strong> TC(시간 집중도), PDR(피크 수요 비율), RU(노선 활용도)</div>
+                        <div><strong>관광특화형:</strong> TC(관광 집중도), TDR(관광 수요 비율), RU(구간 이용률)</div>
+                        <div><strong>교통취약지형:</strong> VAR(취약 접근성), SED(사회 형평성), MDI(이동성 불리), AVS(지역 취약성)</div>
+                      </div>
+                      <div className="text-xs text-blue-600 mt-2">
+                        💡 선택된 정류장의 모델별 세부 지표를 분석합니다
+                      </div>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {selectedStation ? (
               <div className="space-y-4">
                 {/* 선택된 정류장 이름 강조 표시 */}
-                <div className="text-center py-3 px-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-                  <div className="text-2xl font-bold text-blue-800 mb-1">
+                <div className={`text-center py-3 px-4 bg-gradient-to-r ${currentTheme.background} rounded-lg border ${currentTheme.border}`}>
+                  <div className={`text-2xl font-bold ${currentTheme.primary} mb-1`}>
                     🚏 {selectedStation.station_name}
                   </div>
-                  <div className="text-sm text-blue-600 font-medium">
+                  <div className={`text-sm ${currentTheme.secondary} font-medium`}>
                     {selectedModel} 모델 피크 특성 분석
                   </div>
                 </div>
                 {loadingStationDetail ? (
                   <div className="flex items-center justify-center h-64">
                     <div className="text-center">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                      <div className={`animate-spin rounded-full h-12 w-12 border-b-2 ${currentTheme.spinner} mx-auto mb-4`}></div>
                       <div className="text-gray-500">
                         <div className="font-semibold text-lg">{selectedStation.station_name}</div>
                         <div className="text-base">정류장 데이터 로딩 중...</div>
@@ -646,20 +725,20 @@ export const DemandContent = memo(function DemandContent({
                   </div>
                 ) : stationDetail && stationCharacteristics ? (
                   <>
-                    <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
-                      <h4 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                    <div className={`p-4 bg-gradient-to-r ${currentTheme.background} rounded-lg`}>
+                      <h4 className={`font-semibold text-lg mb-3 flex items-center gap-2 ${currentTheme.primary}`}>
                         🎯 {stationCharacteristics.title}
                       </h4>
                       <div className="space-y-3">
                         {stationCharacteristics.items.map((item, idx) => (
                           <div key={idx} className="bg-white p-3 rounded-lg">
-                            <div className="flex items-center justify-between mb-2">
-                              <div>
-                                <div className="font-semibold text-lg">{item.label}</div>
-                                <div className="text-lg text-gray-600">{item.description}</div>
+                            <div className="flex items-start gap-3 mb-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="font-semibold text-base">{item.label}</div>
+                                <div className="text-xs text-gray-600">{item.description}</div>
                               </div>
-                              <div className="text-right">
-                                <div className="text-xl font-bold text-blue-600">
+                              <div className="flex-shrink-0 text-right">
+                                <div className={`text-lg font-bold ${currentTheme.score}`}>
                                   {item.score}점
                                 </div>
                                 <Badge variant={
@@ -667,7 +746,7 @@ export const DemandContent = memo(function DemandContent({
                                   item.level.includes("높음") || item.level.includes("우수") ? "secondary" : 
                                   item.level.includes("보통") ? "outline" : 
                                   "secondary"
-                                }>
+                                } className="text-xs px-1.5 py-0.5">
                                   {item.level}
                                 </Badge>
                               </div>
@@ -685,15 +764,15 @@ export const DemandContent = memo(function DemandContent({
                       </div>
                     </div>
 
-                    <div className="p-3 bg-green-50 rounded-lg">
-                      <div className="text-base font-medium text-green-800 mb-1">
+                    <div className={`p-3 rounded-lg ${currentTheme.background.replace('from-', 'bg-').replace(' to-pink-50', '').replace(' to-indigo-50', '').replace(' to-emerald-50', '')}`}>
+                      <div className={`text-base font-medium ${currentTheme.primary} mb-1`}>
                         종합 DRT 적합도
                       </div>
                       <div className="flex items-center justify-between">
-                        <div className="text-2xl font-bold text-green-600">
+                        <div className={`text-2xl font-bold ${currentTheme.secondary}`}>
                           {stationDetail.current_score.toFixed(1)}점
                         </div>
-                        <div className="text-base text-green-700">
+                        <div className={`text-base ${currentTheme.primary}`}>
                           피크: {stationDetail.peak_hour}시 ({stationDetail.peak_score.toFixed(1)}점)
                         </div>
                       </div>
@@ -705,7 +784,20 @@ export const DemandContent = memo(function DemandContent({
                       <div className="text-4xl mb-3">⚠️</div>
                       <div className="font-semibold text-lg">{selectedStation.station_name}</div>
                       <div className="text-base mt-2">정류장 데이터를 불러올 수 없습니다</div>
+                      <div className="text-sm mt-2 text-gray-500">
+                        ID: {selectedStation.station_id} | 모델: {selectedModel}
+                      </div>
                       <div className="text-sm mt-1">다른 정류장을 선택해주세요</div>
+                      <button 
+                        onClick={() => {
+                          console.log("🔄 Retry button clicked for station:", selectedStation.station_name);
+                          setStationDetail(null);
+                          // useEffect will automatically trigger reload
+                        }}
+                        className={`mt-3 px-4 py-2 ${currentTheme.button} rounded-lg transition-colors text-sm`}
+                      >
+                        🔄 다시 시도
+                      </button>
                     </div>
                   </div>
                 )}
@@ -725,7 +817,30 @@ export const DemandContent = memo(function DemandContent({
         {/* 시계열 그래프 */}
         <Card className="lg:col-span-3">
           <CardHeader>
-            <CardTitle>시간대별 DRT 점수</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              시간대별 DRT 점수
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-md p-4">
+                    <div className="space-y-2">
+                      <div className="font-semibold text-sm">시간대별 DRT 점수</div>
+                      <div className="text-xs text-gray-600 space-y-1">
+                        <div>📈 <strong>24시간 DRT 점수:</strong> 0시부터 23시까지 시간대별 점수 변화</div>
+                        <div>🎯 <strong>현재 점수:</strong> 선택된 시간대의 DRT 적합도 점수</div>
+                        <div>⏰ <strong>피크 시간:</strong> 가장 높은 점수를 기록한 시간대</div>
+                        <div>📊 <strong>일평균:</strong> 해당 정류장의 월별 평균 점수</div>
+                      </div>
+                      <div className="text-xs text-blue-600 mt-2">
+                        💡 정류장별 수요 패턴과 최적 운행 시간대를 분석합니다
+                      </div>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </CardTitle>
             <CardDescription>
               {selectedStation && stationDetail
                 ? `${selectedStation.station_name} 정류장의 24시간 DRT 점수 변화`
@@ -737,7 +852,7 @@ export const DemandContent = memo(function DemandContent({
               loadingStationDetail ? (
                 <div className="flex items-center justify-center h-64">
                   <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <div className={`animate-spin rounded-full h-12 w-12 border-b-2 ${currentTheme.spinner} mx-auto mb-4`}></div>
                     <div className="text-gray-500">
                       <div className="font-semibold text-lg">{selectedStation.station_name}</div>
                       <div className="text-base">시간대별 데이터 로딩 중...</div>
@@ -781,9 +896,9 @@ export const DemandContent = memo(function DemandContent({
                 </ResponsiveContainer>
 
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="text-center p-3 bg-blue-50 rounded">
-                    <div className="text-lg text-blue-600">현재 점수</div>
-                    <div className="font-bold text-xl text-blue-700">
+                  <div className={`text-center p-3 rounded ${currentTheme.background.replace('from-', 'bg-').replace(' to-pink-50', '').replace(' to-indigo-50', '').replace(' to-emerald-50', '')}`}>
+                    <div className={`text-lg ${currentTheme.secondary}`}>현재 점수</div>
+                    <div className={`font-bold text-xl ${currentTheme.primary}`}>
                       {stationDetail.current_score.toFixed(1)}점
                     </div>
                   </div>
@@ -807,6 +922,18 @@ export const DemandContent = memo(function DemandContent({
                     <div className="text-4xl mb-3">⚠️</div>
                     <div className="font-semibold text-lg">{selectedStation.station_name}</div>
                     <div className="text-base mt-2">시간대별 데이터를 불러올 수 없습니다</div>
+                    <div className="text-sm mt-2 text-gray-500">
+                      ID: {selectedStation.station_id} | 모델: {selectedModel}
+                    </div>
+                    <button 
+                      onClick={() => {
+                        console.log("🔄 Retry button clicked for station time data:", selectedStation.station_name);
+                        setStationDetail(null);
+                      }}
+                      className={`mt-3 px-4 py-2 ${currentTheme.button} rounded-lg transition-colors text-sm`}
+                    >
+                      🔄 다시 시도
+                    </button>
                   </div>
                 </div>
               )
@@ -827,13 +954,34 @@ export const DemandContent = memo(function DemandContent({
           <CardHeader className="pb-4">
             <CardTitle className="text-2xl flex items-center gap-2">
               🏆 {selectedDistrictName ? `${selectedDistrictName} ` : ""}{selectedModel} DRT TOP 5
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent side="left" className="max-w-sm p-4">
+                    <div className="space-y-2">
+                      <div className="font-semibold text-sm">TOP 5 DRT 적합 정류장</div>
+                      <div className="text-xs text-gray-600 space-y-1">
+                        <div>🥇 <strong>최고점수 기준:</strong> 각 정류장의 24시간 중 최고 DRT 점수</div>
+                        <div>📍 <strong>지역별 순위:</strong> 선택된 구/지역 내 상위 5개 정류장</div>
+                        <div>📊 <strong>진행률 바:</strong> 100점 만점 기준 상대적 점수 표시</div>
+                        <div>🏅 <strong>순위 배지:</strong> 1위(금), 2-3위(은), 4-5위(동)</div>
+                      </div>
+                      <div className="text-xs text-blue-600 mt-2">
+                        💡 DRT 서비스 도입 시 우선 검토 대상 정류장입니다
+                      </div>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </CardTitle>
-            <CardDescription className="text-lg">
-              <div className="flex items-center justify-between">
-                <span>{selectedDistrictName ? `${selectedDistrictName} 지역 ` : ""}{selectedModel} 모델 기준 상위 정류장</span>
+            <CardDescription className="text-sm">
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex-1 min-w-0">{selectedDistrictName ? `${selectedDistrictName} 지역 ` : ""}{selectedModel} 모델 기준 상위 정류장</span>
                 {selectedDistrictName && (
-                  <span className="text-blue-600 text-base font-medium">
-                    {drtData?.stations?.length || 0}개 정류장 중
+                  <span className={`${currentTheme.secondary} text-xs font-medium flex-shrink-0`}>
+                    {drtData?.stations?.length || 0}개 중
                   </span>
                 )}
               </div>
@@ -847,14 +995,14 @@ export const DemandContent = memo(function DemandContent({
                   .slice(0, 5)
                   .map((station, index) => (
                     <div key={station.station_id} className="p-3 border rounded-lg hover:bg-gray-50 transition-colors">
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <h4 className="font-semibold text-base">{station.station_name}</h4>
-                          <p className="text-sm text-muted-foreground">{selectedDistrictName}</p>
+                      <div className="flex items-start gap-2 mb-2">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-sm">{station.station_name}</h4>
+                          <p className="text-xs text-muted-foreground">{selectedDistrictName}</p>
                         </div>
-                        <div className="text-right">
-                          <div className="text-base font-bold text-blue-600">{station.drt_score?.toFixed(1)}점</div>
-                          <Badge variant={index === 0 ? "default" : index < 3 ? "secondary" : "outline"} className="text-sm">
+                        <div className="flex-shrink-0 text-right">
+                          <div className={`text-sm font-bold ${currentTheme.secondary}`}>{station.drt_score?.toFixed(1)}점</div>
+                          <Badge variant={index === 0 ? "default" : index < 3 ? "secondary" : "outline"} className="text-xs px-1.5 py-0.5">
                             #{index + 1}
                           </Badge>
                         </div>
