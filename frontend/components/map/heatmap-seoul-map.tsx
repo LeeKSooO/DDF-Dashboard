@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
 "use client";
 
 import {
@@ -9,10 +10,25 @@ import {
   useImperativeHandle,
 } from "react";
 import dynamic from "next/dynamic";
-import { DistrictData, StationData } from "@/lib/api";
+import { DistrictData } from "@/lib/api";
 
-// Dynamically import Leaflet to avoid SSR issues
-const L = typeof window !== "undefined" ? require("leaflet") : null;
+// 패턴별 정류장 데이터 타입 정의
+interface PatternStation {
+  station_id: string;
+  station_name: string;
+  coordinate: {
+    latitude: number;
+    longitude: number;
+  };
+  pattern_score?: number;
+  traffic_volume?: number;
+  patternColor?: string;
+  patternType?: string;
+  patternInfo?: string;
+}
+
+// Import leaflet
+import L from 'leaflet';
 
 // Fix for default markers in Leaflet - only on client side
 if (typeof window !== "undefined" && L) {
@@ -33,9 +49,8 @@ interface HeatmapSeoulMapProps {
   districts: DistrictData[];
   viewMode: "district" | "station";
   loading?: boolean;
-  highlightTopStations?: boolean; // TOP 5 정류장 강조 옵션
   selectedPattern?: string | null; // 선택된 이상 패턴
-  patternStations?: any[]; // 패턴별 정류장 데이터
+  patternStations?: PatternStation[]; // 패턴별 정류장 데이터
 }
 
 export interface HeatmapSeoulMapRef {
@@ -53,7 +68,6 @@ const HeatmapSeoulMapComponent = forwardRef<
       districts = [],
       viewMode,
       loading = false,
-      highlightTopStations = false,
       selectedPattern = null,
       patternStations = [],
     },
@@ -76,71 +90,54 @@ const HeatmapSeoulMapComponent = forwardRef<
     };
     
     const stopAllAnimations = () => {
-      console.log('🛑 모든 애니메이션 중지 시작 - 현재 활성:', animationManagerRef.current.size, '개');
-      animationManagerRef.current.forEach((animationId, stationId) => {
-        console.log('🛑 애니메이션 중지:', stationId, animationId);
+      animationManagerRef.current.forEach((animationId) => {
         cancelAnimationFrame(animationId);
       });
       animationManagerRef.current.clear();
-      console.log('✅ 모든 애니메이션 중지 완료');
     };
     
-    const resetAllMarkerStyles = () => {
-      console.log('🎨 모든 마커 스타일 초기화 시작');
-      const existingMarkers = stationMarkersRef.current;
-      
-      existingMarkers.forEach((marker, stationId) => {
-        if (marker && mapInstanceRef.current?.hasLayer(marker)) {
-          // 마커를 일반 정류장 스타일로 되돌림 (패턴 색상 제거)
-          // 여기서 원래 스타일을 계산해서 되돌려야 함
-          console.log('🎨 마커 스타일 리셋:', stationId);
-        }
-      });
-      
-      console.log('✅ 모든 마커 스타일 초기화 완료');
-    };
     
     const startPatternAnimation = (stationId: string, marker: any, baseRadius: number) => {
-      console.log('🎯 패턴 애니메이션 시작:', stationId, 'baseRadius:', baseRadius);
-      
       // 기존 애니메이션이 있다면 먼저 정리
       stopAnimation(stationId);
       
       let growing = true;
       let currentRadius = baseRadius;
+      let frameCount = 0; // 성능 최적화: 프레임 카운터
       
       const animate = () => {
-        if (growing) {
-          currentRadius += 0.1;
-          if (currentRadius >= baseRadius * 1.15) {
-            growing = false;
+        frameCount++;
+        
+        // 60FPS에서 30FPS로 감소 (성능 향상)
+        if (frameCount % 2 === 0) {
+          if (growing) {
+            currentRadius += 0.15; // 속도 약간 증가
+            if (currentRadius >= baseRadius * 1.12) { // 변화량 감소
+              growing = false;
+            }
+          } else {
+            currentRadius -= 0.15;
+            if (currentRadius <= baseRadius * 0.98) { // 변화량 감소
+              growing = true;
+            }
           }
-        } else {
-          currentRadius -= 0.1;
-          if (currentRadius <= baseRadius * 0.95) {
-            growing = true;
+          
+          if (marker && mapInstanceRef.current?.hasLayer(marker)) {
+            marker.setStyle({ radius: currentRadius });
           }
         }
         
         if (marker && mapInstanceRef.current?.hasLayer(marker)) {
-          marker.setStyle({ radius: currentRadius });
           const animationId = requestAnimationFrame(animate);
           animationManagerRef.current.set(stationId, animationId);
-        } else {
-          console.log('⚠️ 마커가 지도에서 제거됨, 애니메이션 중지:', stationId);
         }
       };
       
-      // 애니메이션 시작
-      setTimeout(() => {
-        if (marker && mapInstanceRef.current?.hasLayer(marker)) {
-          const animationId = requestAnimationFrame(animate);
-          animationManagerRef.current.set(stationId, animationId);
-          console.log('✅ 애니메이션 시작됨:', stationId, 'ID:', animationId);
-        } else {
-          console.log('⚠️ 마커가 없어서 애니메이션 시작 안됨:', stationId);
-        }
-      }, 100);
+      // 지연 시작 제거 (즉시 시작)
+      if (marker && mapInstanceRef.current?.hasLayer(marker)) {
+        const animationId = requestAnimationFrame(animate);
+        animationManagerRef.current.set(stationId, animationId);
+      }
     };
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -168,7 +165,7 @@ const HeatmapSeoulMapComponent = forwardRef<
           }
         },
       }),
-      []
+      [seoulBounds]
     );
 
     // Convert district data to lookup map
@@ -180,25 +177,7 @@ const HeatmapSeoulMapComponent = forwardRef<
       return lookup;
     }, [districts]);
 
-    // TOP 5 정류장 계산
-    const topStations = useMemo(() => {
-      return districts
-        .flatMap(d => d.stations || [])
-        .sort((a, b) => b.total_traffic - a.total_traffic)
-        .slice(0, 5)
-        .map(station => station.station_id);
-    }, [districts]);
 
-    // TOP 5 정류장 여부 확인 함수
-    const isTopStation = (stationId: string): boolean => {
-      return highlightTopStations && topStations.includes(stationId);
-    };
-
-    // 패턴 정류장 여부 확인 함수
-    const getPatternStation = (stationId: string) => {
-      if (!selectedPattern || !patternStations.length) return null;
-      return patternStations.find(station => station.station_id === stationId);
-    };
 
     // 줌인 기능 제거 - 단순 표시만
 
@@ -224,22 +203,7 @@ const HeatmapSeoulMapComponent = forwardRef<
       return "#6B7280"; // Gray - Very Low (1천명 미만)
     };
 
-    // Combined traffic color function
-    const getTrafficColor = (traffic: number): string => {
-      return viewMode === "station" ? getStationTrafficColor(traffic) : getDistrictTrafficColor(traffic);
-    };
 
-    // TOP 5 정류장 전용 색상 (금색 그라데이션)
-    const getTopStationColor = (rank: number): string => {
-      const colors = [
-        "#FFD700", // Gold - 1위
-        "#FFA500", // Orange Gold - 2위
-        "#FF8C00", // Dark Orange - 3위
-        "#FF6347", // Tomato - 4위
-        "#FF4500", // Orange Red - 5위
-      ];
-      return colors[rank] || "#FFD700";
-    };
 
     // 구별 경계선 색상 배열 (25개 구를 위한 색상)
     const districtBorderColors = [
@@ -290,7 +254,7 @@ const HeatmapSeoulMapComponent = forwardRef<
           fillOpacity: 0.3,
         };
       };
-    }, [viewMode, selectedDistrict, districtLookup]);
+    }, [viewMode, selectedDistrict, districtLookup, districtBorderColors, getDistrictColorIndex]);
 
     useEffect(() => {
       if (!isClient || !L || !mapRef.current || mapInstanceRef.current) {
@@ -344,11 +308,10 @@ const HeatmapSeoulMapComponent = forwardRef<
           const geoJsonData = await response.json();
 
           // Add all district features to map
-          const layer = L.geoJSON(geoJsonData, {
+          L.geoJSON(geoJsonData, {
             style: getFeatureStyle,
-            onEachFeature: (feature, layer) => {
+            onEachFeature: (feature: any, layer: any) => {
               const districtName = feature.properties.sggnm;
-              const districtData = districtLookup[districtName];
 
               // Mouse events - 클로저 문제 방지를 위해 함수 내부에서 처리
               layer.on({
@@ -375,7 +338,7 @@ const HeatmapSeoulMapComponent = forwardRef<
                   const layer = e.target;
                   layer.setStyle(getFeatureStyle(feature));
                 },
-                click: (e) => {
+                click: () => {
                   const districtName = feature.properties.sggnm;
                   const districtCode = feature.properties.sgg;
 
@@ -393,12 +356,12 @@ const HeatmapSeoulMapComponent = forwardRef<
                 },
               });
 
-              // Tooltip - will be updated when data changes
+              // Tooltip - 데이터 준비될 때까지 기본 메시지
               layer.bindTooltip(
                 `<div>
-                <strong>${districtName}</strong><br/>
-                교통량: 로딩 중...
-              </div>`,
+                  <strong>${districtName}</strong><br/>
+                  데이터 로딩 중...
+                </div>`,
                 {
                   permanent: false,
                   direction: "center",
@@ -420,6 +383,63 @@ const HeatmapSeoulMapComponent = forwardRef<
 
       loadGeoJSON();
 
+      // 줌 이벤트 리스너 추가 (디바운싱 적용)
+      let zoomUpdateTimeout: NodeJS.Timeout;
+      map.on('zoomend', () => {
+        // 정류장 모드일 때만 마커 크기 업데이트
+        if (viewMode === 'station') {
+          // 디바운싱: 150ms 후에 업데이트
+          clearTimeout(zoomUpdateTimeout);
+          zoomUpdateTimeout = setTimeout(() => {
+            const currentZoom = map.getZoom();
+            // 더 극적인 크기 변화: 줄아웃 시 매우 작게, 줌인 시 더 크게
+            const zoomFactor = Math.max(0.1, Math.min(2.5, (currentZoom - 9) * 0.35));
+            
+            // 성능 최적화: 정류장 데이터를 Map으로 미리 생성
+            const stationDataMap = new Map();
+            districts.forEach(district => {
+              district.stations?.forEach(station => {
+                stationDataMap.set(station.station_id, station);
+              });
+            });
+            
+            const patternStationMap = new Map(patternStations.map(ps => [ps.station_id, ps]));
+            
+            // 마커 업데이트를 배치로 처리하여 성능 향상
+            const markerUpdates: Array<{marker: any, iconSize: number}> = [];
+            
+            stationMarkersRef.current.forEach((marker, stationId) => {
+              const stationData = stationDataMap.get(stationId);
+              if (stationData) {
+                const patternStation = patternStationMap.get(stationId);
+                
+                // 크기 재계산 - 더 극적인 변화
+                const baseIconSize = Math.min(
+                  Math.max(stationData.total_traffic / 30000, 2.5), // 기본 크기 더 작게
+                  12 // 기본 최대 크기 더 작게
+                );
+                
+                let iconSize = Math.max(baseIconSize * zoomFactor, 0.8); // 줄아웃 시 최소 크기 더 작게
+                
+                if (patternStation) {
+                  iconSize = Math.max(iconSize * 2.2, 1.5 * zoomFactor);
+                }
+                
+                // 줄아웃 시 최소/줄인 시 최대 크기를 더 극적으로 조정
+                iconSize = Math.max(0.8, Math.min(iconSize, currentZoom > 13 ? 45 : currentZoom > 11 ? 25 : 15));
+                
+                markerUpdates.push({marker, iconSize});
+              }
+            });
+            
+            // 배치 업데이트 실행
+            markerUpdates.forEach(({marker, iconSize}) => {
+              marker.setStyle({ radius: iconSize });
+            });
+          }, 150);
+        }
+      });
+
       // Cleanup function
       return () => {
         if (mapInstanceRef.current) {
@@ -433,7 +453,7 @@ const HeatmapSeoulMapComponent = forwardRef<
     useEffect(() => {
       if (!isClient || !L || !mapInstanceRef.current) return;
 
-      console.log("🔄 Updating heatmap styles and tooltips");
+      // 히트맵 스타일과 툴팁 업데이트
 
       // Update existing station markers instead of removing them
       const existingMarkers = stationMarkersRef.current;
@@ -442,7 +462,7 @@ const HeatmapSeoulMapComponent = forwardRef<
         if (layer instanceof L.GeoJSON) {
           layer.eachLayer((featureLayer: any) => {
             if (featureLayer instanceof L.Path) {
-              const feature = featureLayer.feature;
+              const feature = (featureLayer as any).feature;
               if (feature) {
                 // Update style
                 featureLayer.setStyle(getFeatureStyle(feature));
@@ -486,14 +506,17 @@ const HeatmapSeoulMapComponent = forwardRef<
                       ).toFixed(2)
                     : "N/A";
 
-                featureLayer.setTooltipContent(
-                  `<div>
-                  <strong>${districtName}</strong><br/>
-                  교통량: ${traffic.toLocaleString()}명<br/>
-                  정류장: ${stationCount}개<br/>
-                  승하차비율: ${rideAlightRatio}
-                </div>`
-                );
+                // 데이터가 있을 때만 업데이트, 없으면 로딩 메시지 유지
+                if (districtData && Object.keys(districtLookup).length > 0) {
+                  featureLayer.setTooltipContent(
+                    `<div>
+                    <strong>${districtName}</strong><br/>
+                    교통량: ${traffic.toLocaleString()}명<br/>
+                    정류장: ${stationCount}개<br/>
+                    승하차비율: ${rideAlightRatio}
+                  </div>`
+                  );
+                }
               }
             }
           });
@@ -512,13 +535,13 @@ const HeatmapSeoulMapComponent = forwardRef<
           }
         });
         existingMarkers.clear();
-        console.log('🗑️ District mode: 모든 정류장 마커 및 애니메이션 제거 완료');
+        // District mode: 모든 정류장 마커 및 애니메이션 제거
       }
       
       // Add station markers if in station mode and stations available
       else if (viewMode === "station" && districts.length > 0) {
         // 패턴이 변경될 때마다 모든 마커를 완전히 제거하고 다시 생성
-        console.log('🔄 패턴 변경 감지 - 모든 마커 제거 후 재생성');
+        // 패턴 변경 감지 - 모든 마커 제거 후 재생성
         stopAllAnimations();
         
         // 모든 정류장 마커들을 지도에서 완전히 제거
@@ -528,7 +551,7 @@ const HeatmapSeoulMapComponent = forwardRef<
           }
         });
         existingMarkers.clear();
-        console.log('🗑️ 모든 기존 마커 제거 완료 - 깨끗한 상태로 시작');
+        // 모든 기존 마커 제거 완료
         // Filter districts - if a district is selected, show only its stations
         const districtsToShow = selectedDistrict
           ? districts.filter((d) => d.district_name === selectedDistrict)
@@ -536,38 +559,44 @@ const HeatmapSeoulMapComponent = forwardRef<
 
         // 더 이상 다른 구 마커 제거 로직 불필요 - 모든 마커를 새로 만들기 때문
 
+        // 성능 최적화: 공통 계산 미리 수행
+        const currentZoom = mapInstanceRef.current.getZoom();
+        const zoomFactor = Math.max(0.1, Math.min(2.5, (currentZoom - 9) * 0.35));
+        
+        // 패턴 정류장 맵으로 변환 (빠른 조회)
+        const patternStationMap = new Map(patternStations.map(ps => [ps.station_id, ps]));
+        
         districtsToShow.forEach((district) => {
           if (district.stations && district.stations.length > 0) {
             district.stations.forEach((station) => {
               // Check if coordinates exist and are valid
-              const lat =
-                station.coordinate?.lat || station.coordinate?.latitude;
-              const lng =
-                station.coordinate?.lng || station.coordinate?.longitude;
+              const lat = (station.coordinate as any)?.lat || station.coordinate?.latitude;
+              const lng = (station.coordinate as any)?.lng || station.coordinate?.longitude;
 
               if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
-                // 모든 마커를 새로 생성 (기존 마커 체크 없이)
+                // 정류장 우선순위 확인 (최적화된 버전)
+                const patternStation = patternStationMap.get(station.station_id);
                 
-                // 정류장 우선순위 확인
-                const topStationRank = topStations.indexOf(station.station_id);
-                const isTop = isTopStation(station.station_id);
-                const patternStation = getPatternStation(station.station_id);
+                // 줄 레벨 계산은 이미 위에서 수행됨
                 
-                // Create custom icon based on traffic (확대시 더 잘 보이도록 크기 증가)
-                let iconSize = Math.min(
-                  Math.max(station.total_traffic / 25000, 6), // 최소 크기 4->6, 나누는 값 50000->25000으로 조정
-                  20 // 최대 크기 15->20으로 증가
+                // Create custom icon based on traffic + zoom level
+                const baseIconSize = Math.min(
+                  Math.max(station.total_traffic / 30000, 2.5), // 기본 최소 크기 더 작게
+                  12 // 기본 최대 크기 더 작게
                 );
                 
-                // 우선순위별 크기 조정
+                let iconSize = Math.max(baseIconSize * zoomFactor, 0.8); // 줄아웃 시 최소 0.8px
+                
+                // 우선순위별 크기 조정 (줄 레벨 고려)
                 if (patternStation) {
-                  iconSize = Math.max(iconSize * 2.2, 20); // 패턴 정류장 가장 크게 (16->20)
-                } else if (isTop) {
-                  iconSize = Math.max(iconSize * 1.8, 16); // TOP 5 정류장 (12->16)
+                  iconSize = Math.max(iconSize * 2.2, 1.5 * zoomFactor); // 패턴 정류장
                 }
                 
+                // 줄아웃 시 최소/최대 크기 제한 (더 극적으로)
+                iconSize = Math.max(0.8, Math.min(iconSize, currentZoom > 13 ? 45 : currentZoom > 11 ? 25 : 15));
+                
                 // 우선순위별 색상 및 스타일 결정 (파스텔/반투명 스타일)
-                let fillColor, borderColor, borderWeight, fillOpacity, zIndex;
+                let fillColor, borderColor, borderWeight, fillOpacity;
                 
                 if (patternStation) {
                   // 패턴 정류장 - 부드러운 파스텔 톤으로 강조
@@ -575,21 +604,12 @@ const HeatmapSeoulMapComponent = forwardRef<
                   borderColor = patternStation.patternColor;
                   borderWeight = 2;
                   fillOpacity = 0.6; // 반투명
-                  zIndex = 3000; // 패턴 정류장이 가장 위에
-                } else if (isTop) {
-                  // TOP 5 정류장 - 부드러운 골드 파스텔
-                  fillColor = getTopStationColor(topStationRank);
-                  borderColor = getTopStationColor(topStationRank);
-                  borderWeight = 2;
-                  fillOpacity = 0.7; // 약간 더 진하게
-                  zIndex = 2000;
                 } else {
                   // 일반 정류장 - 매우 부드러운 톤
                   fillColor = getStationTrafficColor(station.total_traffic);
                   borderColor = fillColor;
                   borderWeight = 1;
                   fillOpacity = 0.5; // 반투명
-                  zIndex = 1000;
                 }
 
                 // 모든 마커를 새로 생성 (깨끗한 상태에서 시작)
@@ -606,8 +626,6 @@ const HeatmapSeoulMapComponent = forwardRef<
                 
                 // z-order 설정
                 if (patternStation) {
-                  icon.bringToFront();
-                } else if (isTop) {
                   icon.bringToFront();
                 }
                 
@@ -648,19 +666,6 @@ const HeatmapSeoulMapComponent = forwardRef<
                   `;
                   tooltipClass = "pattern-station-tooltip";
                   tooltipOffset = -20;
-                } else if (isTop) {
-                  // TOP 5 정류장 툴팁
-                  tooltipContent = `
-                    <div style="background: linear-gradient(135deg, #FFD700, #FFA500); color: #000; font-weight: bold; border: 2px solid #FF8C00;">
-                      <div style="color: #8B0000; font-weight: bold; font-size: 14px;">⭐ TOP ${topStationRank + 1} 정류장 ⭐</div>
-                      <strong>${station.station_name}</strong><br/>
-                      구: ${district.district_name}<br/>
-                      교통량: ${station.total_traffic.toLocaleString()}명
-                      <div style="color: #8B0000; font-size: 12px; margin-top: 4px;">클릭하여 상세정보 확인</div>
-                    </div>
-                  `;
-                  tooltipClass = "top-station-tooltip";
-                  tooltipOffset = -15;
                 } else {
                   // 일반 정류장 툴팁
                   tooltipContent = `
@@ -699,8 +704,6 @@ const HeatmapSeoulMapComponent = forwardRef<
       getFeatureStyle,
       viewMode,
       districts,
-      highlightTopStations,
-      topStations,
       selectedPattern, // 패턴 변경 시 마커 업데이트
       patternStations, // 패턴 정류장 데이터 변경 시 마커 업데이트
     ]);
@@ -709,7 +712,7 @@ const HeatmapSeoulMapComponent = forwardRef<
 
     if (loading) {
       return (
-        <div className="h-[800px] bg-gray-100 rounded-lg flex items-center justify-center">
+        <div className="h-[900px] bg-gray-100 rounded-lg flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
             <p className="text-gray-600">데이터 로딩 중...</p>
@@ -720,7 +723,7 @@ const HeatmapSeoulMapComponent = forwardRef<
 
     if (error) {
       return (
-        <div className="h-[800px] bg-gray-100 rounded-lg flex items-center justify-center">
+        <div className="h-[900px] bg-gray-100 rounded-lg flex items-center justify-center">
           <div className="text-center text-red-500">
             <p className="font-medium">지도 로딩 실패</p>
             <p className="text-base">{error}</p>
@@ -732,7 +735,7 @@ const HeatmapSeoulMapComponent = forwardRef<
     // Don't render anything on server side
     if (!isClient) {
       return (
-        <div className="h-[800px] bg-gray-100 rounded-lg flex items-center justify-center">
+        <div className="h-[900px] bg-gray-100 rounded-lg flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
             <p className="text-gray-600">지도 로딩 중...</p>
@@ -745,7 +748,7 @@ const HeatmapSeoulMapComponent = forwardRef<
       <div className="relative">        
         <div
           ref={mapRef}
-          className="h-[800px] rounded-lg border"
+          className="h-[900px] rounded-lg border"
           style={{ zIndex: 1 }}
         />
 
@@ -758,149 +761,183 @@ const HeatmapSeoulMapComponent = forwardRef<
           </div>
         )}
 
-        {/* Enhanced Legend for Heatmap */}
-        <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg text-base z-20">
-          <div className="font-medium mb-2">
-            {viewMode === "district" ? "구별 교통량 범례" : "정류장별 교통량 범례"}
-          </div>
+        {/* Enhanced Legend for Heatmap - 상황별 컴팩트 모드 */}
+        <div className={`absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg z-20 transition-all duration-300 ${
+          (selectedPattern || selectedDistrict || (viewMode === 'station' && districts.length > 0)) ? 'p-2 text-xs' : 'p-3 text-base'
+        }`}>
+          {/* 기본 상태에서만 제목 표시 */}
+          {!(selectedPattern || selectedDistrict || (viewMode === 'station' && districts.length > 0)) && (
+            <div className="font-medium mb-2">
+              교통량 범례
+            </div>
+          )}
           
-          {/* 패턴 범례 (패턴 선택시) */}
+          {/* 패턴 범례 (컴팩트 모드) */}
           {selectedPattern && patternStations.length > 0 && (
-            <div className="mb-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded border-2 border-blue-200">
-              <div className="font-medium text-blue-800 mb-2 flex items-center gap-2">
-                🎯 이상 패턴 분석
+            <div className="mb-2 p-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded border border-blue-200">
+              <div className="font-medium text-blue-800 mb-1 flex items-center gap-1 text-xs">
+                🎯 {selectedPattern === 'weekend' ? '주말우세' : selectedPattern === 'night' ? '심야고수요' : selectedPattern === 'underutilized' ? '저활용' : selectedPattern === 'lunchtime' ? '점심시간' : selectedPattern === 'rushhour' ? '러시아워' : '지역특성'} ({patternStations.length})
               </div>
-              <div className="space-y-2">
+              <div className="flex flex-wrap gap-1">
                 {selectedPattern === 'weekend' && (
-                  <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 rounded-full bg-blue-500 border-2 border-black"></div>
-                    <span className="text-blue-700">주말 우세 정류장 ({patternStations.length}곳)</span>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                    <span className="text-blue-700 text-xs">주말우세</span>
                   </div>
                 )}
                 {selectedPattern === 'night' && (
-                  <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 rounded-full bg-purple-500 border-2 border-black"></div>
-                    <span className="text-purple-700">심야 고수요 정류장 ({patternStations.length}곳)</span>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                    <span className="text-purple-700 text-xs">심야고수요</span>
                   </div>
                 )}
                 {selectedPattern === 'underutilized' && (
-                  <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 rounded-full bg-red-500 border-2 border-black"></div>
-                    <span className="text-red-700">저활용 정류장 ({patternStations.length}곳)</span>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                    <span className="text-red-700 text-xs">저활용</span>
                   </div>
                 )}
                 {selectedPattern === 'lunchtime' && (
-                  <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 rounded-full bg-green-500 border-2 border-black"></div>
-                    <span className="text-green-700">점심시간 특화 정류장 ({patternStations.length}곳)</span>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                    <span className="text-green-700 text-xs">점심시간</span>
                   </div>
                 )}
                 {selectedPattern === 'rushhour' && (
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded-full" style={{ backgroundColor: '#FF6B35' }}></div>
-                      <span className="text-orange-700 text-sm">🌅 오전 러시아워 (07-09시)</span>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#FF6B35' }}></div>
+                      <span className="text-orange-700 text-xs">오전</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded-full" style={{ backgroundColor: '#DC2626' }}></div>
-                      <span className="text-red-700 text-sm">🌆 오후 러시아워 (17-19시)</span>
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#DC2626' }}></div>
+                      <span className="text-red-700 text-xs">오후</span>
                     </div>
-                    <div className="text-xs text-gray-600 mt-1">총 {patternStations.length}곳</div>
                   </div>
                 )}
                 {selectedPattern === 'areatype' && (
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded-full bg-sky-500 border border-black"></div>
-                      <span className="text-sky-700 text-sm">주거지역</span>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 rounded-full bg-sky-500"></div>
+                      <span className="text-sky-700 text-xs">주거</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded-full bg-purple-500 border border-black"></div>
-                      <span className="text-purple-700 text-sm">업무지역</span>
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                      <span className="text-purple-700 text-xs">업무</span>
                     </div>
                   </div>
                 )}
-                <div className="text-xs text-gray-600 mt-2">패턴별 색상으로 강조 표시</div>
               </div>
+              <div className="text-xs text-gray-500 mt-1">패턴 강조</div>
             </div>
           )}
           
-          {/* TOP 5 정류장 범례 (강조 모드일 때만) */}
-          {highlightTopStations && viewMode === "station" && !selectedPattern && (
-            <div className="mb-3 p-2 bg-gradient-to-r from-yellow-100 to-orange-100 rounded border">
-              <div className="font-medium text-orange-800 mb-1">⭐ TOP 5 정류장</div>
-              <div className="flex items-center gap-2 text-sm">
-                <div className="w-4 h-4 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 border-2 border-black"></div>
-                <span className="text-orange-700">특별 강조 표시</span>
-              </div>
-            </div>
-          )}
           
-          {/* 구별 모드 범례 */}
-          {viewMode === "district" && (
+          {/* 구별 모드 범례 - 상황별 표시 */}
+          {viewMode === "district" && !selectedPattern && (
             <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-3 bg-[#DC2626] rounded-sm"></div>
-                <span>900만명 초과</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-3 bg-[#EA580C] rounded-sm"></div>
-                <span>750-900만명</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-3 bg-[#F59E0B] rounded-sm"></div>
-                <span>600-750만명</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-3 bg-[#EAB308] rounded-sm"></div>
-                <span>450-600만명</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-3 bg-[#16A34A] rounded-sm"></div>
-                <span>300-450만명</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-3 bg-[#2563EB] rounded-sm"></div>
-                <span>150-300만명</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-3 bg-[#6B7280] rounded-sm"></div>
-                <span>150만명 미만</span>
-              </div>
+              {/* 기본 상태: 상세한 범례 */}
+              {!selectedDistrict ? (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-3 bg-[#DC2626] rounded-sm"></div>
+                    <span>900만명 초과</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-3 bg-[#EA580C] rounded-sm"></div>
+                    <span>750-900만명</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-3 bg-[#F59E0B] rounded-sm"></div>
+                    <span>600-750만명</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-3 bg-[#EAB308] rounded-sm"></div>
+                    <span>450-600만명</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-3 bg-[#16A34A] rounded-sm"></div>
+                    <span>300-450만명</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-3 bg-[#2563EB] rounded-sm"></div>
+                    <span>150-300만명</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-3 bg-[#6B7280] rounded-sm"></div>
+                    <span>150만명 미만</span>
+                  </div>
+                </div>
+              ) : (
+                /* 구 선택 시: 컴팩트 범례 */
+                <div>
+                  <div className="text-xs text-gray-600 mb-1">구별 교통량</div>
+                  <div className="flex flex-wrap gap-1">
+                    <div className="w-4 h-4 bg-[#DC2626] rounded" title="900만명 초과"></div>
+                    <div className="w-4 h-4 bg-[#EA580C] rounded" title="750-900만명"></div>
+                    <div className="w-4 h-4 bg-[#F59E0B] rounded" title="600-750만명"></div>
+                    <div className="w-4 h-4 bg-[#EAB308] rounded" title="450-600만명"></div>
+                    <div className="w-4 h-4 bg-[#16A34A] rounded" title="300-450만명"></div>
+                    <div className="w-4 h-4 bg-[#2563EB] rounded" title="150-300만명"></div>
+                    <div className="w-4 h-4 bg-[#6B7280] rounded" title="150만명 미만"></div>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">높음 → 낮음</div>
+                </div>
+              )}
             </div>
           )}
 
-          {/* 정류장별 모드 범례 */}
-          {viewMode === "station" && (
+          {/* 정류장별 모드 범례 - 상황별 표시 */}
+          {viewMode === "station" && !selectedPattern && (
             <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-3 bg-[#DC2626] rounded-sm"></div>
-                <span>4만명 이상</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-3 bg-[#EA580C] rounded-sm"></div>
-                <span>3-4만명</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-3 bg-[#F59E0B] rounded-sm"></div>
-                <span>2-3만명</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-3 bg-[#EAB308] rounded-sm"></div>
-                <span>1만-2만명</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-3 bg-[#16A34A] rounded-sm"></div>
-                <span>5천-1만명</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-3 bg-[#2563EB] rounded-sm"></div>
-                <span>1천-5천명</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-3 bg-[#6B7280] rounded-sm"></div>
-                <span>1천명 미만</span>
-              </div>
+              {/* 기본 상태: 상세한 범례 */}
+              {!selectedDistrict ? (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-3 bg-[#DC2626] rounded-sm"></div>
+                    <span>4만명 이상</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-3 bg-[#EA580C] rounded-sm"></div>
+                    <span>3-4만명</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-3 bg-[#F59E0B] rounded-sm"></div>
+                    <span>2-3만명</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-3 bg-[#EAB308] rounded-sm"></div>
+                    <span>1만-2만명</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-3 bg-[#16A34A] rounded-sm"></div>
+                    <span>5천-1만명</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-3 bg-[#2563EB] rounded-sm"></div>
+                    <span>1천-5천명</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-3 bg-[#6B7280] rounded-sm"></div>
+                    <span>1천명 미만</span>
+                  </div>
+                </div>
+              ) : (
+                /* 구 선택 시: 컴팩트 범례 */
+                <div>
+                  <div className="text-xs text-gray-600 mb-1">정류장 교통량</div>
+                  <div className="flex flex-wrap gap-1">
+                    <div className="w-4 h-4 bg-[#DC2626] rounded" title="4만명 이상"></div>
+                    <div className="w-4 h-4 bg-[#EA580C] rounded" title="3-4만명"></div>
+                    <div className="w-4 h-4 bg-[#F59E0B] rounded" title="2-3만명"></div>
+                    <div className="w-4 h-4 bg-[#EAB308] rounded" title="1만-2만명"></div>
+                    <div className="w-4 h-4 bg-[#16A34A] rounded" title="5천-1만명"></div>
+                    <div className="w-4 h-4 bg-[#2563EB] rounded" title="1천-5천명"></div>
+                    <div className="w-4 h-4 bg-[#6B7280] rounded" title="1천명 미만"></div>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">높음 → 낮음</div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -928,12 +965,6 @@ const HeatmapSeoulMapComponent = forwardRef<
             </div>
           )}
           
-          {/* TOP 5 강조 표시 */}
-          {highlightTopStations && viewMode === "station" && !selectedPattern && (
-            <div className="text-sm text-orange-600 mt-1 font-medium">
-              ⭐ TOP 5 강조 모드
-            </div>
-          )}
         </div>
       </div>
     );
@@ -955,3 +986,5 @@ export const HeatmapSeoulMap = dynamic(
     ),
   }
 );
+
+HeatmapSeoulMapComponent.displayName = 'HeatmapSeoulMapComponent';

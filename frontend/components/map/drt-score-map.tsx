@@ -5,16 +5,16 @@ import dynamic from 'next/dynamic'
 import { DRTScoreResponse } from '@/lib/api'
 
 // Dynamically import Leaflet to avoid SSR issues
-const L = typeof window !== 'undefined' ? require('leaflet') : null
+import L from 'leaflet';
 
-// Fix for default markers in Leaflet - only on client side
-if (typeof window !== 'undefined' && L) {
-  delete (L.Icon.Default.prototype as any)._getIconUrl
+// Fix for default markers in Leaflet
+if (typeof window !== 'undefined') {
+  delete (L.Icon.Default.prototype as any)._getIconUrl; // eslint-disable-line @typescript-eslint/no-explicit-any
   L.Icon.Default.mergeOptions({
     iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
     iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  })
+  });
 }
 
 interface DRTScoreMapProps {
@@ -26,8 +26,8 @@ interface DRTScoreMapProps {
 
 function DRTScoreMapComponent({ drtData, selectedModel, loading = false, error = null }: DRTScoreMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
-  const mapInstanceRef = useRef<any>(null)
-  const markersRef = useRef<any[]>([])
+  const mapInstanceRef = useRef<L.Map | null>(null)
+  const markersRef = useRef<(L.Marker | L.CircleMarker)[]>([])
   const [isClient, setIsClient] = useState(false)
 
   // Check if we're on client side
@@ -128,14 +128,16 @@ function DRTScoreMapComponent({ drtData, selectedModel, loading = false, error =
           </div>
         `)
         
-        marker.addTo(mapInstanceRef.current)
-        markersRef.current.push(marker)
+        if (mapInstanceRef.current) {
+          marker.addTo(mapInstanceRef.current)
+          markersRef.current.push(marker)
+        }
       }
     })
 
     // Fit map to show all markers if we have data
-    if (markersRef.current.length > 0) {
-      const group = new L.featureGroup(markersRef.current)
+    if (markersRef.current.length > 0 && mapInstanceRef.current) {
+      const group = L.featureGroup(markersRef.current)
       mapInstanceRef.current.fitBounds(group.getBounds().pad(0.1))
     }
 
@@ -233,7 +235,7 @@ function DRTScoreMapComponent({ drtData, selectedModel, loading = false, error =
         <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-sm z-20">
           <div className="font-medium mb-2 text-base">🏆 TOP 3 정류장</div>
           <div className="space-y-1 text-base">
-            {drtData.top_stations.slice(0, 3).map((station, idx) => (
+            {drtData.top_stations.slice(0, 3).map((station) => (
               <div key={station.station_id} className="flex justify-between items-center">
                 <span className="truncate max-w-24">{station.station_name}</span>
                 <span 
