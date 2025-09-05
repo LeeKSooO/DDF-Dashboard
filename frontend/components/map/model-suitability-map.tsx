@@ -1,11 +1,30 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
 "use client"
 
-import { useEffect, useRef, useState, useMemo } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
-import { apiService, DRTModelType, DRTStationData } from '@/lib/api'
+import { apiService, DRTModelType, DRTStationData, utils } from '@/lib/api'
 
-// Dynamically import Leaflet to avoid SSR issues
-const L = typeof window !== 'undefined' ? require('leaflet') : null
+// District analysis 타입 정의
+interface DistrictAnalysis {
+  total_stations: number;
+  avg_score: number;
+  high_score_stations: number;
+  stations: DRTStationData[];
+  stationName?: string | null;
+  stationData?: DRTStationData | null;
+  districtName?: string;
+  selectedModelScore?: number | null;
+  allModelScores?: Record<string, number>;
+  bestModel?: string;
+  bestScore?: number;
+  suitabilityLevel?: string;
+  suitabilityColor?: string;
+  peakHour?: string | number;
+}
+
+// Import leaflet
+import L from 'leaflet';
 
 // Fix for default markers in Leaflet - only on client side
 if (typeof window !== 'undefined' && L) {
@@ -42,8 +61,11 @@ const getSuitabilityLevel = (score: number): string => {
 
 interface ModelSuitabilityMapProps {
   selectedModel: string
+  selectedMonth?: string
   initialDistrictName?: string
-  onDistrictAnalysis?: (districtName: string, analysis: any) => void
+  onDistrictAnalysis?: (districtName: string, analysis: DistrictAnalysis) => void
+  height?: string
+  focusStation?: { lat: number; lng: number; stationName: string } | null
 }
 
 interface StationAnalysis {
@@ -56,20 +78,14 @@ interface StationAnalysis {
   peakHour: number
 }
 
-interface DistrictAnalysis {
-  districtName: string
-  selectedModelScore: number
-  allModelScores: Record<string, number>
-  bestModel: string
-  bestScore: number
-  suitabilityLevel: string
-  suitabilityColor: string
-}
 
 function ModelSuitabilityMapComponent({ 
-  selectedModel, 
+  selectedModel,
+  selectedMonth = "7",
   initialDistrictName,
-  onDistrictAnalysis 
+  onDistrictAnalysis,
+  height = "600px",
+  focusStation
 }: ModelSuitabilityMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
@@ -77,7 +93,7 @@ function ModelSuitabilityMapComponent({
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null)
-  const [districtScores, setDistrictScores] = useState<Record<string, Record<string, number>>>({})
+  const [districtScores] = useState<Record<string, Record<string, number>>>({})
   const [stationData, setStationData] = useState<DRTStationData[]>([])
   const [selectedStation, setSelectedStation] = useState<StationAnalysis | null>(null)
   const [stationMarkersLayer, setStationMarkersLayer] = useState<any>(null)
@@ -95,11 +111,6 @@ function ModelSuitabilityMapComponent({
   }, [])
 
   // 선택된 모델에 따른 구별 색상 계산
-  const getDistrictColor = (districtName: string) => {
-    const modelType = modelTypeMapping[selectedModel]
-    const score = districtScores[districtName]?.[modelType] || 0
-    return getSuitabilityColor(score)
-  }
 
   // Style function for districts with pastel colors
   const getFeatureStyle = (feature: any) => {
@@ -126,7 +137,7 @@ function ModelSuitabilityMapComponent({
       const apiModelType = modelTypeMapping[selectedModel] || "vulnerable"
       console.log('🔄 API call with params:', { districtName, selectedModel, apiModelType })
       
-      const response = await apiService.getDRTScores(districtName, apiModelType, "2025-07-01")
+      const response = await apiService.getDRTScores(districtName, apiModelType, utils.formatSelectedMonth(selectedMonth))
       
       console.log('📊 Map Station DRT response:', response)
       console.log('📊 Stations count:', response.stations?.length || 0)
@@ -196,6 +207,7 @@ function ModelSuitabilityMapComponent({
       marker.bindTooltip(
         `<div>
           <strong>${station.station_name}</strong><br/>
+          <small style="color: #666; font-size: 11px;">(ID: ${station.station_id})</small><br/>
           DRT 점수: ${station.drt_score.toFixed(1)}점<br/>
           적합성: ${getSuitabilityLevel(station.drt_score)}
         </div>`,
@@ -238,7 +250,11 @@ function ModelSuitabilityMapComponent({
     // Call district analysis callback with station data
     if (onDistrictAnalysis) {
       onDistrictAnalysis(selectedDistrict || "강남구", {
-        districtName: selectedDistrict,
+        total_stations: 0,
+        avg_score: 0,
+        high_score_stations: 0,
+        stations: [],
+        districtName: selectedDistrict || undefined,
         stationName: station.station_name,
         selectedModelScore: station.drt_score,
         allModelScores: { [selectedModel]: station.drt_score },
@@ -271,6 +287,23 @@ function ModelSuitabilityMapComponent({
       // Load station data for this district with current model
       await loadStationData(districtName)
       
+      // Notify parent component about district change
+      if (onDistrictAnalysis) {
+        console.log('📤 Notifying parent about district change:', districtName);
+        onDistrictAnalysis(districtName, {
+          total_stations: 0,
+          avg_score: 0,
+          high_score_stations: 0,
+          stations: [],
+          districtName,
+          stationName: null, // No specific station selected
+          selectedModelScore: null,
+          allModelScores: {},
+          bestModel: selectedModel,
+          stationData: null
+        });
+      }
+      
     } catch (err) {
       console.error('🚨 District analysis error:', err)
     }
@@ -289,9 +322,14 @@ function ModelSuitabilityMapComponent({
       maxZoom: 16,        // 최대 줌 레벨 설정
       maxBounds: seoulBoundingBox, // 서울시 경계로 이동 제한
       maxBoundsViscosity: 1.0,     // 경계 제한 강도 (1.0 = 완전 제한)
-      zoomControl: true,
+      zoomControl: false,  // 기본 줌 컨트롤 비활성화
       attributionControl: true
     })
+    
+    // Add zoom control to bottom-right to avoid overlap with other controls
+    L.control.zoom({
+      position: 'bottomright'
+    }).addTo(map)
 
     // CartoDB Positron tiles
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -316,14 +354,14 @@ function ModelSuitabilityMapComponent({
         const geoJsonData = await response.json()
         
         // Add all district features to map
-        const layer = L.geoJSON(geoJsonData, {
+        L.geoJSON(geoJsonData, {
           style: getFeatureStyle,
-          onEachFeature: (feature, layer) => {
+          onEachFeature: (feature: any, layer: any) => {
             const districtName = feature.properties.sggnm
 
             // Mouse events
             layer.on({
-              mouseover: (e) => {
+              mouseover: (e: any) => {
                 const layer = e.target
                 layer.setStyle({
                   weight: 3,
@@ -332,11 +370,11 @@ function ModelSuitabilityMapComponent({
                 })
                 layer.bringToFront()
               },
-              mouseout: (e) => {
+              mouseout: (e: any) => {
                 const layer = e.target
                 layer.setStyle(getFeatureStyle(feature))
               },
-              click: (e) => {
+              click: () => {
                 const districtName = feature.properties.sggnm
                 
                 // Zoom to district
@@ -399,6 +437,61 @@ function ModelSuitabilityMapComponent({
     console.log('🔄 Updating station data for model change:', selectedModel, 'in district:', selectedDistrict)
     loadStationData(selectedDistrict)
   }, [selectedModel, isClient, selectedDistrict])
+
+  // Focus on specific station when requested
+  useEffect(() => {
+    if (!isClient || !L || !mapInstanceRef.current || !focusStation) return
+
+    console.log('🎯 Focusing map on station:', focusStation.stationName, 'at coordinates:', focusStation.lat, focusStation.lng)
+    
+    // Smoothly pan and zoom to the station (줌 레벨 17로 더 가깝게)
+    mapInstanceRef.current.setView([focusStation.lat, focusStation.lng], 17, {
+      animate: true,
+      duration: 1.0, // 1 second animation
+      easeLinearity: 0.25
+    })
+    
+    // Add a temporary pulsing marker for better visual feedback
+    const pulsingIcon = L.divIcon({
+      html: `<div style="
+        background-color: #3B82F6;
+        border: 3px solid white;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        box-shadow: 0 0 30px rgba(59, 130, 246, 0.8);
+        animation: pulse 1.5s infinite;
+      "></div>
+      <style>
+        @keyframes pulse {
+          0% { transform: scale(1); opacity: 1; box-shadow: 0 0 30px rgba(59, 130, 246, 0.8); }
+          50% { transform: scale(1.3); opacity: 0.9; box-shadow: 0 0 50px rgba(59, 130, 246, 1); }
+          100% { transform: scale(1); opacity: 1; box-shadow: 0 0 30px rgba(59, 130, 246, 0.8); }
+        }
+      </style>`,
+      className: 'pulsing-marker',
+      iconSize: [30, 30],
+      iconAnchor: [15, 15]
+    })
+    
+    const tempMarker = L.marker([focusStation.lat, focusStation.lng], { icon: pulsingIcon })
+      .addTo(mapInstanceRef.current)
+      .bindPopup(`
+        <div style="text-align: center; padding: 5px;">
+          <strong style="font-size: 16px;">🎯 ${focusStation.stationName}</strong><br/>
+          <small style="color: #666;">검색에서 선택된 정류장</small>
+        </div>
+      `, { offset: [0, -15] })
+      .openPopup()
+    
+    // Remove temporary marker after 6 seconds (더 오래 표시)
+    setTimeout(() => {
+      if (mapInstanceRef.current && tempMarker) {
+        mapInstanceRef.current.removeLayer(tempMarker)
+      }
+    }, 6000)
+    
+  }, [focusStation, isClient])
   
   // Update district styles when needed
   useEffect(() => {
@@ -408,7 +501,7 @@ function ModelSuitabilityMapComponent({
       if (layer instanceof L.GeoJSON) {
         layer.eachLayer((featureLayer: any) => {
           if (featureLayer instanceof L.Path) {
-            const feature = featureLayer.feature
+            const feature = (featureLayer as any).feature
             if (feature) {
               // Update style
               featureLayer.setStyle(getFeatureStyle(feature))
@@ -455,8 +548,8 @@ function ModelSuitabilityMapComponent({
     <div className="relative">
       <div 
         ref={mapRef} 
-        className="h-[400px] rounded-lg border"
-        style={{ zIndex: 1 }}
+        className="rounded-lg border"
+        style={{ height: height, zIndex: 1 }}
       />
       
       {isLoading && (

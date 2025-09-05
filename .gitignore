@@ -12,6 +12,10 @@
 .env.test
 .env.production
 
+# RAG-specific sensitive data
+chroma/
+data/documents/
+
 # ⚠️ SENSITIVE DATA: Transportation usage data
 data/raw/usages/*.csv
 data/raw/POI/

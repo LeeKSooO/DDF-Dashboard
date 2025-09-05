@@ -1,7 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { TrendingUp, TrendingDown, BarChart3, Zap, Users, MapPin, Activity, Clock } from "lucide-react"
+import { TrendingUp, BarChart3, Users, Activity, Clock } from "lucide-react"
 import {
   LineChart,
   Line,
@@ -15,7 +15,7 @@ import {
   ResponsiveContainer,
 } from "recharts"
 import { memo, useState, useEffect } from "react"
-import { apiService, TrafficResponse, HeatmapResponse } from "@/lib/api"
+import { apiService, TrafficResponse, HeatmapResponse, utils } from "@/lib/api"
 
 // Month names in Korean
 const monthNames = ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"]
@@ -50,9 +50,10 @@ export const DashboardContent = memo(function DashboardContent({ selectedMonth }
         setError(null);
         
         // 병렬로 두 API 호출
+        const analysisMonth = utils.formatSelectedMonth(selectedMonth);
         const [trafficApiData, heatmapApiData] = await Promise.all([
-          apiService.getHourlyTraffic("2025-07-01", "seoul"),
-          apiService.getSeoulHeatmap("2025-07-01", false) // 정류장 상세 제외
+          apiService.getHourlyTraffic(analysisMonth, "seoul"),
+          apiService.getSeoulHeatmap(analysisMonth, false) // 정류장 상세 제외
         ]);
 
         // API 데이터 저장

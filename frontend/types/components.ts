@@ -67,6 +67,7 @@ export interface DRTScoreMapProps extends MapProps {
 // Chart 컴포넌트 props
 export interface TrafficChartProps {
   className?: string;
+  selectedMonth?: string;
 }
 
 // 분석 패널 props
