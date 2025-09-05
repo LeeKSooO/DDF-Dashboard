@@ -1,6 +1,6 @@
 # Core dependencies
 python-dotenv==1.0.1
-pandas==2.1.4
+# pandas==2.1.4  # ETL only - removed from RAG service
 sqlalchemy==2.0.31
 psycopg2-binary==2.9.9
 pydantic-settings==2.1.0
@@ -10,19 +10,19 @@ fastapi==0.104.1
 uvicorn[standard]==0.24.0
 redis==5.0.1
 
-# Fuzzy matching
-fuzzywuzzy==0.18.0
-python-Levenshtein==0.25.1
+# Fuzzy matching (ETL only - removed from RAG service)
+# fuzzywuzzy==0.18.0
+# python-Levenshtein==0.25.1
 
-# PDF processing
-PyMuPDF==1.24.9
-pypdf==4.3.1
+# PDF processing (ETL only - removed from RAG service)
+# PyMuPDF==1.24.9
+# pypdf==4.3.1
 
 # LangChain ecosystem
 langchain==0.2.12
-langchain-community==0.2.11
+# langchain-community==0.2.11  # ETL only - document loaders
 langchain-core==0.2.28
-langchain-huggingface==0.0.3
+# langchain-huggingface==0.0.3  # ETL only - not needed for read-only
 langchain-chroma==0.1.2
 
 # Embeddings and vector database (CPU only)

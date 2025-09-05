@@ -3,6 +3,7 @@ Document loader and chunking service for RAG system
 """
 
 import os
+import json
 import logging
 import hashlib
 from typing import List, Dict, Any, Optional, Tuple
@@ -34,6 +35,7 @@ class DocumentLoaderService:
         self._health_status = False
         self.processed_files: Dict[str, Dict[str, Any]] = {}
         self.text_splitter = None
+        self.processed_files_cache_path = Path("./data/processed_files_cache.json")
         
     async def initialize(self) -> None:
         """Initialize document loader service"""
@@ -51,6 +53,9 @@ class DocumentLoaderService:
                 separators=["\n\n", "\n", ". ", "。", "!", "?", " ", ""],  # 구분자 우선순위
                 length_function=len,
             )
+            
+            # Load processed files cache
+            await self._load_processed_files_cache()
             
             self._initialized = True
             self._health_status = True
@@ -252,6 +257,9 @@ class DocumentLoaderService:
                 chunk_overlap=chunk_overlap
             )
             
+            # Update processed file information
+            self._update_processed_file_info(file_path, len(chunks))
+            
             return chunks
             
         except Exception as e:
@@ -388,10 +396,64 @@ class DocumentLoaderService:
             "last_health_check": datetime.utcnow().isoformat()
         }
     
+    async def _load_processed_files_cache(self) -> None:
+        """Load processed files cache from disk"""
+        try:
+            if self.processed_files_cache_path.exists():
+                with open(self.processed_files_cache_path, 'r', encoding='utf-8') as f:
+                    cached_data = json.load(f)
+                    self.processed_files = cached_data
+                    logger.info(f"📁 Loaded processed files cache: {len(self.processed_files)} files")
+            else:
+                logger.info("📁 No processed files cache found, starting fresh")
+        except Exception as e:
+            logger.warning(f"Failed to load processed files cache: {e}")
+            self.processed_files = {}
+    
+    async def _save_processed_files_cache(self) -> None:
+        """Save processed files cache to disk"""
+        try:
+            # Ensure data directory exists
+            self.processed_files_cache_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            with open(self.processed_files_cache_path, 'w', encoding='utf-8') as f:
+                json.dump(self.processed_files, f, indent=2, ensure_ascii=False)
+                
+            logger.debug(f"💾 Saved processed files cache: {len(self.processed_files)} files")
+        except Exception as e:
+            logger.warning(f"Failed to save processed files cache: {e}")
+    
+    def _update_processed_file_info(self, file_path: str, doc_count: int) -> None:
+        """Update processed file information and save to cache"""
+        current_hash = self._get_file_hash(file_path)
+        
+        self.processed_files[file_path] = {
+            "hash": current_hash,
+            "processed_at": datetime.utcnow().isoformat(),
+            "document_count": doc_count,
+            "file_size": os.path.getsize(file_path) if os.path.exists(file_path) else 0
+        }
+        
+        # Save cache asynchronously (fire and forget)
+        try:
+            import asyncio
+            asyncio.create_task(self._save_processed_files_cache())
+        except:
+            # If we can't create async task, save synchronously
+            import asyncio
+            try:
+                loop = asyncio.get_event_loop()
+                loop.create_task(self._save_processed_files_cache())
+            except:
+                pass  # Best effort - if async doesn't work, skip saving
+    
     async def cleanup(self) -> None:
         """Cleanup resources"""
         
         logger.info("🧹 Cleaning up document loader service...")
+        
+        # Save processed files cache before cleanup
+        await self._save_processed_files_cache()
         
         self.text_splitter = None
         self.processed_files.clear()

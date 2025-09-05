@@ -162,32 +162,33 @@ def format_backend_data(data: Dict[str, Any]) -> str:
     return "\n".join(formatted)
 
 
-@router.post("/reload-documents")
-async def reload_documents(
+@router.post("/reload-vectorstore")
+async def reload_vectorstore(
     rag_service: RAGService = Depends(get_rag_service)
 ):
-    """문서를 다시 로드하고 임베딩을 재생성합니다"""
+    """벡터 저장소를 다시 로드합니다 (읽기 전용 - ETL은 별도 실행 필요)"""
     
     try:
-        logger.info("Starting document reload process...")
-        success = await rag_service.reload_documents()
+        logger.info("Starting vectorstore reload process...")
+        success = await rag_service.reload_vectorstore()
         
         if success:
             return {
                 "status": "success",
-                "message": "Documents reloaded and embeddings regenerated successfully"
+                "message": "Vector store reloaded successfully (read-only mode)",
+                "note": "To add/update documents, run DocumentETL job separately"
             }
         else:
             return {
                 "status": "error", 
-                "message": "Failed to reload documents"
+                "message": "Failed to reload vector store"
             }
             
     except Exception as e:
-        logger.error(f"Document reload failed: {e}")
+        logger.error(f"Vector store reload failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Document reload failed: {str(e)}"
+            detail=f"Vector store reload failed: {str(e)}"
         )
 
 
@@ -242,7 +243,12 @@ async def get_query_examples():
         "cot_endpoints": {
             "set_cot_on": "/api/v1/query/cot/on",
             "set_cot_off": "/api/v1/query/cot/off",
-            "reload_documents": "/api/v1/query/reload-documents"
+            "reload_vectorstore": "/api/v1/query/reload-vectorstore"
+        },
+        "etl_info": {
+            "note": "This service is read-only. To add/update documents, use DocumentETL job:",
+            "etl_command": "cd RAG && python etl/document_etl.py --force-reload",
+            "etl_script": "cd RAG && ./etl/run_etl.sh --force-reload"
         },
         "usage": {
             "endpoint": "/api/v1/query/",

@@ -13,7 +13,7 @@ from app.core.dependencies import (
     get_redis, 
     get_llm_service,
     get_embedding_service,
-    get_vector_store_service
+    get_rag_service
 )
 from app.core.config import settings
 from app.models.schemas.response import HealthResponse, ResponseStatus, DatabaseTestResponse
@@ -112,18 +112,21 @@ async def detailed_health_check(
         }
         overall_status = ResponseStatus.PARTIAL
     
-    # Check vector store
+    # Check RAG service (includes vector store)
     try:
-        vector_store_service = get_vector_store_service()
-        health_status = await vector_store_service.health_check()
-        services_status["vector_store"] = {
-            "status": "healthy" if health_status else "unhealthy",
-            "message": "Vector store operational" if health_status else "Vector store unavailable"
+        rag_service = get_rag_service()
+        health_status = await rag_service.get_health_status()
+        services_status["rag_service"] = {
+            "status": health_status["status"],
+            "message": f"RAG service {health_status['status']}",
+            "components": health_status.get("components", {})
         }
+        if health_status["status"] != "healthy":
+            overall_status = ResponseStatus.PARTIAL
     except Exception as e:
-        services_status["vector_store"] = {
+        services_status["rag_service"] = {
             "status": "unhealthy",
-            "message": f"Vector store error: {str(e)}"
+            "message": f"RAG service error: {str(e)}"
         }
         overall_status = ResponseStatus.PARTIAL
     

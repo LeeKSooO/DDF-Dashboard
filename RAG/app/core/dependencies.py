@@ -12,8 +12,6 @@ from redis import Redis
 from app.core.config import settings
 from app.services.llm_service import LLMService
 from app.services.embedding_service import EmbeddingService
-from app.services.vector_store_service import VectorStoreService
-from app.services.document_loader_service import DocumentLoaderService
 from app.services.rag_service import RAGService
 
 
@@ -40,8 +38,6 @@ if settings.REDIS_URL:
 # Service instances (will be initialized on startup)
 llm_service: Optional[LLMService] = None
 embedding_service: Optional[EmbeddingService] = None
-vector_store_service: Optional[VectorStoreService] = None
-document_loader_service: Optional[DocumentLoaderService] = None
 rag_service: Optional[RAGService] = None
 
 
@@ -76,18 +72,8 @@ def get_embedding_service() -> EmbeddingService:
     return embedding_service
 
 
-def get_vector_store_service() -> VectorStoreService:
-    """Get vector store service instance"""
-    if not vector_store_service:
-        raise RuntimeError("Vector store service not initialized")
-    return vector_store_service
 
 
-def get_document_loader_service() -> DocumentLoaderService:
-    """Get document loader service instance"""
-    if not document_loader_service:
-        raise RuntimeError("Document loader service not initialized")
-    return document_loader_service
 
 
 def get_rag_service() -> RAGService:

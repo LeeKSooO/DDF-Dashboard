@@ -14,7 +14,7 @@ if [ ! -f .env ]; then
 fi
 
 # Create data directories
-mkdir -p data/chroma logs
+mkdir -p chroma logs data/documents
 
 # Check Python version
 python_version=$(python3 --version 2>&1 | cut -d' ' -f2 | cut -d'.' -f1,2)

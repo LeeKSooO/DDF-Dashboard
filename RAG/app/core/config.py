@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     
     # Vector store settings
     VECTOR_STORE_TYPE: str = "chroma"  # chroma, pinecone, weaviate
-    CHROMA_PERSIST_DIR: str = "./data/chroma"
+    CHROMA_PERSIST_DIR: str = "./chroma"
     EMBEDDING_MODEL: str = "sentence-transformers/all-MiniLM-L6-v2"
     EMBEDDING_DIMENSION: int = 384
     
@@ -61,6 +61,9 @@ class Settings(BaseSettings):
     BACKEND_API_URL: str = "http://localhost:8000"
     
     # Document loading settings
+    SKIP_INITIAL_DOCUMENT_LOAD: bool = os.getenv('SKIP_INITIAL_DOCUMENT_LOAD', 'false').lower() == 'true'
+    FORCE_RELOAD_DOCUMENTS: bool = os.getenv('FORCE_RELOAD_DOCUMENTS', 'false').lower() == 'true'
+    
     DOCUMENT_PATHS: List[Dict[str, Any]] = [
         {
             "type": "directory",
