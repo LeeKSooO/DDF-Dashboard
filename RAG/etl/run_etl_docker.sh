@@ -28,7 +28,7 @@ print_error() {
 FORCE_RELOAD=false
 RAG_IMAGE="infrastructure-rag:latest"
 NETWORK="infrastructure_ddf-network"
-PROJECT_ROOT="/Users/leekyoungsoo/teamProject/DDF-ASTGCN"
+PROJECT_ROOT="/home/aaab97/Workspace/DDF-MSTGCN"
 
 show_usage() {
     echo "Docker ETL Runner"
