@@ -746,49 +746,91 @@ export function TrafficAnalysisContent({
             </CardHeader>
             <CardContent>
               <div className="space-y-4 scrollable-list">
-                {underutilizedData?.data?.map((item: any, index: number) => (
-                  <Alert
-                    key={item.station.station_id}
-                    className="border-l-4 border-l-red-500 animate-slide-in bg-gradient-to-r from-red-50 to-red-100"
-                    style={{ animationDelay: `${index * 150}ms` }}
-                  >
-                    <AlertTriangle className="h-5 w-5" />
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold text-base">
-                          {item.station.station_name}
-                        </h4>
-                        <Badge
-                          variant="destructive"
-                          className="text-base px-3 py-1"
-                        >
-                          노선당 {item.efficiency_score.toFixed(1)}명
-                        </Badge>
+                {underutilizedData?.data?.map((item: any, index: number) => {
+                  // 정류장 평균 대비 계산 (예: 30%만 이용)
+                  const avgComparison = ((item.avg_daily_passengers / (item.station_average || 1000)) * 100).toFixed(1);
+                  const comparisonValue = Number(avgComparison);
+                  
+                  return (
+                    <Alert
+                      key={item.station.station_id}
+                      className="border-l-4 border-l-red-500 animate-slide-in bg-gradient-to-r from-red-50 to-red-100"
+                      style={{ animationDelay: `${index * 150}ms` }}
+                    >
+                      <AlertTriangle className="h-5 w-5" />
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-semibold text-base">
+                            {item.station.station_name}
+                          </h4>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-red-600">평균 대비</span>
+                            <Badge
+                              variant="destructive"
+                              className="text-base px-3 py-1"
+                            >
+                              {comparisonValue}%
+                            </Badge>
+                          </div>
+                        </div>
+                        <AlertDescription>
+                          {/* 시각적 비교 표현 - Progress Bar */}
+                          <div className="mb-3">
+                            <div className="flex items-center justify-between text-sm mb-1">
+                              <span className="text-gray-600">정류장 평균 대비</span>
+                              <span className="text-red-600 font-medium">
+                                {comparisonValue < 100 ? `▼ ${(100 - comparisonValue).toFixed(1)}% 낮음` : `▲ ${(comparisonValue - 100).toFixed(1)}% 높음`}
+                              </span>
+                            </div>
+                            <div className="relative w-full h-8 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+                              {/* 평균선 표시 (50% 위치) */}
+                              <div className="absolute inset-y-0 left-1/2 w-0.5 bg-gray-600 z-10">
+                                <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-xs text-gray-600 font-medium">평균</span>
+                              </div>
+                              {/* 실제 사용률 바 */}
+                              <div 
+                                className="relative h-full bg-gradient-to-r from-red-500 to-red-400 transition-all duration-1000 ease-out"
+                                style={{ 
+                                  width: `${Math.min(comparisonValue / 2, 50)}%`,
+                                  animation: 'slideInLeft 1s ease-out'
+                                }}
+                              >
+                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-white font-bold">
+                                  {comparisonValue}%
+                                </span>
+                              </div>
+                              {/* 작은 삼각형 인디케이터 */}
+                              <div 
+                                className="absolute top-full mt-1 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-red-500"
+                                style={{ left: `${Math.min(comparisonValue / 2, 50)}%` }}
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4 text-base">
+                            <div>
+                              <span className="text-gray-600">일평균 이용:</span>{" "}
+                              <span className="font-semibold text-red-700 animate-count-up">
+                                {(animatedNumbers[`underutil-${item.station.station_id}`] || 0).toLocaleString()}명
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">노선 대비:</span>{" "}
+                              <span className="font-semibold text-red-700">
+                                {Math.round(item.avg_daily_passengers / Math.max(item.connecting_routes, 1))}명/노선
+                              </span>
+                            </div>
+                          </div>
+                          <div className="mt-2 text-sm text-gray-600">
+                            <strong>운행 노선:</strong> {item.connecting_routes}개 |{" "}
+                            <strong>최대 일일:</strong>{" "}
+                            {item.max_daily_passengers?.toLocaleString()}명
+                          </div>
+                        </AlertDescription>
                       </div>
-                      <AlertDescription>
-                        <div className="grid grid-cols-2 gap-4 text-base">
-                          <div>
-                            일평균 이용:{" "}
-                            <span className="font-medium animate-count-up">
-                              {(animatedNumbers[`underutil-${item.station.station_id}`] || 0).toLocaleString()}명
-                            </span>
-                          </div>
-                          <div>
-                            활용도:{" "}
-                            <span className="font-medium">
-                              {(item.utilization_rate * 100).toFixed(1)}%
-                            </span>
-                          </div>
-                        </div>
-                        <div className="mt-2 text-base">
-                          <strong>노선 수:</strong> {item.connecting_routes}개 |{" "}
-                          <strong>최대 이용:</strong>{" "}
-                          {item.max_daily_passengers}명/일
-                        </div>
-                      </AlertDescription>
-                    </div>
-                  </Alert>
-                )) || (
+                    </Alert>
+                  );
+                }) || (
                   <div className="text-center text-gray-500 py-8">
                     데이터를 불러오는 중...
                   </div>
