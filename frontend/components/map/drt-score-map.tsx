@@ -27,7 +27,7 @@ interface DRTScoreMapProps {
 function DRTScoreMapComponent({ drtData, selectedModel, loading = false, error = null }: DRTScoreMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
-  const markersRef = useRef<L.Marker[]>([])
+  const markersRef = useRef<(L.Marker | L.CircleMarker)[]>([])
   const [isClient, setIsClient] = useState(false)
 
   // Check if we're on client side
@@ -128,14 +128,16 @@ function DRTScoreMapComponent({ drtData, selectedModel, loading = false, error =
           </div>
         `)
         
-        marker.addTo(mapInstanceRef.current)
-        markersRef.current.push(marker)
+        if (mapInstanceRef.current) {
+          marker.addTo(mapInstanceRef.current)
+          markersRef.current.push(marker)
+        }
       }
     })
 
     // Fit map to show all markers if we have data
-    if (markersRef.current.length > 0) {
-      const group = new L.featureGroup(markersRef.current)
+    if (markersRef.current.length > 0 && mapInstanceRef.current) {
+      const group = L.featureGroup(markersRef.current)
       mapInstanceRef.current.fitBounds(group.getBounds().pad(0.1))
     }
 

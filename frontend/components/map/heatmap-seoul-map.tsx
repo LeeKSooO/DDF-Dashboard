@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
 "use client";
 
 import {
@@ -22,6 +22,9 @@ interface PatternStation {
   };
   pattern_score?: number;
   traffic_volume?: number;
+  patternColor?: string;
+  patternType?: string;
+  patternInfo?: string;
 }
 
 // Import leaflet
@@ -29,7 +32,7 @@ import L from 'leaflet';
 
 // Fix for default markers in Leaflet - only on client side
 if (typeof window !== "undefined" && L) {
-  delete (L.Icon.Default.prototype as any)._getIconUrl; // eslint-disable-line @typescript-eslint/no-explicit-any
+  delete (L.Icon.Default.prototype as any)._getIconUrl;
   L.Icon.Default.mergeOptions({
     iconRetinaUrl:
       "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
@@ -162,7 +165,7 @@ const HeatmapSeoulMapComponent = forwardRef<
           }
         },
       }),
-      []
+      [seoulBounds]
     );
 
     // Convert district data to lookup map
@@ -251,7 +254,7 @@ const HeatmapSeoulMapComponent = forwardRef<
           fillOpacity: 0.3,
         };
       };
-    }, [viewMode, selectedDistrict, districtLookup]);
+    }, [viewMode, selectedDistrict, districtLookup, districtBorderColors, getDistrictColorIndex]);
 
     useEffect(() => {
       if (!isClient || !L || !mapRef.current || mapInstanceRef.current) {
@@ -459,7 +462,7 @@ const HeatmapSeoulMapComponent = forwardRef<
         if (layer instanceof L.GeoJSON) {
           layer.eachLayer((featureLayer: any) => {
             if (featureLayer instanceof L.Path) {
-              const feature = featureLayer.feature;
+              const feature = (featureLayer as any).feature;
               if (feature) {
                 // Update style
                 featureLayer.setStyle(getFeatureStyle(feature));

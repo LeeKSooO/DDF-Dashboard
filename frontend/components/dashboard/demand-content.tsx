@@ -27,7 +27,7 @@ import {
   Line,
   Legend,
 } from "recharts";
-import { memo, useState, useEffect } from "react";
+import { memo, useState, useEffect, useRef } from "react";
 import { apiService, DRTScoreResponse, DRTModelType, DRTStationData, DRTStationDetailResponse, VulnerableFeatureScores, CommuterFeatureScores, TourismFeatureScores, utils } from "@/lib/api";
 import { ModelSuitabilityMap } from "@/components/map/model-suitability-map";
 
@@ -96,6 +96,7 @@ export const DemandContent = memo(function DemandContent({
   const [selectedStation, setSelectedStation] = useState<DRTStationData | null>(null);
   const [stationDetail, setStationDetail] = useState<DRTStationDetailResponse | null>(null);
   const [loadingStationDetail, setLoadingStationDetail] = useState(false);
+  const [loadingDrtData, setLoadingDrtData] = useState(false); // DRT 데이터 로딩 상태 추가
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [searchResults, setSearchResults] = useState<DRTStationData[]>([]);
@@ -104,16 +105,38 @@ export const DemandContent = memo(function DemandContent({
   // 현재 선택된 모델의 색상 테마
   const currentTheme = modelColorThemes[selectedModel as keyof typeof modelColorThemes] || modelColorThemes["출퇴근"];
   
+  // AbortController를 useRef로 관리하여 이전 요청 취소
+  const abortControllerRef = useRef<AbortController | null>(null);
+  
   // 구별 DRT 데이터 로드
   useEffect(() => {
     const loadDRTData = async () => {
+      // 이전 요청 취소
+      if (abortControllerRef.current) {
+        console.log("🛑 Cancelling previous API request");
+        abortControllerRef.current.abort();
+      }
+      
+      // 새로운 AbortController 생성
+      abortControllerRef.current = new AbortController();
+      const currentAbortController = abortControllerRef.current;
+      
       try {
+        setLoadingDrtData(true); // 로딩 시작
+        
         const apiModelType = modelTypeMapping[selectedModel as keyof typeof modelTypeMapping] || "vulnerable";
-        let targetRegion = selectedRegion;
+        let targetRegion = selectedDistrictName || selectedRegion; // selectedDistrictName 우선 사용
         let response;
         let didFallback = false; // fallback 발생 여부 추적
         
-        console.log("🔄 Loading DRT data:", { selectedModel, apiModelType, selectedRegion, targetRegion });
+        console.log("🔄 Loading DRT data:", { 
+          selectedModel, 
+          apiModelType, 
+          selectedRegion, 
+          targetRegion, 
+          selectedDistrictName,
+          currentDataStations: drtData?.stations?.length || 0 
+        });
         
         if (selectedRegion === "전체") {
           // "전체" 선택 시 - API가 "전체"를 지원하는지 먼저 시도
@@ -165,21 +188,30 @@ export const DemandContent = memo(function DemandContent({
           }
         }
         
+        // 요청이 취소되지 않았는지 확인 후 상태 업데이트
+        if (currentAbortController.signal.aborted) {
+          console.log("🛑 Request was cancelled, ignoring response");
+          return;
+        }
+        
         console.log("📊 Final DRT API response:", {
           selectedRegion,
           targetRegion, 
           stationCount: response?.stations?.length || 0,
-          firstStation: response?.stations?.[0]?.station_name || "None"
+          firstStation: response?.stations?.[0]?.station_name || "None",
+          firstStationScore: response?.stations?.[0]?.drt_score || "None",
+          top5Scores: response?.stations?.slice(0, 5).map(s => ({ name: s.station_name, score: s.drt_score })),
+          model_type: response?.model_type
         });
         setDrtData(response);
         
-        // 구 이름 업데이트 로직 개선
-        if (didFallback) {
-          // Fallback이 발생한 경우에만 구 이름을 변경 (사용자가 요청한 구가 없는 경우)
+        // 구 이름 업데이트 로직 개선 - 무한 루프 방지
+        if (didFallback && selectedDistrictName !== targetRegion) {
+          // Fallback이 발생하고 실제로 다른 구인 경우에만 구 이름 변경
           console.log("🏢 Fallback occurred, updating district name to:", targetRegion);
           setSelectedDistrictName(targetRegion);
-        } else if (!selectedDistrictName || selectedDistrictName === "") {
-          // 초기 로드인 경우에만 구 이름 설정
+        } else if ((!selectedDistrictName || selectedDistrictName === "") && selectedDistrictName !== targetRegion) {
+          // 초기 로드이고 실제로 다른 구인 경우에만 구 이름 설정
           console.log("🏢 Initial load, setting district name to:", targetRegion);
           setSelectedDistrictName(targetRegion);
         } else {
@@ -202,8 +234,8 @@ export const DemandContent = memo(function DemandContent({
               s => s.station_id === selectedStation.station_id
             );
             
-            if (currentSelectedInNewData) {
-              // 현재 선택된 정류장이 새 데이터에 있으면 유지 (새로운 DRT 점수로 업데이트)
+            if (currentSelectedInNewData && (!selectedStation || selectedStation.drt_score !== currentSelectedInNewData.drt_score)) {
+              // 현재 선택된 정류장이 새 데이터에 있고 점수가 다른 경우에만 업데이트
               console.log("🔄 Keeping current station:", currentSelectedInNewData.station_name, "New Score:", currentSelectedInNewData.drt_score);
               setSelectedStation(currentSelectedInNewData);
             } else if (isInitialLoad || !selectedStation) {
@@ -236,14 +268,27 @@ export const DemandContent = memo(function DemandContent({
           setStationDetail(null);
         }
       } catch (err) {
-        console.error("🚨 DRT API error:", err);
+        // 요청이 취소된 경우는 에러가 아님
+        if ((err as Error).name !== 'AbortError') {
+          console.error("🚨 DRT API error:", err);
+        } else {
+          console.log("✅ API request cancelled successfully");
+        }
       } finally {
-        // Loading state removed
+        setLoadingDrtData(false); // 로딩 상태 해제
       }
     };
 
     loadDRTData();
-  }, [selectedModel, selectedRegion, selectedMonth, selectedDistrictName, isInitialLoad, selectedStation]);
+    
+    // Cleanup: 컴포넌트 언마운트나 의존성 변경 시 진행 중인 요청 취소
+    return () => {
+      if (abortControllerRef.current) {
+        console.log("🧹 Cleanup: Cancelling ongoing API request");
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [selectedModel, selectedRegion, selectedMonth, selectedDistrictName, isInitialLoad]);
 
 
   // 상단 헤더에 현재 선택된 구 알리기 (DRT 분석 탭 전용)
@@ -281,7 +326,14 @@ export const DemandContent = memo(function DemandContent({
           utils.formatSelectedMonth(selectedMonth)
         );
         
-        console.log("✅ Station detail loaded:", detail);
+        console.log("✅ Station detail loaded:", {
+          station_name: detail?.station?.station_name,
+          model_type: detail?.model_type,
+          current_score: detail?.current_score,
+          peak_hour: detail?.peak_hour,
+          hourly_scores_count: detail?.hourly_scores?.length,
+          feature_scores: detail?.feature_scores
+        });
         
         // 응답 데이터 유효성 검사
         if (!detail || !detail.feature_scores) {
@@ -380,7 +432,7 @@ export const DemandContent = memo(function DemandContent({
     if (selectedModel === "교통취약지") {
       // 교통취약지 모델 타입 가드
       const isVulnerableScores = (scores: unknown): scores is VulnerableFeatureScores => {
-        return 'var_t_score' in scores && 'sed_t_score' in scores && 'mdi_t_score' in scores;
+        return scores !== null && typeof scores === 'object' && 'var_t_score' in scores && 'sed_t_score' in scores && 'mdi_t_score' in scores;
       };
       
       if (!isVulnerableScores(feature_scores)) {
@@ -413,7 +465,7 @@ export const DemandContent = memo(function DemandContent({
     } else if (selectedModel === "출퇴근") {
       // 출퇴근 모델 타입 가드
       const isCommuterScores = (scores: unknown): scores is CommuterFeatureScores => {
-        return 'tc_score' in scores && 'pdr_score' in scores && 'ru_score' in scores;
+        return scores !== null && typeof scores === 'object' && 'tc_score' in scores && 'pdr_score' in scores && 'ru_score' in scores;
       };
       
       if (!isCommuterScores(feature_scores)) {
@@ -446,7 +498,7 @@ export const DemandContent = memo(function DemandContent({
     } else {
       // 관광 모델 타입 가드
       const isTourismScores = (scores: unknown): scores is TourismFeatureScores => {
-        return 'tc_t_score' in scores && 'tdr_t_score' in scores && 'ru_t_score' in scores;
+        return scores !== null && typeof scores === 'object' && 'tc_t_score' in scores && 'tdr_t_score' in scores && 'ru_t_score' in scores;
       };
       
       if (!isTourismScores(feature_scores)) {
@@ -479,14 +531,18 @@ export const DemandContent = memo(function DemandContent({
     }
   };
 
-  // 시간대별 데이터 포맷팅
+  // 시간대별 데이터 포맷팅 (데이터 검증 추가)
   const getHourlyChartData = () => {
-    if (!stationDetail?.hourly_scores) return [];
+    if (!stationDetail?.hourly_scores || !Array.isArray(stationDetail.hourly_scores)) {
+      console.warn("⚠️ Invalid hourly_scores data:", stationDetail?.hourly_scores);
+      return [];
+    }
     
+    // 데이터 검증 및 포맷팅
     return stationDetail.hourly_scores.map(item => ({
       hour: `${item.hour}시`,
-      score: item.score,
-      평균: stationDetail.monthly_average,
+      score: typeof item.score === 'number' ? item.score : 0,
+      평균: typeof stationDetail.monthly_average === 'number' ? stationDetail.monthly_average : 0,
     }));
   };
 
@@ -625,46 +681,29 @@ export const DemandContent = memo(function DemandContent({
                   height="680px"
                   focusStation={focusStation}
                 onDistrictAnalysis={async (districtName, analysis) => {
-                  console.log("🔄 DemandContent received analysis:", { districtName, analysis });
+                  console.log("🗺️ Map click - District change request:", { 
+                    requestedDistrict: districtName,
+                    currentDistrict: selectedDistrictName,
+                    currentModel: selectedModel,
+                    isDistrictChange: selectedDistrictName !== districtName
+                  });
                   
-                  // 구가 변경된 경우에만 새 데이터 로딩
+                  // 구가 변경된 경우에만 처리
                   if (selectedDistrictName !== districtName) {
-                    console.log("🗺️ District changed from", selectedDistrictName, "to", districtName, "- loading new data");
+                    console.log(`🔄 DISTRICT CHANGE: ${selectedDistrictName} → ${districtName} (${selectedModel} 모델)`);
                     
-                    // 구 이름 먼저 업데이트
+                    // 상태 초기화 (이전 데이터 즉시 클리어하여 UI 혼동 방지)
+                    setDrtData(null);
+                    setSelectedStation(null);
+                    setStationDetail(null);
+                    setSearchQuery("");
+                    setSearchResults([]);
+                    setFocusStation(null);
+                    
+                    // 구 이름 업데이트 (이것이 useEffect를 트리거하여 새 데이터 로드)
                     setSelectedDistrictName(districtName);
-                    
-                    // 새 구의 DRT 데이터 로딩
-                    try {
-                      const apiModelType = modelTypeMapping[selectedModel as keyof typeof modelTypeMapping] || "vulnerable";
-                      console.log("📡 Loading DRT data for new district:", districtName);
-                      
-                      const response = await apiService.getDRTScores(
-                        districtName,
-                        apiModelType,
-                        utils.formatSelectedMonth(selectedMonth)
-                      );
-                      
-                      console.log("✅ New district data loaded:", districtName, "- stations:", response?.stations?.length || 0);
-                      setDrtData(response);
-                      
-                      // 기존 정류장 선택 초기화 (다른 구의 정류장이므로)
-                      setSelectedStation(null);
-                      setStationDetail(null);
-                      
-                      // 검색 쿼리도 초기화 (다른 구로 변경되었으므로)
-                      setSearchQuery("");
-                      setSearchResults([]);
-                      
-                      // 지도 포커스도 초기화
-                      setFocusStation(null);
-                      
-                    } catch (error) {
-                      console.error("🚨 Failed to load data for district:", districtName, error);
-                      // 실패 시 기존 로직 유지
-                    }
                   } else {
-                    console.log("🔄 Same district selected, no data reload needed");
+                    console.log("✅ Same district clicked, no change needed");
                   }
                   
                   // 정류장 선택 처리
@@ -1039,10 +1078,10 @@ export const DemandContent = memo(function DemandContent({
             </CardTitle>
             <CardDescription className="text-sm text-center">
               <div className="flex items-center justify-center gap-1 flex-wrap">
-                <span>{selectedDistrictName ? `${selectedDistrictName} ` : ""}{selectedModel} 상위 정류장</span>
+                <span>{selectedDistrictName ? `${selectedDistrictName} ` : ""}{selectedModel} 최상위 정류장</span>
                 {selectedDistrictName && (
                   <span className={`${currentTheme.secondary} text-xs font-medium`}>
-                    ({drtData?.stations?.length || 0}개 중)
+                    (전체 {drtData?.stations?.length || 0}개 중)
                   </span>
                 )}
               </div>
@@ -1050,11 +1089,13 @@ export const DemandContent = memo(function DemandContent({
           </CardHeader>
           <CardContent className="pt-0">
             <div className="space-y-3">
-              {drtData?.stations && drtData.stations.length > 0 ? (
-                [...drtData.stations]
-                  .sort((a, b) => (b.drt_score || 0) - (a.drt_score || 0))
-                  .slice(0, 5)
-                  .map((station, index) => (
+              {drtData?.top_stations && drtData.top_stations.length > 0 ? (
+                // API에서 이미 정렬된 top_stations 사용
+                drtData.top_stations
+                  .slice(0, 5)  // 최대 5개만 표시
+                  .map((station, index) => {
+                    console.log(`🎯 Rendering Top${index + 1} station (from top_stations):`, station.station_name, "Score:", station.drt_score);
+                    return (
                     <div key={station.station_id} className="p-3 border rounded-lg hover:bg-gray-50 transition-colors">
                       <div className="flex items-start gap-2 mb-2">
                         <div className="flex-1 min-w-0">
@@ -1070,13 +1111,25 @@ export const DemandContent = memo(function DemandContent({
                       </div>
                       <Progress value={station.drt_score || 0} max={100} className="h-1.5" />
                     </div>
-                  ))
+                    );
+                  })
               ) : (
                 <div className="text-center text-gray-500 py-6">
-                  <div className="text-2xl mb-2">
-                    {selectedModel === '교통취약지' ? '💜' : selectedModel === '출퇴근' ? '🏢' : '📸'}
-                  </div>
-                  <div className="text-base">{selectedDistrictName ? `${selectedDistrictName} ` : ""}{selectedModel} 데이터 로딩 중...</div>
+                  {loadingDrtData ? (
+                    <div>
+                      <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${currentTheme.spinner} mx-auto mb-4`}></div>
+                      <div className="text-base">
+                        {selectedDistrictName ? `${selectedDistrictName} ` : ""}{selectedModel} 데이터 로딩 중...
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="text-2xl mb-2">
+                        {selectedModel === '교통취약지' ? '💜' : selectedModel === '출퇴근' ? '🏢' : '📸'}
+                      </div>
+                      <div className="text-base">데이터를 불러올 수 없습니다</div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

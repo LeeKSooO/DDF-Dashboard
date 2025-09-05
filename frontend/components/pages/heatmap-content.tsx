@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
 "use client";
 
 import {
@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MapPin, Navigation, Activity, Globe, HelpCircle } from "lucide-react";
+import Image from "next/image";
 import {
   Tooltip as HelpTooltip,
   TooltipContent as HelpTooltipContent,
@@ -483,7 +484,7 @@ export function HeatmapContent({
                           }`}
                         >
                           <div className="flex items-center gap-2">
-                            <img src="/heatmap_icon/주말패턴_히트맵.png" alt="주말 패턴" className="h-4 w-4" />
+                            <Image src="/heatmap_icon/주말패턴_히트맵.png" alt="주말 패턴" className="h-4 w-4" width={16} height={16} />
                             <span>주말</span>
                           </div>
                         </button>
@@ -514,7 +515,7 @@ export function HeatmapContent({
                           }`}
                         >
                           <div className="flex items-center gap-2">
-                            <img src="/heatmap_icon/심야패턴_히트맵.png" alt="심야 패턴" className="h-4 w-4" />
+                            <Image src="/heatmap_icon/심야패턴_히트맵.png" alt="심야 패턴" className="h-4 w-4" width={16} height={16} />
                             <span>심야</span>
                           </div>
                         </button>
@@ -547,7 +548,7 @@ export function HeatmapContent({
                           }`}
                         >
                           <div className="flex items-center gap-2">
-                            <img src="/heatmap_icon/저활용_히트맵.png" alt="저활용 패턴" className="h-4 w-4" />
+                            <Image src="/heatmap_icon/저활용_히트맵.png" alt="저활용 패턴" className="h-4 w-4" width={16} height={16} />
                             <span>저활용</span>
                           </div>
                         </button>
@@ -578,7 +579,7 @@ export function HeatmapContent({
                           }`}
                         >
                           <div className="flex items-center gap-2">
-                            <img src="/heatmap_icon/점심패턴_히트맵.png" alt="점심 패턴" className="h-4 w-4" />
+                            <Image src="/heatmap_icon/점심패턴_히트맵.png" alt="점심 패턴" className="h-4 w-4" width={16} height={16} />
                             <span>점심</span>
                           </div>
                         </button>
@@ -609,7 +610,7 @@ export function HeatmapContent({
                           }`}
                         >
                           <div className="flex items-center gap-2">
-                            <img src="/heatmap_icon/러시아워_히트맵.png" alt="러시아워 패턴" className="h-4 w-4" />
+                            <Image src="/heatmap_icon/러시아워_히트맵.png" alt="러시아워 패턴" className="h-4 w-4" width={16} height={16} />
                             <span>러시</span>
                           </div>
                         </button>
@@ -640,7 +641,7 @@ export function HeatmapContent({
                           }`}
                         >
                           <div className="flex items-center gap-2">
-                            <img src="/heatmap_icon/지역특성_히트맵.png" alt="지역 특성 패턴" className="h-4 w-4" />
+                            <Image src="/heatmap_icon/지역특성_히트맵.png" alt="지역 특성 패턴" className="h-4 w-4" width={16} height={16} />
                             <span>지역</span>
                           </div>
                         </button>
@@ -667,18 +668,18 @@ export function HeatmapContent({
               <div className="flex items-start justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-3 text-3xl font-bold text-gray-800">
-                    <img src="/heatmap_icon/지도_히트맵.png" alt="지도 히트맵" className="h-8 w-8" />
+                    <Image src="/heatmap_icon/지도_히트맵.png" alt="지도 히트맵" className="h-8 w-8" width={32} height={32} />
                     서울시 교통량 히트맵
                   </CardTitle>
                   <CardDescription className="text-lg text-gray-600 mt-1 flex items-center gap-2">
                     {viewMode === "district" ? (
                       <>
-                        <img src="/heatmap_icon/지도_구별_히트맵.png" alt="구별 히트맵" className="h-5 w-5" />
+                        <Image src="/heatmap_icon/지도_구별_히트맵.png" alt="구별 히트맵" className="h-5 w-5" width={20} height={20} />
                         25개 자치구별
                       </>
                     ) : (
                       <>
-                        <img src="/heatmap_icon/지도_정류장별_히트맵.png" alt="정류장별 히트맵" className="h-5 w-5" />
+                        <Image src="/heatmap_icon/지도_정류장별_히트맵.png" alt="정류장별 히트맵" className="h-5 w-5" width={20} height={20} />
                         정류장별
                       </>
                     )} 교통량 시각화
@@ -809,7 +810,7 @@ export function HeatmapContent({
           }`}>
             <CardHeader className="pb-6">
               <CardTitle className="text-2xl font-bold flex items-center gap-3 text-gray-800">
-                <img src="/heatmap_icon/정류장(월별)_히트맵.png" alt="정류장 월별" className="h-7 w-7" />
+                <Image src="/heatmap_icon/정류장(월별)_히트맵.png" alt="정류장 월별" className="h-7 w-7" width={28} height={28} />
                 {selectedPattern ? (
                   <>
                     {selectedPattern === "weekend" && "주말 우세"}
@@ -1261,7 +1262,7 @@ export function HeatmapContent({
           <Card>
             <CardHeader className="pb-4">
               <CardTitle className="text-2xl font-bold flex items-center gap-3">
-                <img src="/heatmap_icon/통계_히트맵.png" alt="통계" className="h-6 w-6" />
+                <Image src="/heatmap_icon/통계_히트맵.png" alt="통계" className="h-6 w-6" width={24} height={24} />
                 {selectedPattern
                   ? "패턴별 통계"
                   : selectedDistrict

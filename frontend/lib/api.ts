@@ -361,7 +361,6 @@ analysisMonth: string,
   async getAnomalyPatterns(
     districtName: string,
 analysisMonth: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> { // eslint-disable-line @typescript-eslint/no-explicit-any
     const url = `${API_BASE_URL}/anomaly-pattern/integration?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}`;
     

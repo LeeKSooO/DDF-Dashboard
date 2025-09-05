@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
 "use client"
 
 import { useEffect, useRef, useState, useMemo } from 'react'
@@ -212,7 +212,7 @@ function SeoulMapComponent({ onDistrictClick, selectedDistrict, trafficData = []
       if (layer instanceof L.GeoJSON) {
         layer.eachLayer((featureLayer: any) => {
           if (featureLayer instanceof L.Path) {
-            const feature = featureLayer.feature
+            const feature = (featureLayer as any).feature
             if (feature) {
               // Update style
               featureLayer.setStyle(getFeatureStyle(feature))

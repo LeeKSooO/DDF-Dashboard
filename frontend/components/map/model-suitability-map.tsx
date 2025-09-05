@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
 "use client"
 
 import { useEffect, useRef, useState } from 'react'
@@ -11,6 +11,16 @@ interface DistrictAnalysis {
   avg_score: number;
   high_score_stations: number;
   stations: DRTStationData[];
+  stationName?: string | null;
+  stationData?: DRTStationData | null;
+  districtName?: string;
+  selectedModelScore?: number | null;
+  allModelScores?: Record<string, number>;
+  bestModel?: string;
+  bestScore?: number;
+  suitabilityLevel?: string;
+  suitabilityColor?: string;
+  peakHour?: string | number;
 }
 
 // Import leaflet
@@ -18,7 +28,7 @@ import L from 'leaflet';
 
 // Fix for default markers in Leaflet - only on client side
 if (typeof window !== 'undefined' && L) {
-  delete (L.Icon.Default.prototype as any)._getIconUrl // eslint-disable-line @typescript-eslint/no-explicit-any
+  delete (L.Icon.Default.prototype as any)._getIconUrl
   L.Icon.Default.mergeOptions({
     iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
     iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
@@ -240,7 +250,11 @@ function ModelSuitabilityMapComponent({
     // Call district analysis callback with station data
     if (onDistrictAnalysis) {
       onDistrictAnalysis(selectedDistrict || "강남구", {
-        districtName: selectedDistrict,
+        total_stations: 0,
+        avg_score: 0,
+        high_score_stations: 0,
+        stations: [],
+        districtName: selectedDistrict || undefined,
         stationName: station.station_name,
         selectedModelScore: station.drt_score,
         allModelScores: { [selectedModel]: station.drt_score },
@@ -277,6 +291,10 @@ function ModelSuitabilityMapComponent({
       if (onDistrictAnalysis) {
         console.log('📤 Notifying parent about district change:', districtName);
         onDistrictAnalysis(districtName, {
+          total_stations: 0,
+          avg_score: 0,
+          high_score_stations: 0,
+          stations: [],
           districtName,
           stationName: null, // No specific station selected
           selectedModelScore: null,
@@ -426,8 +444,8 @@ function ModelSuitabilityMapComponent({
 
     console.log('🎯 Focusing map on station:', focusStation.stationName, 'at coordinates:', focusStation.lat, focusStation.lng)
     
-    // Smoothly pan and zoom to the station
-    mapInstanceRef.current.setView([focusStation.lat, focusStation.lng], 16, {
+    // Smoothly pan and zoom to the station (줌 레벨 17로 더 가깝게)
+    mapInstanceRef.current.setView([focusStation.lat, focusStation.lng], 17, {
       animate: true,
       duration: 1.0, // 1 second animation
       easeLinearity: 0.25
@@ -439,34 +457,39 @@ function ModelSuitabilityMapComponent({
         background-color: #3B82F6;
         border: 3px solid white;
         border-radius: 50%;
-        width: 20px;
-        height: 20px;
-        box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
-        animation: pulse 2s infinite;
+        width: 30px;
+        height: 30px;
+        box-shadow: 0 0 30px rgba(59, 130, 246, 0.8);
+        animation: pulse 1.5s infinite;
       "></div>
       <style>
         @keyframes pulse {
-          0% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.5); opacity: 0.7; }
-          100% { transform: scale(1); opacity: 1; }
+          0% { transform: scale(1); opacity: 1; box-shadow: 0 0 30px rgba(59, 130, 246, 0.8); }
+          50% { transform: scale(1.3); opacity: 0.9; box-shadow: 0 0 50px rgba(59, 130, 246, 1); }
+          100% { transform: scale(1); opacity: 1; box-shadow: 0 0 30px rgba(59, 130, 246, 0.8); }
         }
       </style>`,
       className: 'pulsing-marker',
-      iconSize: [20, 20],
-      iconAnchor: [10, 10]
+      iconSize: [30, 30],
+      iconAnchor: [15, 15]
     })
     
     const tempMarker = L.marker([focusStation.lat, focusStation.lng], { icon: pulsingIcon })
       .addTo(mapInstanceRef.current)
-      .bindPopup(`🎯 ${focusStation.stationName}<br/><small>검색에서 선택됨</small>`)
+      .bindPopup(`
+        <div style="text-align: center; padding: 5px;">
+          <strong style="font-size: 16px;">🎯 ${focusStation.stationName}</strong><br/>
+          <small style="color: #666;">검색에서 선택된 정류장</small>
+        </div>
+      `, { offset: [0, -15] })
       .openPopup()
     
-    // Remove temporary marker after 4 seconds
+    // Remove temporary marker after 6 seconds (더 오래 표시)
     setTimeout(() => {
       if (mapInstanceRef.current && tempMarker) {
         mapInstanceRef.current.removeLayer(tempMarker)
       }
-    }, 4000)
+    }, 6000)
     
   }, [focusStation, isClient])
   
@@ -478,7 +501,7 @@ function ModelSuitabilityMapComponent({
       if (layer instanceof L.GeoJSON) {
         layer.eachLayer((featureLayer: any) => {
           if (featureLayer instanceof L.Path) {
-            const feature = featureLayer.feature
+            const feature = (featureLayer as any).feature
             if (feature) {
               // Update style
               featureLayer.setStyle(getFeatureStyle(feature))
