@@ -401,6 +401,12 @@ export const DemandContent = memo(function DemandContent({
     setSearchResults(filtered.slice(0, 5)); // 구 내 검색이므로 최대 5개까지 표시
   }, [searchQuery, drtData?.stations, selectedDistrictName]);
 
+  // 구 변경 시 검색 상태 초기화를 위한 별도 effect
+  useEffect(() => {
+    setSearchQuery("");
+    setSearchResults([]);
+  }, [selectedDistrictName]);
+
   // 검색 결과에서 정류장 선택
   const handleSearchResultSelect = (station: DRTStationData) => {
     console.log("🚏 Selected station from search:", station.station_name, "at coordinates:", station.coordinate);
@@ -699,6 +705,7 @@ export const DemandContent = memo(function DemandContent({
                     setSearchQuery("");
                     setSearchResults([]);
                     setFocusStation(null);
+                    setLoadingDrtData(true); // 로딩 상태 즉시 시작
                     
                     // 구 이름 업데이트 (이것이 useEffect를 트리거하여 새 데이터 로드)
                     setSelectedDistrictName(districtName);
