@@ -471,7 +471,7 @@ const HeatmapSeoulMapComponent = forwardRef<
 
                     // Zoom to district
                     if (mapInstanceRef.current) {
-                      mapInstanceRef.current.fitBounds(featureLayer.getBounds(), {
+                      mapInstanceRef.current.fitBounds(e.target.getBounds(), {
                         padding: [50, 50],
                         duration: 0.5,
                         maxZoom: 13,
