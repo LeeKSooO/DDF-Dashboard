@@ -64,12 +64,12 @@ class LLMService:
                 model_id=settings.WATSON_MODEL_ID,
                 params={
                     "decoding_method": "greedy",
-                    "max_new_tokens": 2000,
-                    "temperature": 0.1 if self.enable_cot else 0.3,
-                    "top_p": 1.0,
-                    "top_k": 50,
-                    "repetition_penalty": 1.0,
-                    "stop_sequences": ["<|endoftext|>"]
+                    "max_new_tokens": 4000,  # 대폭 증가
+                    "temperature": 0.05 if self.enable_cot else 0.2,  # CoT용 더 낮은 온도
+                    "top_p": 0.9,
+                    "top_k": 40,
+                    "repetition_penalty": 1.1,
+                    "stop_sequences": ["<|endoftext|>", "Human:", "Assistant:"]
                 },
                 credentials=credentials,
                 project_id=settings.WATSON_PROJECT_ID
@@ -83,8 +83,10 @@ class LLMService:
                 project_id=settings.WATSON_PROJECT_ID,
                 params={
                     "decoding_method": "greedy",
-                    "max_new_tokens": 2000,
-                    "temperature": 0.1
+                    "max_new_tokens": 4000,  # 대폭 증가
+                    "temperature": 0.05,     # CoT용 더 낮은 온도
+                    "top_p": 0.9,
+                    "repetition_penalty": 1.1
                 }
             )
             

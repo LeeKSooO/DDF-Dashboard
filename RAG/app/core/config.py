@@ -55,7 +55,14 @@ class Settings(BaseSettings):
     DEFAULT_CONFIDENCE_THRESHOLD: float = 0.5
     MAX_RESULTS: int = 10
     SIMILARITY_THRESHOLD: float = 0.7
-    MAX_CONTEXT_LENGTH: int = 4000
+    MAX_CONTEXT_LENGTH: int = 8000
+    
+    # Enhanced Chunking settings
+    USE_ENHANCED_CHUNKING: bool = os.getenv('USE_ENHANCED_CHUNKING', 'false').lower() == 'true'
+    ENHANCED_CHUNK_SIZE: int = int(os.getenv('ENHANCED_CHUNK_SIZE', '1200'))
+    ENHANCED_CHUNK_OVERLAP: int = int(os.getenv('ENHANCED_CHUNK_OVERLAP', '200'))
+    MAX_CHUNK_SIZE: int = int(os.getenv('MAX_CHUNK_SIZE', '2000'))
+    MIN_CHUNK_SIZE: int = int(os.getenv('MIN_CHUNK_SIZE', '300'))
     
     # Backend API settings
     BACKEND_API_URL: str = "http://localhost:8000"
