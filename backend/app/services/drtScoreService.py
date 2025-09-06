@@ -20,6 +20,7 @@ from app.schemas.drtScore import (
     StationInfoSchema,
     CoordinateSchema
 )
+from app.core.redis_client import cache_result
 
 
 class DRTScoreService:
@@ -52,6 +53,7 @@ class DRTScoreService:
     # 메인 엔드포인트 메서드들
     # ==========================================
     
+    @cache_result(key_prefix="drt:district", use_month_ttl=True)
     async def get_district_drt_scores(
         self,
         db: AsyncSession,
@@ -316,6 +318,7 @@ class DRTScoreService:
     # 통계 및 분석 메서드
     # ==========================================
     
+    @cache_result(key_prefix="drt:statistics", use_month_ttl=True)
     async def get_model_statistics(
         self,
         db: AsyncSession,

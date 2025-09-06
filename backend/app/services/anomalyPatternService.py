@@ -26,6 +26,7 @@ from app.schemas.anomalyPattern import (
     UnderutilizedStationSchema,
     AnomalyPatternFilterSchema
 )
+from app.core.redis_client import cache_result
 
 logger = logging.getLogger(__name__)
 
@@ -174,6 +175,7 @@ class AnomalyPatternService:
             analysis_period_days=int(row.analysis_period_days or 0)
         )
 
+    @cache_result(key_prefix="anomaly:weekend", use_month_ttl=True)
     async def get_weekend_dominant_stations(
         self,
         db: AsyncSession,
@@ -350,6 +352,7 @@ class AnomalyPatternService:
             
         return final_stations
 
+    @cache_result(key_prefix="anomaly:night", use_month_ttl=True)
     async def get_night_demand_stations(
         self,
         db: AsyncSession,
@@ -470,6 +473,7 @@ class AnomalyPatternService:
             
         return final_stations
 
+    @cache_result(key_prefix="anomaly:rush", use_month_ttl=True)
     async def get_rush_hour_stations(
         self,
         db: AsyncSession,
@@ -665,6 +669,7 @@ class AnomalyPatternService:
             evening_rush=evening_stations
         )
 
+    @cache_result(key_prefix="anomaly:lunch", use_month_ttl=True)
     async def get_lunch_time_stations(
         self,
         db: AsyncSession,
@@ -784,6 +789,7 @@ class AnomalyPatternService:
 
 
 
+    @cache_result(key_prefix="anomaly:area", use_month_ttl=True)
     async def get_area_type_analysis(
         self,
         db: AsyncSession,
@@ -932,6 +938,7 @@ class AnomalyPatternService:
             )
 
 
+    @cache_result(key_prefix="anomaly:underutil", use_month_ttl=True)
     async def get_underutilized_stations(
         self,
         db: AsyncSession,
@@ -1038,6 +1045,7 @@ class AnomalyPatternService:
             return []
 
 
+    @cache_result(key_prefix="anomaly:integration", use_month_ttl=True)
     async def get_integrated_anomaly_patterns(
         self,
         db: AsyncSession,

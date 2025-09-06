@@ -2,10 +2,23 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from loguru import logger
+import logging
 
 from app.core.config import settings
 from app.api.v1.api import api_router
 from app.db.session import close_db
+
+# Configure logging for Redis client with handler
+redis_logger = logging.getLogger("app.core.redis_client")
+redis_logger.setLevel(logging.INFO)
+
+# Add handler to ensure Redis logs appear in stdout
+import sys
+handler = logging.StreamHandler(sys.stdout)
+handler.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+redis_logger.addHandler(handler)
 
 
 @asynccontextmanager
