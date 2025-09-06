@@ -66,6 +66,9 @@ RAG/app/__pycache__/
 __pycache__/
 *.py[cod]
 *$py.class
+
+# Root level Python cache
+/__pycache__/
 .Python
 build/
 dist/
@@ -146,10 +149,12 @@ tmp/
 # ===========================================
 # Test Files
 # ===========================================
+test/
 test_*.py
 *_test.py
 tests/
 scripts/test_*.py
+
 
 # ===========================================
 # Cache
@@ -257,4 +262,4 @@ rag-legacy
 legacy
 
 # Reference files (API docs, swagger files, etc.)
-frontend/reference/
+frontend/reference/frontend_bak/
