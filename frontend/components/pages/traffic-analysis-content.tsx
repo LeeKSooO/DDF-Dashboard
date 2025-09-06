@@ -684,7 +684,7 @@ export function TrafficAnalysisContent({
                       </p>
                       <ul className="text-sm space-y-1">
                         <li>
-                          • 출퇴근 시간대: 06-09시(출근), 17-19시(퇴근) 평일만
+                          • 출퇴근 시간대: 06-08시(출근), 17-19시(퇴근) 평일만
                         </li>
                         <li>
                           • 주거지역: (출근승차/출근하차) × (퇴근하차/퇴근승차)
@@ -700,7 +700,7 @@ export function TrafficAnalysisContent({
               </TooltipProvider>
             </CardTitle>
             <CardDescription>
-              출퇴근 승하차 패턴으로 주거지역과 업무지역 구분
+              출퇴근 승하차 패턴으로 주거지역과 업무지역 구분 (주중)
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -982,7 +982,7 @@ export function TrafficAnalysisContent({
                 </TooltipProvider>
               </CardTitle>
               <CardDescription>
-                출퇴근 시간대(06-09시, 17-19시) 교통 집중 구간
+                출퇴근 시간대(06-08시, 17-19시) 교통 집중 구간 (주중)
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -990,7 +990,7 @@ export function TrafficAnalysisContent({
                 {/* 오전 러시아워 */}
                 <div>
                   <h5 className="font-semibold text-lg text-orange-800 mb-4">
-                    🌅 오전 러시아워 (06-09시)
+                    🌅 오전 러시아워 (06-08시)
                   </h5>
                   <div className="space-y-4 scrollable-list">
                     {rushHourData?.data?.morning_rush?.map(
