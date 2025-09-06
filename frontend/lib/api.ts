@@ -479,9 +479,10 @@ export const utils = {
   },
 
   // 선택된 월을 API 형식으로 변환 ("7" -> "2025-07-01")
-  formatSelectedMonth: (selectedMonth: string): string => {
+  // 데이터가 2025년 기준이므로 2025년으로 고정하되, 향후 확장 가능하도록 구조화
+  formatSelectedMonth: (selectedMonth: string, year: number = 2025): string => {
     const month = String(selectedMonth).padStart(2, "0");
-    return `2025-${month}-01`;
+    return `${year}-${month}-01`;
   },
 
   // 서울시 25개 구 목록

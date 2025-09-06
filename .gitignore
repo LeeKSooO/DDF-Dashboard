@@ -255,3 +255,6 @@ kubeconfig
 # regacy
 rag-legacy
 legacy
+
+# Reference files (API docs, swagger files, etc.)
+frontend/reference/

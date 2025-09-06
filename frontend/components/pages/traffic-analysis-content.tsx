@@ -28,6 +28,22 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { apiService, utils } from "@/lib/api";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  Legend,
+  ResponsiveContainer,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+} from "recharts";
+import Image from "next/image";
 
 // Month names in Korean
 const monthNames = [
@@ -65,10 +81,40 @@ export function TrafficAnalysisContent({
   const [areaTypeData, setAreaTypeData] = useState<any>(null);
   const [underutilizedData, setUnderutilizedData] = useState<any>(null);
 
+  // 차트 데이터 계산
+  const getChartData = () => {
+    if (!areaTypeData?.data?.residential_stations || !areaTypeData?.data?.business_stations) {
+      return [];
+    }
+    
+    const resStations = areaTypeData.data.residential_stations;
+    const bizStations = areaTypeData.data.business_stations;
+    
+    return [
+      {
+        name: "주거지역 평균",
+        "오전승차": Math.round(resStations.reduce((sum: number, item: any) => sum + (item.morning_ride || 0), 0) / resStations.length),
+        "오전하차": Math.round(resStations.reduce((sum: number, item: any) => sum + (item.morning_alight || 0), 0) / resStations.length),
+        "오후승차": Math.round(resStations.reduce((sum: number, item: any) => sum + (item.evening_ride || 0), 0) / resStations.length),
+        "오후하차": Math.round(resStations.reduce((sum: number, item: any) => sum + (item.evening_alight || 0), 0) / resStations.length),
+      },
+      {
+        name: "업무지역 평균",
+        "오전승차": Math.round(bizStations.reduce((sum: number, item: any) => sum + (item.morning_ride || 0), 0) / bizStations.length),
+        "오전하차": Math.round(bizStations.reduce((sum: number, item: any) => sum + (item.morning_alight || 0), 0) / bizStations.length),
+        "오후승차": Math.round(bizStations.reduce((sum: number, item: any) => sum + (item.evening_ride || 0), 0) / bizStations.length),
+        "오후하차": Math.round(bizStations.reduce((sum: number, item: any) => sum + (item.evening_alight || 0), 0) / bizStations.length),
+      }
+    ];
+  };
+  
+  const chartData = getChartData();
+
   // 애니메이션 상태
   const [animatedNumbers, setAnimatedNumbers] = useState<
     Record<string, number>
   >({});
+  const animatedTargetsRef = useRef<Record<string, number>>({});
 
   // 중복된 정류장 이름을 감지하고 구분 표시하는 함수
   const checkDuplicateStationNames = (stations: any[]) => {
@@ -173,49 +219,45 @@ export function TrafficAnalysisContent({
     }
   `;
 
-  // 동적 숫자 애니메이션 훅
+  // 동적 숫자 애니메이션 훅 (무한 루프 방지)
   const animateNumber = useCallback(
     (key: string, targetValue: number, duration: number = 1500) => {
-      // 이미 애니메이션이 진행 중이거나 완료된 경우 건너뛰기
-      if (animatedNumbers[key] === targetValue) {
-        return;
-      }
+      // 같은 key에 같은 목표값이면 재실행 방지
+      if (animatedTargetsRef.current[key] === targetValue) return;
+      animatedTargetsRef.current[key] = targetValue;
 
       const startValue = 0; // 항상 0에서 시작
-      const startTime = Date.now();
+      const startTime = performance.now();
 
       const easeOutCubic = (t: number): number => {
         return 1 - Math.pow(1 - t, 3);
       };
 
-      const animate = () => {
-        const elapsed = Date.now() - startTime;
+      const step = (now: number) => {
+        const elapsed = now - startTime;
         const progress = Math.min(elapsed / duration, 1);
-        const easeProgress = easeOutCubic(progress);
+        const eased = easeOutCubic(progress);
         const currentValue = Math.floor(
-          startValue + (targetValue - startValue) * easeProgress
+          startValue + (targetValue - startValue) * eased
         );
 
-        setAnimatedNumbers((prev) => ({
-          ...prev,
-          [key]: currentValue,
-        }));
+        setAnimatedNumbers((prev) =>
+          prev[key] === currentValue ? prev : { ...prev, [key]: currentValue }
+        );
 
-        // 완료되지 않았으면 계속 진행
         if (progress < 1) {
-          requestAnimationFrame(animate);
+          requestAnimationFrame(step);
         } else {
-          // 완료 시 정확한 목표값으로 설정
-          setAnimatedNumbers((prev) => ({
-            ...prev,
-            [key]: targetValue,
-          }));
+          // 마지막으로 정확히 맞춰줍
+          setAnimatedNumbers((prev) =>
+            prev[key] === targetValue ? prev : { ...prev, [key]: targetValue }
+          );
         }
       };
 
-      requestAnimationFrame(animate);
+      requestAnimationFrame(step);
     },
-    [animatedNumbers]
+    [] // 의존성 없음: 함수 참조가 안정적이라 useEffect 재실행 유발 안 함
   );
 
   // 애니메이션 트리거 - 한 번만 실행되도록 useRef로 관리
@@ -344,6 +386,7 @@ export function TrafficAnalysisContent({
 
         // 새로운 데이터 로드 시 애니메이션 플래그 리셋
         animationTriggered.current = false;
+        animatedTargetsRef.current = {}; // 목표값 기록 초기화
         setAnimatedNumbers({}); // 애니메이션 숫자 상태 초기화
 
         console.log("🚌 Loading integrated traffic analysis data for:", {
@@ -351,62 +394,214 @@ export function TrafficAnalysisContent({
           selectedRegion,
         });
 
-        // 분석할 구 목록 결정
-        const districtsToAnalyze =
-          selectedRegion === "전체"
-            ? ["강남구", "서초구", "송파구", "영등포구", "마포구"] // 샘플 구들
-            : [selectedRegion];
-
-        // 첫 번째 구로 데이터 로드 (데모용)
-        const targetDistrict = districtsToAnalyze[0];
         const analysisMonth = utils.formatSelectedMonth(selectedMonth);
 
-        // 통합 API 호출
-        const integrationResult = await apiService.getIntegratedAnomalyAnalysis(
-          targetDistrict,
-          analysisMonth
-        );
+        if (selectedRegion === "전체") {
+          // 전체 서울 분석: 모든 구의 데이터를 병합
+          const allDistricts = [
+            "강남구", "강동구", "강북구", "강서구", "관악구", "광진구", 
+            "구로구", "금천구", "노원구", "도봉구", "동대문구", "동작구",
+            "마포구", "서대문구", "서초구", "성동구", "성북구", "송파구",
+            "양천구", "영등포구", "용산구", "은평구", "종로구", "중구", "중랑구"
+          ];
 
-        console.log("🚌 Integrated API Result:", integrationResult);
+          // 모든 구의 데이터를 병렬로 가져와서 병합
+          const allDistrictResults = await Promise.allSettled(
+            allDistricts.map(district => 
+              apiService.getIntegratedAnomalyAnalysis(district, analysisMonth)
+            )
+          );
 
-        // 통합 API 응답 데이터를 개별 상태로 분리
-        if (integrationResult?.success && integrationResult?.data) {
+          // 성공한 결과들만 필터링하고 데이터 병합
+          const successfulResults: any[] = allDistrictResults
+            .filter((result): result is PromiseFulfilledResult<any> => 
+              result.status === 'fulfilled' && result.value?.success
+            )
+            .map(result => result.value.data);
+
+          if (successfulResults.length > 0) {
+            // 모든 구의 데이터를 패턴별로 병합
+            const mergedData = {
+              district_name: "서울시 전체",
+              analysis_month: successfulResults[0].analysis_month,
+              generated_at: new Date().toISOString(),
+              weekend_dominant_stations: [] as any[],
+              night_demand_stations: [] as any[],
+              rush_hour_stations: { morning_rush: [] as any[], evening_rush: [] as any[] },
+              lunch_time_stations: [] as any[],
+              area_type_analysis: { residential_stations: [] as any[], business_stations: [] as any[] },
+              underutilized_stations: [] as any[]
+            };
+
+            // 각 패턴별로 모든 구의 데이터를 합치고 상위 10개씩 선택
+            successfulResults.forEach((districtData: any) => {
+                mergedData.weekend_dominant_stations.push(...((districtData.weekend_dominant_stations as any[]) || []));
+              mergedData.night_demand_stations.push(...((districtData.night_demand_stations as any[]) || []));
+              mergedData.rush_hour_stations.morning_rush.push(...((districtData.rush_hour_stations?.morning_rush as any[]) || []));
+              mergedData.rush_hour_stations.evening_rush.push(...((districtData.rush_hour_stations?.evening_rush as any[]) || []));
+              mergedData.lunch_time_stations.push(...((districtData.lunch_time_stations as any[]) || []));
+              mergedData.area_type_analysis.residential_stations.push(...((districtData.area_type_analysis?.residential_stations as any[]) || []));
+              mergedData.area_type_analysis.business_stations.push(...((districtData.area_type_analysis?.business_stations as any[]) || []));
+              mergedData.underutilized_stations.push(...((districtData.underutilized_stations as any[]) || []));
+            });
+
+            // 각 패턴별로 정렬하고 상위 10개만 선택
+            mergedData.weekend_dominant_stations = (mergedData.weekend_dominant_stations as any[])
+              .sort((a: any, b: any) => (b.weekend_total_traffic || 0) - (a.weekend_total_traffic || 0))
+              .slice(0, 10);
+
+            mergedData.night_demand_stations = (mergedData.night_demand_stations as any[])
+              .sort((a: any, b: any) => (b.total_night_ride || 0) - (a.total_night_ride || 0))
+              .slice(0, 10);
+
+            mergedData.rush_hour_stations.morning_rush = (mergedData.rush_hour_stations.morning_rush as any[])
+              .sort((a: any, b: any) => (b.total_morning_rush || 0) - (a.total_morning_rush || 0))
+              .slice(0, 10);
+
+            mergedData.rush_hour_stations.evening_rush = (mergedData.rush_hour_stations.evening_rush as any[])
+              .sort((a: any, b: any) => (b.total_evening_rush || 0) - (a.total_evening_rush || 0))
+              .slice(0, 10);
+
+            mergedData.lunch_time_stations = (mergedData.lunch_time_stations as any[])
+              .sort((a: any, b: any) => (b.total_lunch_alight || 0) - (a.total_lunch_alight || 0))
+              .slice(0, 10);
+
+            mergedData.area_type_analysis.residential_stations = (mergedData.area_type_analysis.residential_stations as any[])
+              .sort((a: any, b: any) => (b.imbalance_ratio || 0) - (a.imbalance_ratio || 0))
+              .slice(0, 10);
+
+            mergedData.area_type_analysis.business_stations = (mergedData.area_type_analysis.business_stations as any[])
+              .sort((a: any, b: any) => (b.imbalance_ratio || 0) - (a.imbalance_ratio || 0))
+              .slice(0, 10);
+
+            mergedData.underutilized_stations = (mergedData.underutilized_stations as any[])
+              .sort((a: any, b: any) => (a.efficiency_score || Infinity) - (b.efficiency_score || Infinity))
+              .slice(0, 10);
+
+            // 병합된 데이터를 사용
+            const integrationResult = { success: true, data: mergedData };
+            processIntegrationResult(integrationResult);
+          } else {
+            throw new Error("모든 구의 데이터 로드에 실패했습니다.");
+          }
+        } else {
+          // 개별 구 분석
+          try {
+            const integrationResult = await apiService.getIntegratedAnomalyAnalysis(
+              selectedRegion,
+              analysisMonth
+            );
+            processIntegrationResult(integrationResult);
+          } catch (integrationError) {
+            console.warn("🔄 통합 API 실패, 개별 패턴 API로 폴백 시도:", integrationError);
+            
+            // 통합 API 실패 시 개별 패턴 API들을 병렬로 호출
+            const fallbackResults = await Promise.allSettled([
+              apiService.getWeekendDominantStations(selectedRegion, analysisMonth, 10),
+              apiService.getNightDemandStations(selectedRegion, analysisMonth, 10),
+              apiService.getRushHourAnalysis(selectedRegion, analysisMonth),
+              apiService.getLunchTimeStations(selectedRegion, analysisMonth, 10),
+              apiService.getAreaTypeAnalysis(selectedRegion, analysisMonth),
+              apiService.getUnderutilizedStations(selectedRegion, analysisMonth, 10)
+            ]);
+
+            // 성공한 개별 API 결과들을 통합 형태로 변환
+            const [weekendResult, nightResult, rushHourResult, lunchTimeResult, areaTypeResult, underutilizedResult] = fallbackResults;
+
+            const fallbackData = {
+              district_name: selectedRegion,
+              analysis_month: analysisMonth,
+              generated_at: new Date().toISOString(),
+              weekend_dominant_stations: weekendResult.status === 'fulfilled' && weekendResult.value?.success 
+                ? weekendResult.value.data : [],
+              night_demand_stations: nightResult.status === 'fulfilled' && nightResult.value?.success 
+                ? nightResult.value.data : [],
+              rush_hour_stations: rushHourResult.status === 'fulfilled' && rushHourResult.value?.success 
+                ? rushHourResult.value.data : { morning_rush: [], evening_rush: [] },
+              lunch_time_stations: lunchTimeResult.status === 'fulfilled' && lunchTimeResult.value?.success 
+                ? lunchTimeResult.value.data : [],
+              area_type_analysis: areaTypeResult.status === 'fulfilled' && areaTypeResult.value?.success 
+                ? areaTypeResult.value.data : { residential_stations: [], business_stations: [] },
+              underutilized_stations: underutilizedResult.status === 'fulfilled' && underutilizedResult.value?.success 
+                ? underutilizedResult.value.data : []
+            };
+
+            const fallbackIntegrationResult = { success: true, data: fallbackData };
+            console.log("✅ 개별 API 폴백 성공:", fallbackIntegrationResult);
+            processIntegrationResult(fallbackIntegrationResult);
+          }
+        }
+
+        function processIntegrationResult(integrationResult: any) {
+          console.log("🚌 Integrated API Result:", integrationResult);
+
+          // 데이터 검증 및 구조 확인
+          if (!integrationResult?.success) {
+            throw new Error(`API 응답 실패: ${integrationResult?.message || 'Unknown error'}`);
+          }
+
+          if (!integrationResult?.data) {
+            throw new Error("API 응답에 데이터가 없습니다.");
+          }
+
           const data = integrationResult.data;
 
-          // 각 패턴 데이터를 기존 형식에 맞게 변환
+          // 필수 데이터 구조 검증
+          const requiredFields = [
+            'weekend_dominant_stations',
+            'night_demand_stations', 
+            'rush_hour_stations',
+            'lunch_time_stations',
+            'area_type_analysis',
+            'underutilized_stations'
+          ];
+
+          const missingFields = requiredFields.filter(field => !(field in data));
+          if (missingFields.length > 0) {
+            console.warn(`⚠️ 누락된 데이터 필드: ${missingFields.join(', ')}`);
+          }
+
+          // 각 패턴별 데이터 유효성 검증 및 기본값 설정
+          const validateAndNormalize = (fieldData: any, fieldName: string, defaultValue: any) => {
+            if (!fieldData) {
+              console.warn(`⚠️ ${fieldName} 데이터가 없습니다. 기본값으로 설정합니다.`);
+              return defaultValue;
+            }
+            return fieldData;
+          };
+
+          // 각 패턴 데이터를 검증하고 상태로 설정
           setWeekendData({
             success: true,
-            data: data.weekend_dominant_stations || [],
+            data: validateAndNormalize(data.weekend_dominant_stations, '주말 우세 정류장', []),
           });
 
           setNightData({
             success: true,
-            data: data.night_demand_stations || [],
+            data: validateAndNormalize(data.night_demand_stations, '심야 고수요 정류장', []),
           });
 
           setRushHourData({
             success: true,
-            data: data.rush_hour_stations || {},
+            data: validateAndNormalize(data.rush_hour_stations, '러시아워 정류장', { morning_rush: [], evening_rush: [] }),
           });
 
           setLunchTimeData({
             success: true,
-            data: data.lunch_time_stations || [],
+            data: validateAndNormalize(data.lunch_time_stations, '점심시간 특화 정류장', []),
           });
 
           setAreaTypeData({
             success: true,
-            data: data.area_type_analysis || {},
+            data: validateAndNormalize(data.area_type_analysis, '지역 특성 분석', { residential_stations: [], business_stations: [] }),
           });
 
           setUnderutilizedData({
             success: true,
-            data: data.underutilized_stations || [],
+            data: validateAndNormalize(data.underutilized_stations, '저활용 정류장', []),
           });
 
-          // setIntegrationData(integrationResult); // 추후 필요시 활성화
-        } else {
-          throw new Error("Invalid response from integrated API");
+          console.log("✅ 모든 패턴 데이터 처리 완료");
         }
       } catch (err) {
         console.error("🚨 Integrated Traffic Analysis API error:", err);
@@ -488,9 +683,15 @@ export function TrafficAnalysisContent({
                         🏠 주거지역 vs 🏢 업무지역 구분 분석
                       </p>
                       <ul className="text-sm space-y-1">
-                        <li>• 출퇴근 승하차 패턴으로 지역 특성 파악</li>
-                        <li>• 주거지역: 오전 승차↑, 오후 하차↑</li>
-                        <li>• 업무지역: 오전 하차↑, 오후 승차↑</li>
+                        <li>
+                          • 출퇴근 시간대: 06-08시(출근), 17-19시(퇴근) 평일만
+                        </li>
+                        <li>
+                          • 주거지역: (출근승차/출근하차) × (퇴근하차/퇴근승차)
+                        </li>
+                        <li>
+                          • 업무지역: (출근하차/출근승차) × (퇴근승차/퇴근하차)
+                        </li>
                         <li>• 도시계획 및 교통정책 수립에 활용</li>
                       </ul>
                     </div>
@@ -499,15 +700,60 @@ export function TrafficAnalysisContent({
               </TooltipProvider>
             </CardTitle>
             <CardDescription>
-              출퇴근 승하차 패턴으로 주거지역과 업무지역 구분
+              출퇴근 승하차 패턴으로 주거지역과 업무지역 구분 (주중)
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {/* 4지표 비교 차트 */}
+            {areaTypeData?.data?.residential_stations && areaTypeData?.data?.business_stations && (
+              <div className="mb-8 p-6 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg">
+                <h4 className="text-xl font-bold text-gray-800 mb-4 text-center flex items-center justify-center gap-3">
+                  <Image
+                    src="/heatmap_icon/통계_히트맵.png"
+                    alt="통계 차트"
+                    width={24}
+                    height={24}
+                    className="flex-shrink-0"
+                  />
+                  주거지역 vs 업무지역 출퇴근 패턴 비교
+                </h4>
+                <div className="h-96">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={chartData}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="name" tick={{ fontSize: 12, fontWeight: 600 }} />
+                      <YAxis tick={{ fontSize: 11 }} />
+                      <RechartsTooltip 
+                        contentStyle={{ 
+                          backgroundColor: '#fff', 
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                        }}
+                        formatter={(value: number) => [`${value.toLocaleString()}명`, '']}
+                      />
+                      <Legend />
+                      <Bar dataKey="오전승차" fill="#3B82F6" name="오전 승차" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="오전하차" fill="#10B981" name="오전 하차" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="오후승차" fill="#F59E0B" name="오후 승차" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="오후하차" fill="#EF4444" name="오후 하차" radius={[2, 2, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-4 text-sm text-gray-600 text-center">
+                  ℹ️ 주거지역은 오전 승차·오후 하차가, 업무지역은 오전 하차·오후 승차가 높은 특징
+                </div>
+              </div>
+            )}
+            
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* 주거지역 특성 정류장 */}
               <div className="p-4 bg-blue-50 rounded-lg">
                 <h5 className="font-semibold text-lg text-blue-800 mb-3 flex items-center gap-2">
-                  🏠 주거지역 특성
+                  🏠 주거지역 특성 (주거→업무 패턴)
                 </h5>
                 <div className="space-y-3 scrollable-list">
                   {areaTypeData?.data?.residential_stations?.map(
@@ -526,74 +772,71 @@ export function TrafficAnalysisContent({
                               )}
                             </div>
                             <div className="text-blue-600 font-semibold text-sm mt-1">
-                              주거지 특성도: {item.imbalance_ratio?.toFixed(1)}
+                              불균형 비율: {item.imbalance_ratio?.toFixed(1)}
                             </div>
                           </div>
                         </div>
 
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">
-                              오전 승차
-                            </span>
-                            <span className="font-medium animate-count-up">
-                              {(
-                                animatedNumbers[
-                                  `residential-morning-${item.station.station_id}`
-                                ] || 0
-                              ).toLocaleString()}
-                              명
-                            </span>
+                        <div className="grid grid-cols-2 gap-3">
+                          {/* 4개 지표 모두 표시 */}
+                          <div className="space-y-2">
+                            <div className="text-xs text-gray-500 font-medium">오전 승차 ⬆️</div>
+                            <div className="font-medium text-blue-600">
+                              {(item.morning_ride || 0).toLocaleString()}명
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-1.5">
+                              <div
+                                className="bg-blue-500 h-1.5 rounded-full transition-all duration-1000"
+                                style={{
+                                  width: `${Math.min(100, ((item.morning_ride || 0) / Math.max(...(areaTypeData?.data?.residential_stations?.map((s: any) => s.morning_ride) || [1]))) * 100)}%`,
+                                }}
+                              ></div>
+                            </div>
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-gradient-to-r from-blue-400 to-blue-600 h-2 rounded-full animate-progress"
-                              style={{
-                                width: `${Math.min(
-                                  100,
-                                  ((item.morning_ride || 0) /
-                                    Math.max(
-                                      ...(areaTypeData?.data?.residential_stations?.map(
-                                        (s: any) => s.morning_ride
-                                      ) || [1])
-                                    )) *
-                                    100
-                                )}%`,
-                                animationDelay: `${index * 100 + 200}ms`,
-                              }}
-                            ></div>
+                          
+                          <div className="space-y-2">
+                            <div className="text-xs text-gray-500 font-medium">오전 하차 ⬇️</div>
+                            <div className="font-medium text-gray-600">
+                              {(item.morning_alight || 0).toLocaleString()}명
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-1.5">
+                              <div
+                                className="bg-gray-400 h-1.5 rounded-full transition-all duration-1000"
+                                style={{
+                                  width: `${Math.min(100, ((item.morning_alight || 0) / Math.max(...(areaTypeData?.data?.residential_stations?.map((s: any) => s.morning_alight) || [1]))) * 100)}%`,
+                                }}
+                              ></div>
+                            </div>
                           </div>
-
-                          <div className="flex items-center justify-between mt-3">
-                            <span className="text-sm text-gray-600">
-                              오후 하차
-                            </span>
-                            <span className="font-medium animate-count-up">
-                              {(
-                                animatedNumbers[
-                                  `residential-evening-${item.station.station_id}`
-                                ] || 0
-                              ).toLocaleString()}
-                              명
-                            </span>
+                          
+                          <div className="space-y-2">
+                            <div className="text-xs text-gray-500 font-medium">오후 승차 ⬆️</div>
+                            <div className="font-medium text-gray-600">
+                              {(item.evening_ride || 0).toLocaleString()}명
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-1.5">
+                              <div
+                                className="bg-gray-400 h-1.5 rounded-full transition-all duration-1000"
+                                style={{
+                                  width: `${Math.min(100, ((item.evening_ride || 0) / Math.max(...(areaTypeData?.data?.residential_stations?.map((s: any) => s.evening_ride) || [1]))) * 100)}%`,
+                                }}
+                              ></div>
+                            </div>
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-gradient-to-r from-blue-500 to-blue-700 h-2 rounded-full animate-progress"
-                              style={{
-                                width: `${Math.min(
-                                  100,
-                                  ((item.evening_alight || 0) /
-                                    Math.max(
-                                      ...(areaTypeData?.data?.residential_stations?.map(
-                                        (s: any) => s.evening_alight
-                                      ) || [1])
-                                    )) *
-                                    100
-                                )}%`,
-                                animationDelay: `${index * 100 + 300}ms`,
-                              }}
-                            ></div>
+                          
+                          <div className="space-y-2">
+                            <div className="text-xs text-gray-500 font-medium">오후 하차 ⬇️</div>
+                            <div className="font-medium text-blue-600">
+                              {(item.evening_alight || 0).toLocaleString()}명
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-1.5">
+                              <div
+                                className="bg-blue-600 h-1.5 rounded-full transition-all duration-1000"
+                                style={{
+                                  width: `${Math.min(100, ((item.evening_alight || 0) / Math.max(...(areaTypeData?.data?.residential_stations?.map((s: any) => s.evening_alight) || [1]))) * 100)}%`,
+                                }}
+                              ></div>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -609,7 +852,7 @@ export function TrafficAnalysisContent({
               {/* 업무지역 특성 정류장 */}
               <div className="p-4 bg-green-50 rounded-lg">
                 <h5 className="font-semibold text-lg text-green-800 mb-3 flex items-center gap-2">
-                  🏢 업무지역 특성
+                  🏢 업무지역 특성 (업무←주거 패턴)
                 </h5>
                 <div className="space-y-3 scrollable-list">
                   {areaTypeData?.data?.business_stations?.map(
@@ -628,74 +871,71 @@ export function TrafficAnalysisContent({
                               )}
                             </div>
                             <div className="text-green-600 font-semibold text-sm mt-1">
-                              업무지 특성도: {item.imbalance_ratio?.toFixed(1)}
+                              불균형 비율: {item.imbalance_ratio?.toFixed(1)}
                             </div>
                           </div>
                         </div>
 
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">
-                              오전 하차
-                            </span>
-                            <span className="font-medium animate-count-up">
-                              {(
-                                animatedNumbers[
-                                  `business-morning-${item.station.station_id}`
-                                ] || 0
-                              ).toLocaleString()}
-                              명
-                            </span>
+                        <div className="grid grid-cols-2 gap-3">
+                          {/* 4개 지표 모두 표시 */}
+                          <div className="space-y-2">
+                            <div className="text-xs text-gray-500 font-medium">오전 승차 ⬆️</div>
+                            <div className="font-medium text-gray-600">
+                              {(item.morning_ride || 0).toLocaleString()}명
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-1.5">
+                              <div
+                                className="bg-gray-400 h-1.5 rounded-full transition-all duration-1000"
+                                style={{
+                                  width: `${Math.min(100, ((item.morning_ride || 0) / Math.max(...(areaTypeData?.data?.business_stations?.map((s: any) => s.morning_ride) || [1]))) * 100)}%`,
+                                }}
+                              ></div>
+                            </div>
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-gradient-to-r from-green-400 to-green-600 h-2 rounded-full animate-progress"
-                              style={{
-                                width: `${Math.min(
-                                  100,
-                                  ((item.morning_alight || 0) /
-                                    Math.max(
-                                      ...(areaTypeData?.data?.business_stations?.map(
-                                        (s: any) => s.morning_alight
-                                      ) || [1])
-                                    )) *
-                                    100
-                                )}%`,
-                                animationDelay: `${index * 100 + 200}ms`,
-                              }}
-                            ></div>
+                          
+                          <div className="space-y-2">
+                            <div className="text-xs text-gray-500 font-medium">오전 하차 ⬇️</div>
+                            <div className="font-medium text-green-600">
+                              {(item.morning_alight || 0).toLocaleString()}명
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-1.5">
+                              <div
+                                className="bg-green-500 h-1.5 rounded-full transition-all duration-1000"
+                                style={{
+                                  width: `${Math.min(100, ((item.morning_alight || 0) / Math.max(...(areaTypeData?.data?.business_stations?.map((s: any) => s.morning_alight) || [1]))) * 100)}%`,
+                                }}
+                              ></div>
+                            </div>
                           </div>
-
-                          <div className="flex items-center justify-between mt-3">
-                            <span className="text-sm text-gray-600">
-                              오후 승차
-                            </span>
-                            <span className="font-medium animate-count-up">
-                              {(
-                                animatedNumbers[
-                                  `business-evening-${item.station.station_id}`
-                                ] || 0
-                              ).toLocaleString()}
-                              명
-                            </span>
+                          
+                          <div className="space-y-2">
+                            <div className="text-xs text-gray-500 font-medium">오후 승차 ⬆️</div>
+                            <div className="font-medium text-green-600">
+                              {(item.evening_ride || 0).toLocaleString()}명
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-1.5">
+                              <div
+                                className="bg-green-600 h-1.5 rounded-full transition-all duration-1000"
+                                style={{
+                                  width: `${Math.min(100, ((item.evening_ride || 0) / Math.max(...(areaTypeData?.data?.business_stations?.map((s: any) => s.evening_ride) || [1]))) * 100)}%`,
+                                }}
+                              ></div>
+                            </div>
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-gradient-to-r from-green-500 to-green-700 h-2 rounded-full animate-progress"
-                              style={{
-                                width: `${Math.min(
-                                  100,
-                                  ((item.evening_ride || 0) /
-                                    Math.max(
-                                      ...(areaTypeData?.data?.business_stations?.map(
-                                        (s: any) => s.evening_ride
-                                      ) || [1])
-                                    )) *
-                                    100
-                                )}%`,
-                                animationDelay: `${index * 100 + 300}ms`,
-                              }}
-                            ></div>
+                          
+                          <div className="space-y-2">
+                            <div className="text-xs text-gray-500 font-medium">오후 하차 ⬇️</div>
+                            <div className="font-medium text-gray-600">
+                              {(item.evening_alight || 0).toLocaleString()}명
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-1.5">
+                              <div
+                                className="bg-gray-400 h-1.5 rounded-full transition-all duration-1000"
+                                style={{
+                                  width: `${Math.min(100, ((item.evening_alight || 0) / Math.max(...(areaTypeData?.data?.business_stations?.map((s: any) => s.evening_alight) || [1]))) * 100)}%`,
+                                }}
+                              ></div>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -730,7 +970,7 @@ export function TrafficAnalysisContent({
                           ⚡ 출퇴근 시간대 교통 집중 구간
                         </p>
                         <ul className="text-sm space-y-1">
-                          <li>• 오전 러시아워: 06:00-09:00</li>
+                          <li>• 오전 러시아워: 06:00-08:00</li>
                           <li>• 오후 러시아워: 17:00-19:00</li>
                           <li>• 평상시 대비 높은 승차량</li>
                           <li>• 배차간격 조정 및 증편 필요 지역</li>
@@ -742,7 +982,7 @@ export function TrafficAnalysisContent({
                 </TooltipProvider>
               </CardTitle>
               <CardDescription>
-                출퇴근 시간대(06-09시, 17-19시) 교통 집중 구간
+                출퇴근 시간대(06-08시, 17-19시) 교통 집중 구간 (주중)
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -750,7 +990,7 @@ export function TrafficAnalysisContent({
                 {/* 오전 러시아워 */}
                 <div>
                   <h5 className="font-semibold text-lg text-orange-800 mb-4">
-                    🌅 오전 러시아워 (06-09시)
+                    🌅 오전 러시아워 (06-08시)
                   </h5>
                   <div className="space-y-4 scrollable-list">
                     {rushHourData?.data?.morning_rush?.map(
@@ -792,7 +1032,7 @@ export function TrafficAnalysisContent({
                                 variant="outline"
                                 className="text-base px-3 py-1"
                               >
-                                {item.vs_district_avg?.toFixed(1)}X
+                                {item.vs_district_avg?.toFixed(1)}배
                               </Badge>
                               <p className="text-sm text-gray-600 mt-1">
                                 구평균 대비
@@ -854,7 +1094,7 @@ export function TrafficAnalysisContent({
                                 variant="outline"
                                 className="text-base px-3 py-1"
                               >
-                                {item.vs_district_avg?.toFixed(1)}X
+                                {item.vs_district_avg?.toFixed(1)}배
                               </Badge>
                               <p className="text-sm text-gray-600 mt-1">
                                 구평균 대비
@@ -894,8 +1134,10 @@ export function TrafficAnalysisContent({
                           <li>• 일평균 이용객 수 대비 낮은 효율성</li>
                           <li>• 노선 재배치 또는 운행횟수 조정 검토</li>
                           <li>• DRT(수요응답형 교통) 전환 후보</li>
-                          <li>• 운영비용 절감 효과 기대</li>
-                          <li>• 서비스 품질 유지하며 최적화</li>
+                          <li>
+                            • 효율성 점수: 일평균 승객수 ÷ 연결된 버스 노선수
+                          </li>
+                          <li>• 구 평균 대비 활용률 (%) 계산</li>
                         </ul>
                       </div>
                     </TooltipContent>
@@ -925,103 +1167,77 @@ export function TrafficAnalysisContent({
                     >
                       <AlertTriangle className="h-5 w-5" />
                       <div className="flex-1">
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="font-semibold text-base">
-                            {formatStationName(
-                              item,
-                              underutilizedData?.data || []
-                            )}
-                          </h4>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-red-600">
-                              평균 대비
-                            </span>
-                            <Badge
-                              variant="destructive"
-                              className="text-base px-3 py-1"
-                            >
-                              {comparisonValue}%
-                            </Badge>
+                        <div className="space-y-6">
+                          {/* 상단: 정류장명 */}
+                          <div className="text-center">
+                            <h4 className="font-bold text-3xl text-gray-900 mb-2">
+                              {formatStationName(
+                                item,
+                                underutilizedData?.data || []
+                              )}
+                            </h4>
+                            <div className="inline-block px-4 py-1 bg-red-100 text-red-700 rounded-full text-sm font-semibold">
+                              저활용 정류장
+                            </div>
                           </div>
-                        </div>
-                        <AlertDescription>
-                          {/* 시각적 비교 표현 - Progress Bar */}
-                          <div className="mb-3">
-                            <div className="flex items-center justify-between text-sm mb-1">
-                              <span className="text-gray-600">
-                                정류장 평균 대비
-                              </span>
-                              <span className="text-red-600 font-medium">
+                          
+                          {/* 중단: 주요 지표 2개 - 동일 크기 */}
+                          <div className="grid grid-cols-2 gap-6">
+                            {/* 평균대비 퍼센테이지 */}
+                            <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-6 border border-red-200 text-center">
+                              <div className="text-xs text-red-600 mb-2 font-semibold">평균 대비</div>
+                              <div className="text-4xl font-black text-red-700 mb-2">
+                                {comparisonValue}%
+                              </div>
+                              <div className="text-sm text-red-600 font-semibold">
                                 {comparisonValue < 100
-                                  ? `▼ ${(100 - comparisonValue).toFixed(
-                                      1
-                                    )}% 낮음`
-                                  : `▲ ${(comparisonValue - 100).toFixed(
-                                      1
-                                    )}% 높음`}
-                              </span>
-                            </div>
-                            <div className="relative w-full h-8 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
-                              {/* 평균선 표시 (50% 위치) */}
-                              <div className="absolute inset-y-0 left-1/2 w-0.5 bg-gray-600 z-10">
-                                <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-xs text-gray-600 font-medium">
-                                  평균
-                                </span>
+                                  ? `${(100 - comparisonValue).toFixed(1)}% 낮음 ↓`
+                                  : `${(comparisonValue - 100).toFixed(1)}% 높음 ↑`}
                               </div>
-                              {/* 실제 사용률 바 */}
-                              <div
-                                className="relative h-full bg-gradient-to-r from-red-500 to-red-400 transition-all duration-1000 ease-out"
-                                style={{
-                                  width: `${Math.min(
-                                    comparisonValue / 2,
-                                    50
-                                  )}%`,
-                                  animation: "slideInLeft 1s ease-out",
-                                }}
-                              >
-                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-white font-bold">
-                                  {comparisonValue}%
-                                </span>
-                              </div>
-                              {/* 작은 삼각형 인디케이터 */}
-                              <div
-                                className="absolute top-full mt-1 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-red-500"
-                                style={{
-                                  left: `${Math.min(comparisonValue / 2, 50)}%`,
-                                }}
-                              />
                             </div>
-                          </div>
 
-                          <div className="grid grid-cols-2 gap-4 text-base">
-                            <div>
-                              <span className="text-gray-600">
-                                일평균 이용:
-                              </span>{" "}
-                              <span className="font-semibold text-red-700 animate-count-up">
+                            {/* 일평균이용자 */}
+                            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 border border-blue-200 text-center">
+                              <div className="text-xs text-blue-600 mb-2 font-semibold">일평균 이용자</div>
+                              <div className="text-4xl font-black text-blue-700 animate-count-up mb-2">
                                 {(
                                   animatedNumbers[
                                     `underutil-${item.station.station_id}`
                                   ] || 0
                                 ).toLocaleString()}
-                                명
-                              </span>
+                              </div>
+                              <div className="text-sm text-blue-600 font-semibold">명/일</div>
                             </div>
-                            <div>
-                              <span className="text-gray-600">노선 대비:</span>{" "}
-                              <span className="font-semibold text-red-700">
+                          </div>
+                        </div>
+                        
+                        <AlertDescription>
+                          {/* 하단: 세부 정보 3개 - 전체 폭에 맞게 확장 */}
+                          <div className="w-full flex gap-6">
+                            <div className="flex-1 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200 text-center">
+                              <div className="text-xs text-orange-600 mb-2 font-semibold">노선 대비</div>
+                              <div className="text-2xl font-black text-orange-700 mb-2">
                                 {Math.round(
                                   item.avg_daily_passengers /
                                     Math.max(item.connecting_routes, 1)
                                 )}
-                                명/노선
-                              </span>
+                              </div>
+                              <div className="text-sm font-semibold text-orange-600">명/노선</div>
                             </div>
-                          </div>
-                          <div className="mt-2 text-sm text-gray-600">
-                            <strong>운행 노선:</strong> {item.connecting_routes}
-                            개 | <strong>최대 일일:</strong>{" "}
-                            {item.max_daily_passengers?.toLocaleString()}명
+                            
+                            <div className="flex-1 bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200 text-center">
+                              <div className="text-xs text-green-600 mb-2 font-semibold">운행 노선</div>
+                              <div className="text-2xl font-black text-green-700 mb-2">{item.connecting_routes}</div>
+                              <div className="text-sm font-semibold text-green-600">개 노선</div>
+                            </div>
+                            
+                            <div className="flex-1 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200 text-center">
+                              <div className="text-xs text-purple-600 mb-2 font-semibold">최대 일일</div>
+                              <div className="text-2xl font-black text-purple-700 mb-2">
+                                {(item.max_daily_passengers || 0).toLocaleString()}
+                              </div>
+                              <div className="text-sm font-semibold text-purple-600">명</div>
+                            </div>
                           </div>
                         </AlertDescription>
                       </div>
@@ -1056,8 +1272,8 @@ export function TrafficAnalysisContent({
                           🎯 주말 특화 교통 수요 지역
                         </p>
                         <ul className="text-sm space-y-1">
-                          <li>• 토요일, 일요일 교통량이 평일 대비 높음</li>
-                          <li>• 관광지, 레저시설, 대형 쇼핑몰 인근</li>
+                          <li>• 주말 총 교통량(승차 + 하차) 기준 정렬</li>
+                          <li>• 관광지, 레저시설, 대형 쇼핑몰 인근확율 높음</li>
                           <li>• 주말 전용 노선 또는 증편 검토 대상</li>
                           <li>• 여가활동 중심의 교통패턴</li>
                           <li>• 구평균 대비 배수로 중요도 측정</li>
@@ -1107,7 +1323,7 @@ export function TrafficAnalysisContent({
                         variant="secondary"
                         className="text-base px-3 py-1"
                       >
-                        {item.vs_district_avg?.toFixed(1)}X
+                        {item.vs_district_avg?.toFixed(1)}배
                       </Badge>
                       <p className="text-sm text-gray-600 mt-1">구평균 대비</p>
                     </div>
@@ -1138,7 +1354,9 @@ export function TrafficAnalysisContent({
                           🌙 심야시간대 특화 교통 거점
                         </p>
                         <ul className="text-sm space-y-1">
-                          <li>• 23:00-03:00 시간대 높은 승차량</li>
+                          <li>
+                            • 심야시간(23,0,1,2,3시) 총 승차인원 기준 정렬
+                          </li>
                           <li>• 유흥가, 24시간 상업시설 인근</li>
                           <li>• 교대근무 사업장 및 병원 주변</li>
                           <li>• 심야버스 노선 최적화 대상</li>
@@ -1184,7 +1402,7 @@ export function TrafficAnalysisContent({
                     </div>
                     <div className="text-right">
                       <Badge variant="outline" className="text-base px-3 py-1">
-                        {item.vs_district_avg?.toFixed(1)}X
+                        {item.vs_district_avg?.toFixed(1)}배
                       </Badge>
                       <p className="text-sm text-gray-600 mt-1">구평균 대비</p>
                     </div>
@@ -1215,7 +1433,10 @@ export function TrafficAnalysisContent({
                           🍽️ 점심시간 교통 집중 지역
                         </p>
                         <ul className="text-sm space-y-1">
-                          <li>• 11:00-13:00 시간대 하차량 집중</li>
+                          <li>
+                            • 점심시간(11,12,13시) 총 하차인원 기준 정렬
+                            (평일만)
+                          </li>
                           <li>• 음식점 밀집지역, 업무지구 맛집가</li>
                           <li>• 직장인 외식 수요 반영</li>
                           <li>• 점심시간 배차간격 단축 검토</li>
@@ -1263,7 +1484,7 @@ export function TrafficAnalysisContent({
                     </div>
                     <div className="text-right">
                       <Badge variant="outline" className="text-base px-3 py-1">
-                        {item.vs_district_avg?.toFixed(1)}X
+                        {item.vs_district_avg?.toFixed(1)}배
                       </Badge>
                       <p className="text-sm text-gray-600 mt-1">구평균 대비</p>
                     </div>

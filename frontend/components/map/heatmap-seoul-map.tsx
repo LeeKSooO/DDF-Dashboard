@@ -308,55 +308,24 @@ const HeatmapSeoulMapComponent = forwardRef<
           const geoJsonData = await response.json();
 
           // Add all district features to map
-          L.geoJSON(geoJsonData, {
-            style: getFeatureStyle,
+          const geoJsonLayer = L.geoJSON(geoJsonData, {
+            style: (feature) => {
+              // 초기 기본 스타일
+              return {
+                fillColor: '#3B82F6',
+                weight: 2,
+                opacity: 1,
+                color: '#ffffff',
+                dashArray: '',
+                fillOpacity: 0.3,
+              };
+            },
             onEachFeature: (feature: any, layer: any) => {
               const districtName = feature.properties.sggnm;
 
-              // Mouse events - 클로저 문제 방지를 위해 함수 내부에서 처리
-              layer.on({
-                mouseover: function(e: any) {
-                  const layer = e.target;
-                  // getFeatureStyle이 현재 viewMode를 반영하므로 직접 사용
-                  const baseStyle = getFeatureStyle(feature);
-                  
-                  if (baseStyle.fillOpacity < 0.2) { // station mode (fillOpacity가 낮음)
-                    layer.setStyle({
-                      ...baseStyle,
-                      weight: 4,  // 호버시 경계선 더 두껍게
-                      fillOpacity: 0.1,  // 내부는 약간만 진하게
-                    });
-                  } else { // district mode
-                    layer.setStyle({
-                      ...baseStyle,
-                      weight: 3,
-                      fillOpacity: 0.4,
-                    });
-                  }
-                },
-                mouseout: function(e: any) {
-                  const layer = e.target;
-                  layer.setStyle(getFeatureStyle(feature));
-                },
-                click: () => {
-                  const districtName = feature.properties.sggnm;
-                  const districtCode = feature.properties.sgg;
+              // 초기에는 기본 이벤트만 설정, 나중에 업데이트됨
 
-                  // Zoom to district with padding and animation
-                  map.fitBounds(layer.getBounds(), {
-                    padding: [50, 50], // 여백 추가
-                    duration: 0.5, // 애니메이션 시간
-                    maxZoom: 13, // 너무 많이 줌인되지 않도록 제한
-                  });
-
-                  // Call callback
-                  if (onDistrictClick) {
-                    onDistrictClick(districtName, districtCode);
-                  }
-                },
-              });
-
-              // Tooltip - 데이터 준비될 때까지 기본 메시지
+              // Tooltip - 호버 시 표시
               layer.bindTooltip(
                 `<div>
                   <strong>${districtName}</strong><br/>
@@ -364,12 +333,16 @@ const HeatmapSeoulMapComponent = forwardRef<
                 </div>`,
                 {
                   permanent: false,
-                  direction: "center",
+                  direction: "top",
                   className: "heatmap-tooltip",
+                  sticky: true // 마우스 따라다니기
                 }
               );
             },
-          }).addTo(map);
+          });
+          
+          geoJsonLayer.addTo(map);
+          mapInstanceRef.current.geoJsonLayer = geoJsonLayer; // 나중에 업데이트하기 위해 저장
 
           setIsLoading(false);
         } catch (err) {
@@ -447,7 +420,7 @@ const HeatmapSeoulMapComponent = forwardRef<
           mapInstanceRef.current = null;
         }
       };
-    }, [isClient]);
+    }, [isClient]); // 지도 초기화는 한 번만
 
     // Update styles and tooltips when district data changes
     useEffect(() => {
@@ -468,7 +441,7 @@ const HeatmapSeoulMapComponent = forwardRef<
                 featureLayer.setStyle(getFeatureStyle(feature));
 
                 // Re-bind mouse events to ensure they use current viewMode
-                featureLayer.off('mouseover mouseout'); // Remove old handlers
+                featureLayer.off('mouseover mouseout click'); // Remove old handlers
                 featureLayer.on({
                   mouseover: function(e: any) {
                     const layer = e.target;
@@ -491,6 +464,23 @@ const HeatmapSeoulMapComponent = forwardRef<
                   mouseout: function(e: any) {
                     const layer = e.target;
                     layer.setStyle(getFeatureStyle(feature));
+                  },
+                  click: function(e: any) {
+                    const districtName = feature.properties.sggnm;
+                    const districtCode = feature.properties.sgg;
+
+                    // Zoom to district
+                    if (mapInstanceRef.current) {
+                      mapInstanceRef.current.fitBounds(e.target.getBounds(), {
+                        padding: [50, 50],
+                        duration: 0.5,
+                        maxZoom: 13,
+                      });
+                    }
+
+                    if (onDistrictClick) {
+                      onDistrictClick(districtName, districtCode);
+                    }
                   }
                 });
 
@@ -506,15 +496,39 @@ const HeatmapSeoulMapComponent = forwardRef<
                       ).toFixed(2)
                     : "N/A";
 
-                // 데이터가 있을 때만 업데이트, 없으면 로딩 메시지 유지
+                // 툴팁을 다시 바인딩 (기존 툴팁 제거 후 새로 설정)
+                featureLayer.unbindTooltip();
+                
+                // 데이터가 있을 때만 업데이트, 없으면 로딩 메시지 표시
                 if (districtData && Object.keys(districtLookup).length > 0) {
-                  featureLayer.setTooltipContent(
+                  featureLayer.bindTooltip(
+                    `<div style="padding: 8px; font-size: 14px;">
+                      <strong style="font-size: 16px; color: #1f2937;">${districtName}</strong><br/>
+                      <div style="margin-top: 4px; color: #4b5563;">
+                        교통량: <span style="font-weight: 600; color: #2563eb;">${traffic.toLocaleString()}명</span><br/>
+                        정류장: <span style="font-weight: 600;">${stationCount}개</span><br/>
+                        승하차비율: <span style="font-weight: 600;">${rideAlightRatio}</span>
+                      </div>
+                    </div>`,
+                    {
+                      permanent: false,
+                      direction: "top",
+                      className: "heatmap-tooltip",
+                      sticky: true // 마우스 따라다니기
+                    }
+                  );
+                } else {
+                  featureLayer.bindTooltip(
                     `<div>
-                    <strong>${districtName}</strong><br/>
-                    교통량: ${traffic.toLocaleString()}명<br/>
-                    정류장: ${stationCount}개<br/>
-                    승하차비율: ${rideAlightRatio}
-                  </div>`
+                      <strong>${districtName}</strong><br/>
+                      데이터 로딩 중...
+                    </div>`,
+                    {
+                      permanent: false,
+                      direction: "top",
+                      className: "heatmap-tooltip",
+                      sticky: true
+                    }
                   );
                 }
               }
@@ -706,6 +720,7 @@ const HeatmapSeoulMapComponent = forwardRef<
       districts,
       selectedPattern, // 패턴 변경 시 마커 업데이트
       patternStations, // 패턴 정류장 데이터 변경 시 마커 업데이트
+      onDistrictClick, // 클릭 핸들러
     ]);
 
     // 줌인 애니메이션 제거
