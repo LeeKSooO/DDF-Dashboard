@@ -22,6 +22,7 @@ from langchain.schema import Document
 
 from app.core.config import settings
 from app.core.exceptions import DocumentLoaderException
+from app.services.enhanced_chunking_service import EnhancedChunkingService
 
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,7 @@ class DocumentLoaderService:
         self._health_status = False
         self.processed_files: Dict[str, Dict[str, Any]] = {}
         self.text_splitter = None
+        self.enhanced_chunking_service = None
         self.processed_files_cache_path = Path("./data/processed_files_cache.json")
         
     async def initialize(self) -> None:
@@ -46,7 +48,14 @@ class DocumentLoaderService:
         logger.info("🚀 Initializing document loader service...")
         
         try:
-            # Initialize text splitter with optimized settings
+            # Initialize enhanced chunking service if enabled
+            if getattr(settings, 'USE_ENHANCED_CHUNKING', True):
+                self.enhanced_chunking_service = EnhancedChunkingService()
+                logger.info("✅ Enhanced chunking service enabled")
+            else:
+                logger.info("📝 Using standard chunking")
+                
+            # Initialize fallback text splitter
             self.text_splitter = RecursiveCharacterTextSplitter(
                 chunk_size=1500,      # 각 청크의 최대 문자 수
                 chunk_overlap=300,    # 인접 청크 간 겹치는 문자 수
@@ -206,29 +215,42 @@ class DocumentLoaderService:
             raise DocumentLoaderException("Document loader not initialized")
         
         try:
-            # Use custom settings if provided
-            if chunk_size or chunk_overlap:
-                text_splitter = RecursiveCharacterTextSplitter(
-                    chunk_size=chunk_size or 1500,
-                    chunk_overlap=chunk_overlap or 300,
-                    separators=["\n\n", "\n", ". ", "。", "!", "?", " ", ""],
-                    length_function=len,
-                )
+            # Use enhanced chunking if available and no custom settings provided
+            if (self.enhanced_chunking_service and 
+                not chunk_size and not chunk_overlap and
+                getattr(settings, 'USE_ENHANCED_CHUNKING', True)):
+                
+                logger.info("🧠 Using enhanced structure-aware chunking")
+                chunks = self.enhanced_chunking_service.chunk_documents(documents)
+                
             else:
-                text_splitter = self.text_splitter
+                # Fallback to standard chunking
+                logger.info("📝 Using standard text chunking")
+                
+                # Use custom settings if provided
+                if chunk_size or chunk_overlap:
+                    text_splitter = RecursiveCharacterTextSplitter(
+                        chunk_size=chunk_size or 1500,
+                        chunk_overlap=chunk_overlap or 300,
+                        separators=["\n\n", "\n", ". ", "。", "!", "?", " ", ""],
+                        length_function=len,
+                    )
+                else:
+                    text_splitter = self.text_splitter
+                
+                # Split documents
+                chunks = text_splitter.split_documents(documents)
+                
+                # Add basic chunk metadata for standard chunking
+                for i, chunk in enumerate(chunks):
+                    chunk.metadata.update({
+                        "chunk_index": i,
+                        "chunk_size": len(chunk.page_content),
+                        "chunked_at": datetime.utcnow().isoformat(),
+                        "enhanced_chunking": False
+                    })
             
-            # Split documents
-            chunks = text_splitter.split_documents(documents)
-            
-            # Add chunk metadata
-            for i, chunk in enumerate(chunks):
-                chunk.metadata.update({
-                    "chunk_index": i,
-                    "chunk_size": len(chunk.page_content),
-                    "chunked_at": datetime.utcnow().isoformat()
-                })
-            
-            logger.info(f"Split {len(documents)} documents into {len(chunks)} chunks")
+            logger.info(f"📊 Split {len(documents)} documents into {len(chunks)} chunks")
             return chunks
             
         except Exception as e:

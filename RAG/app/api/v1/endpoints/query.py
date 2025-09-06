@@ -20,8 +20,9 @@ logger = logging.getLogger(__name__)
 class RAGQueryRequest(BaseModel):
     """Request model for RAG query"""
     query: str = Field(..., description="사용자 질문", example="DRT 시스템이 무엇인가요?")
-    k: int = Field(default=5, description="검색할 문서 개수", example=5)
-    confidence_threshold: float = Field(default=0.7, description="유사도 임계값", example=0.7)
+    max_results: int = Field(default=10, description="검색할 문서 개수", example=10)
+    similarity_threshold: float = Field(default=0.5, description="유사도 임계값", example=0.5)
+    use_multi_query: bool = Field(default=True, description="Multi-Query Generation 사용 여부", example=True)
     include_sources: bool = Field(default=True, description="참조 문서 포함 여부", example=True)
     backend_data: bool = Field(default=True, description="백엔드 데이터 포함 여부", example=True)
     summary_only: bool = Field(default=False, description="4단계 종합 답변만 반환", example=False)
@@ -30,8 +31,9 @@ class RAGQueryRequest(BaseModel):
         schema_extra = {
             "example": {
                 "query": "DRT 시스템이 무엇인가요?",
-                "k": 5,
-                "confidence_threshold": 0.7,
+                "max_results": 10,
+                "similarity_threshold": 0.5,
+                "use_multi_query": True,
                 "include_sources": True,
                 "backend_data": True,
                 "summary_only": False
@@ -75,23 +77,58 @@ async def process_rag_query(
 ):
     
     try:
-        logger.info(f"Processing CoT RAG query: {request.query}")
+        logger.info(f"Processing {'Multi-Query' if request.use_multi_query else 'Standard'} RAG query: {request.query}")
         
-        # RAG 서비스를 통해 질의 처리
-        result = await rag_service.query(request.query)
+        # Multi-Query 또는 기본 쿼리 선택
+        if request.use_multi_query:
+            result = await rag_service.multi_query(request.query, request.max_results)
+            message = "Multi-Query RAG processed successfully"
+        else:
+            result = await rag_service.query(request.query)
+            message = "CoT RAG query processed successfully"
         
         # 4단계 종합 답변만 추출하는 옵션
         final_answer = result["answer"]
         if request.summary_only:
             final_answer = extract_summary_answer(result["answer"])
         
+        # 소스 정보 준비
+        sources_data = []
+        if request.include_sources:
+            sources_data.append({"reasoning_steps": result["reasoning_steps"]})
+            
+            # Multi-Query 추가 정보 포함
+            if request.use_multi_query and "generated_queries" in result:
+                reranking_info = {
+                    "generated_queries": result["generated_queries"],
+                    "documents_retrieved": result.get("documents_retrieved", 0),
+                    "documents_reranked": result.get("documents_reranked", 0),
+                    "unique_sources": result.get("unique_sources", 0),
+                    "reranking_enabled": result.get("reranking_enabled", False)
+                }
+                
+                # Re-ranking 점수 추가 (상위 5개)
+                if result.get("top_rerank_scores"):
+                    reranking_info["top_rerank_scores"] = result["top_rerank_scores"]
+                
+                sources_data.append(reranking_info)
+        
+        # 백엔드 데이터 준비
+        backend_info = {"cot_enabled": result["cot_enabled"]}
+        if request.use_multi_query:
+            backend_info.update({
+                "multi_query_enabled": True,
+                "query_mode": result.get("mode", "multi_query"),
+                "reranking_enabled": result.get("reranking_enabled", False)
+            })
+        
         return RAGQueryResponse(
             status="success",
-            message="CoT RAG query processed successfully", 
+            message=message, 
             query=result["question"],
             answer=final_answer,
-            sources=[{"reasoning_steps": result["reasoning_steps"]}] if request.include_sources else None,
-            backend_data={"cot_enabled": result["cot_enabled"]},
+            sources=sources_data if request.include_sources else None,
+            backend_data=backend_info if request.backend_data else None,
             confidence=result["confidence"]
         )
         
