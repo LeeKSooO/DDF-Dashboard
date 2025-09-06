@@ -1167,80 +1167,76 @@ export function TrafficAnalysisContent({
                     >
                       <AlertTriangle className="h-5 w-5" />
                       <div className="flex-1">
-                        <div className="grid grid-cols-3 gap-6 items-center mb-6">
-                          {/* 정류장명 - 더 크게 */}
-                          <div className="col-span-1">
-                            <h4 className="font-bold text-2xl text-gray-900 leading-tight">
+                        <div className="space-y-6">
+                          {/* 상단: 정류장명 */}
+                          <div className="text-center">
+                            <h4 className="font-bold text-3xl text-gray-900 mb-2">
                               {formatStationName(
                                 item,
                                 underutilizedData?.data || []
                               )}
                             </h4>
-                            <div className="text-sm text-gray-500 mt-1 font-medium">저활용 정류장</div>
+                            <div className="inline-block px-4 py-1 bg-red-100 text-red-700 rounded-full text-sm font-semibold">
+                              저활용 정류장
+                            </div>
                           </div>
                           
-                          {/* 평균대비 퍼센테이지 - 중앙에 크게 */}
-                          <div className="col-span-1">
-                            <div className="bg-red-50 rounded-lg p-6 border-2 border-red-200 text-center">
-                              <div className="text-sm text-red-600 mb-2 font-medium">평균 대비</div>
-                              <div className="text-5xl font-bold text-red-700 mb-2">
+                          {/* 중단: 주요 지표 2개 - 동일 크기 */}
+                          <div className="grid grid-cols-2 gap-6">
+                            {/* 평균대비 퍼센테이지 */}
+                            <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-6 border border-red-200 text-center">
+                              <div className="text-xs text-red-600 mb-2 font-semibold">평균 대비</div>
+                              <div className="text-4xl font-black text-red-700 mb-2">
                                 {comparisonValue}%
                               </div>
-                              <div className="text-sm text-red-600 font-medium">
+                              <div className="text-sm text-red-600 font-semibold">
                                 {comparisonValue < 100
                                   ? `${(100 - comparisonValue).toFixed(1)}% 낮음 ↓`
                                   : `${(comparisonValue - 100).toFixed(1)}% 높음 ↑`}
                               </div>
                             </div>
-                          </div>
 
-                          {/* 일평균이용자 - 오른쪽에 크게 */}
-                          <div className="col-span-1">
-                            <div className="bg-gray-50 rounded-lg p-6 border-2 border-gray-200 text-center">
-                              <div className="text-sm text-gray-600 mb-2 font-medium">일평균 이용자</div>
-                              <div className="text-4xl font-bold text-gray-800 animate-count-up mb-1">
+                            {/* 일평균이용자 */}
+                            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 border border-blue-200 text-center">
+                              <div className="text-xs text-blue-600 mb-2 font-semibold">일평균 이용자</div>
+                              <div className="text-4xl font-black text-blue-700 animate-count-up mb-2">
                                 {(
                                   animatedNumbers[
                                     `underutil-${item.station.station_id}`
                                   ] || 0
                                 ).toLocaleString()}
                               </div>
-                              <div className="text-sm text-gray-600 font-medium">명/일</div>
+                              <div className="text-sm text-blue-600 font-semibold">명/일</div>
                             </div>
                           </div>
                         </div>
                         
                         <AlertDescription>
-                          <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200">
-                            <div className="grid grid-cols-3 gap-6">
-                              <div className="text-center">
-                                <div className="bg-white rounded-lg p-4 shadow-sm border">
-                                  <div className="text-sm text-gray-500 mb-2 font-medium">노선 대비</div>
-                                  <div className="text-2xl font-bold text-blue-700 mb-1">
-                                    {Math.round(
-                                      item.avg_daily_passengers /
-                                        Math.max(item.connecting_routes, 1)
-                                    )}
-                                  </div>
-                                  <div className="text-sm font-medium text-blue-600">명/노선</div>
-                                </div>
+                          {/* 하단: 세부 정보 3개 - 전체 폭에 맞게 확장 */}
+                          <div className="w-full flex gap-6">
+                            <div className="flex-1 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200 text-center">
+                              <div className="text-xs text-orange-600 mb-2 font-semibold">노선 대비</div>
+                              <div className="text-2xl font-black text-orange-700 mb-2">
+                                {Math.round(
+                                  item.avg_daily_passengers /
+                                    Math.max(item.connecting_routes, 1)
+                                )}
                               </div>
-                              <div className="text-center">
-                                <div className="bg-white rounded-lg p-4 shadow-sm border">
-                                  <div className="text-sm text-gray-500 mb-2 font-medium">운행 노선</div>
-                                  <div className="text-2xl font-bold text-green-700 mb-1">{item.connecting_routes}</div>
-                                  <div className="text-sm font-medium text-green-600">개 노선</div>
-                                </div>
+                              <div className="text-sm font-semibold text-orange-600">명/노선</div>
+                            </div>
+                            
+                            <div className="flex-1 bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200 text-center">
+                              <div className="text-xs text-green-600 mb-2 font-semibold">운행 노선</div>
+                              <div className="text-2xl font-black text-green-700 mb-2">{item.connecting_routes}</div>
+                              <div className="text-sm font-semibold text-green-600">개 노선</div>
+                            </div>
+                            
+                            <div className="flex-1 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200 text-center">
+                              <div className="text-xs text-purple-600 mb-2 font-semibold">최대 일일</div>
+                              <div className="text-2xl font-black text-purple-700 mb-2">
+                                {(item.max_daily_passengers || 0).toLocaleString()}
                               </div>
-                              <div className="text-center">
-                                <div className="bg-white rounded-lg p-4 shadow-sm border">
-                                  <div className="text-sm text-gray-500 mb-2 font-medium">최대 일일</div>
-                                  <div className="text-2xl font-bold text-purple-700 mb-1">
-                                    {Math.floor((item.max_daily_passengers || 0) / 1000)}
-                                  </div>
-                                  <div className="text-sm font-medium text-purple-600">K명</div>
-                                </div>
-                              </div>
+                              <div className="text-sm font-semibold text-purple-600">명</div>
                             </div>
                           </div>
                         </AlertDescription>
