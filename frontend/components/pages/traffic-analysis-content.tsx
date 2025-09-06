@@ -351,62 +351,214 @@ export function TrafficAnalysisContent({
           selectedRegion,
         });
 
-        // 분석할 구 목록 결정
-        const districtsToAnalyze =
-          selectedRegion === "전체"
-            ? ["강남구", "서초구", "송파구", "영등포구", "마포구"] // 샘플 구들
-            : [selectedRegion];
-
-        // 첫 번째 구로 데이터 로드 (데모용)
-        const targetDistrict = districtsToAnalyze[0];
         const analysisMonth = utils.formatSelectedMonth(selectedMonth);
 
-        // 통합 API 호출
-        const integrationResult = await apiService.getIntegratedAnomalyAnalysis(
-          targetDistrict,
-          analysisMonth
-        );
+        if (selectedRegion === "전체") {
+          // 전체 서울 분석: 모든 구의 데이터를 병합
+          const allDistricts = [
+            "강남구", "강동구", "강북구", "강서구", "관악구", "광진구", 
+            "구로구", "금천구", "노원구", "도봉구", "동대문구", "동작구",
+            "마포구", "서대문구", "서초구", "성동구", "성북구", "송파구",
+            "양천구", "영등포구", "용산구", "은평구", "종로구", "중구", "중랑구"
+          ];
 
-        console.log("🚌 Integrated API Result:", integrationResult);
+          // 모든 구의 데이터를 병렬로 가져와서 병합
+          const allDistrictResults = await Promise.allSettled(
+            allDistricts.map(district => 
+              apiService.getIntegratedAnomalyAnalysis(district, analysisMonth)
+            )
+          );
 
-        // 통합 API 응답 데이터를 개별 상태로 분리
-        if (integrationResult?.success && integrationResult?.data) {
+          // 성공한 결과들만 필터링하고 데이터 병합
+          const successfulResults = allDistrictResults
+            .filter((result): result is PromiseFulfilledResult<any> => 
+              result.status === 'fulfilled' && result.value?.success
+            )
+            .map(result => result.value.data);
+
+          if (successfulResults.length > 0) {
+            // 모든 구의 데이터를 패턴별로 병합
+            const mergedData = {
+              district_name: "서울시 전체",
+              analysis_month: successfulResults[0].analysis_month,
+              generated_at: new Date().toISOString(),
+              weekend_dominant_stations: [],
+              night_demand_stations: [],
+              rush_hour_stations: { morning_rush: [], evening_rush: [] },
+              lunch_time_stations: [],
+              area_type_analysis: { residential_stations: [], business_stations: [] },
+              underutilized_stations: []
+            };
+
+            // 각 패턴별로 모든 구의 데이터를 합치고 상위 10개씩 선택
+            successfulResults.forEach(districtData => {
+              mergedData.weekend_dominant_stations.push(...(districtData.weekend_dominant_stations || []));
+              mergedData.night_demand_stations.push(...(districtData.night_demand_stations || []));
+              mergedData.rush_hour_stations.morning_rush.push(...(districtData.rush_hour_stations?.morning_rush || []));
+              mergedData.rush_hour_stations.evening_rush.push(...(districtData.rush_hour_stations?.evening_rush || []));
+              mergedData.lunch_time_stations.push(...(districtData.lunch_time_stations || []));
+              mergedData.area_type_analysis.residential_stations.push(...(districtData.area_type_analysis?.residential_stations || []));
+              mergedData.area_type_analysis.business_stations.push(...(districtData.area_type_analysis?.business_stations || []));
+              mergedData.underutilized_stations.push(...(districtData.underutilized_stations || []));
+            });
+
+            // 각 패턴별로 정렬하고 상위 10개만 선택
+            mergedData.weekend_dominant_stations = mergedData.weekend_dominant_stations
+              .sort((a, b) => (b.weekend_total_traffic || 0) - (a.weekend_total_traffic || 0))
+              .slice(0, 10);
+
+            mergedData.night_demand_stations = mergedData.night_demand_stations
+              .sort((a, b) => (b.total_night_ride || 0) - (a.total_night_ride || 0))
+              .slice(0, 10);
+
+            mergedData.rush_hour_stations.morning_rush = mergedData.rush_hour_stations.morning_rush
+              .sort((a, b) => (b.total_morning_rush || 0) - (a.total_morning_rush || 0))
+              .slice(0, 10);
+
+            mergedData.rush_hour_stations.evening_rush = mergedData.rush_hour_stations.evening_rush
+              .sort((a, b) => (b.total_evening_rush || 0) - (a.total_evening_rush || 0))
+              .slice(0, 10);
+
+            mergedData.lunch_time_stations = mergedData.lunch_time_stations
+              .sort((a, b) => (b.total_lunch_alight || 0) - (a.total_lunch_alight || 0))
+              .slice(0, 10);
+
+            mergedData.area_type_analysis.residential_stations = mergedData.area_type_analysis.residential_stations
+              .sort((a, b) => (b.imbalance_ratio || 0) - (a.imbalance_ratio || 0))
+              .slice(0, 10);
+
+            mergedData.area_type_analysis.business_stations = mergedData.area_type_analysis.business_stations
+              .sort((a, b) => (b.imbalance_ratio || 0) - (a.imbalance_ratio || 0))
+              .slice(0, 10);
+
+            mergedData.underutilized_stations = mergedData.underutilized_stations
+              .sort((a, b) => (a.efficiency_score || Infinity) - (b.efficiency_score || Infinity))
+              .slice(0, 10);
+
+            // 병합된 데이터를 사용
+            const integrationResult = { success: true, data: mergedData };
+            processIntegrationResult(integrationResult);
+          } else {
+            throw new Error("모든 구의 데이터 로드에 실패했습니다.");
+          }
+        } else {
+          // 개별 구 분석
+          try {
+            const integrationResult = await apiService.getIntegratedAnomalyAnalysis(
+              selectedRegion,
+              analysisMonth
+            );
+            processIntegrationResult(integrationResult);
+          } catch (integrationError) {
+            console.warn("🔄 통합 API 실패, 개별 패턴 API로 폴백 시도:", integrationError);
+            
+            // 통합 API 실패 시 개별 패턴 API들을 병렬로 호출
+            const fallbackResults = await Promise.allSettled([
+              apiService.getWeekendDominantStations(selectedRegion, analysisMonth, 10),
+              apiService.getNightDemandStations(selectedRegion, analysisMonth, 10),
+              apiService.getRushHourAnalysis(selectedRegion, analysisMonth),
+              apiService.getLunchTimeStations(selectedRegion, analysisMonth, 10),
+              apiService.getAreaTypeAnalysis(selectedRegion, analysisMonth),
+              apiService.getUnderutilizedStations(selectedRegion, analysisMonth, 10)
+            ]);
+
+            // 성공한 개별 API 결과들을 통합 형태로 변환
+            const [weekendResult, nightResult, rushHourResult, lunchTimeResult, areaTypeResult, underutilizedResult] = fallbackResults;
+
+            const fallbackData = {
+              district_name: selectedRegion,
+              analysis_month: analysisMonth,
+              generated_at: new Date().toISOString(),
+              weekend_dominant_stations: weekendResult.status === 'fulfilled' && weekendResult.value?.success 
+                ? weekendResult.value.data : [],
+              night_demand_stations: nightResult.status === 'fulfilled' && nightResult.value?.success 
+                ? nightResult.value.data : [],
+              rush_hour_stations: rushHourResult.status === 'fulfilled' && rushHourResult.value?.success 
+                ? rushHourResult.value.data : { morning_rush: [], evening_rush: [] },
+              lunch_time_stations: lunchTimeResult.status === 'fulfilled' && lunchTimeResult.value?.success 
+                ? lunchTimeResult.value.data : [],
+              area_type_analysis: areaTypeResult.status === 'fulfilled' && areaTypeResult.value?.success 
+                ? areaTypeResult.value.data : { residential_stations: [], business_stations: [] },
+              underutilized_stations: underutilizedResult.status === 'fulfilled' && underutilizedResult.value?.success 
+                ? underutilizedResult.value.data : []
+            };
+
+            const fallbackIntegrationResult = { success: true, data: fallbackData };
+            console.log("✅ 개별 API 폴백 성공:", fallbackIntegrationResult);
+            processIntegrationResult(fallbackIntegrationResult);
+          }
+        }
+
+        function processIntegrationResult(integrationResult: any) {
+          console.log("🚌 Integrated API Result:", integrationResult);
+
+          // 데이터 검증 및 구조 확인
+          if (!integrationResult?.success) {
+            throw new Error(`API 응답 실패: ${integrationResult?.message || 'Unknown error'}`);
+          }
+
+          if (!integrationResult?.data) {
+            throw new Error("API 응답에 데이터가 없습니다.");
+          }
+
           const data = integrationResult.data;
 
-          // 각 패턴 데이터를 기존 형식에 맞게 변환
+          // 필수 데이터 구조 검증
+          const requiredFields = [
+            'weekend_dominant_stations',
+            'night_demand_stations', 
+            'rush_hour_stations',
+            'lunch_time_stations',
+            'area_type_analysis',
+            'underutilized_stations'
+          ];
+
+          const missingFields = requiredFields.filter(field => !(field in data));
+          if (missingFields.length > 0) {
+            console.warn(`⚠️ 누락된 데이터 필드: ${missingFields.join(', ')}`);
+          }
+
+          // 각 패턴별 데이터 유효성 검증 및 기본값 설정
+          const validateAndNormalize = (fieldData: any, fieldName: string, defaultValue: any) => {
+            if (!fieldData) {
+              console.warn(`⚠️ ${fieldName} 데이터가 없습니다. 기본값으로 설정합니다.`);
+              return defaultValue;
+            }
+            return fieldData;
+          };
+
+          // 각 패턴 데이터를 검증하고 상태로 설정
           setWeekendData({
             success: true,
-            data: data.weekend_dominant_stations || [],
+            data: validateAndNormalize(data.weekend_dominant_stations, '주말 우세 정류장', []),
           });
 
           setNightData({
             success: true,
-            data: data.night_demand_stations || [],
+            data: validateAndNormalize(data.night_demand_stations, '심야 고수요 정류장', []),
           });
 
           setRushHourData({
             success: true,
-            data: data.rush_hour_stations || {},
+            data: validateAndNormalize(data.rush_hour_stations, '러시아워 정류장', { morning_rush: [], evening_rush: [] }),
           });
 
           setLunchTimeData({
             success: true,
-            data: data.lunch_time_stations || [],
+            data: validateAndNormalize(data.lunch_time_stations, '점심시간 특화 정류장', []),
           });
 
           setAreaTypeData({
             success: true,
-            data: data.area_type_analysis || {},
+            data: validateAndNormalize(data.area_type_analysis, '지역 특성 분석', { residential_stations: [], business_stations: [] }),
           });
 
           setUnderutilizedData({
             success: true,
-            data: data.underutilized_stations || [],
+            data: validateAndNormalize(data.underutilized_stations, '저활용 정류장', []),
           });
 
-          // setIntegrationData(integrationResult); // 추후 필요시 활성화
-        } else {
-          throw new Error("Invalid response from integrated API");
+          console.log("✅ 모든 패턴 데이터 처리 완료");
         }
       } catch (err) {
         console.error("🚨 Integrated Traffic Analysis API error:", err);
@@ -488,9 +640,15 @@ export function TrafficAnalysisContent({
                         🏠 주거지역 vs 🏢 업무지역 구분 분석
                       </p>
                       <ul className="text-sm space-y-1">
-                        <li>• 출퇴근 승하차 패턴으로 지역 특성 파악</li>
-                        <li>• 주거지역: 오전 승차↑, 오후 하차↑</li>
-                        <li>• 업무지역: 오전 하차↑, 오후 승차↑</li>
+                        <li>
+                          • 출퇴근 시간대: 06-09시(출근), 17-19시(퇴근) 평일만
+                        </li>
+                        <li>
+                          • 주거지역: (출근승차/출근하차) × (퇴근하차/퇴근승차)
+                        </li>
+                        <li>
+                          • 업무지역: (출근하차/출근승차) × (퇴근승차/퇴근하차)
+                        </li>
                         <li>• 도시계획 및 교통정책 수립에 활용</li>
                       </ul>
                     </div>
@@ -730,7 +888,7 @@ export function TrafficAnalysisContent({
                           ⚡ 출퇴근 시간대 교통 집중 구간
                         </p>
                         <ul className="text-sm space-y-1">
-                          <li>• 오전 러시아워: 06:00-09:00</li>
+                          <li>• 오전 러시아워: 06:00-08:00</li>
                           <li>• 오후 러시아워: 17:00-19:00</li>
                           <li>• 평상시 대비 높은 승차량</li>
                           <li>• 배차간격 조정 및 증편 필요 지역</li>
@@ -894,8 +1052,10 @@ export function TrafficAnalysisContent({
                           <li>• 일평균 이용객 수 대비 낮은 효율성</li>
                           <li>• 노선 재배치 또는 운행횟수 조정 검토</li>
                           <li>• DRT(수요응답형 교통) 전환 후보</li>
-                          <li>• 운영비용 절감 효과 기대</li>
-                          <li>• 서비스 품질 유지하며 최적화</li>
+                          <li>
+                            • 효율성 점수: 일평균 승객수 ÷ 연결된 버스 노선수
+                          </li>
+                          <li>• 구 평균 대비 활용률 (%) 계산</li>
                         </ul>
                       </div>
                     </TooltipContent>
@@ -1056,8 +1216,8 @@ export function TrafficAnalysisContent({
                           🎯 주말 특화 교통 수요 지역
                         </p>
                         <ul className="text-sm space-y-1">
-                          <li>• 토요일, 일요일 교통량이 평일 대비 높음</li>
-                          <li>• 관광지, 레저시설, 대형 쇼핑몰 인근</li>
+                          <li>• 주말 총 교통량(승차 + 하차) 기준 정렬</li>
+                          <li>• 관광지, 레저시설, 대형 쇼핑몰 인근확율 높음</li>
                           <li>• 주말 전용 노선 또는 증편 검토 대상</li>
                           <li>• 여가활동 중심의 교통패턴</li>
                           <li>• 구평균 대비 배수로 중요도 측정</li>
@@ -1138,7 +1298,9 @@ export function TrafficAnalysisContent({
                           🌙 심야시간대 특화 교통 거점
                         </p>
                         <ul className="text-sm space-y-1">
-                          <li>• 23:00-03:00 시간대 높은 승차량</li>
+                          <li>
+                            • 심야시간(23,0,1,2,3시) 총 승차인원 기준 정렬
+                          </li>
                           <li>• 유흥가, 24시간 상업시설 인근</li>
                           <li>• 교대근무 사업장 및 병원 주변</li>
                           <li>• 심야버스 노선 최적화 대상</li>
@@ -1215,7 +1377,10 @@ export function TrafficAnalysisContent({
                           🍽️ 점심시간 교통 집중 지역
                         </p>
                         <ul className="text-sm space-y-1">
-                          <li>• 11:00-13:00 시간대 하차량 집중</li>
+                          <li>
+                            • 점심시간(11,12,13시) 총 하차인원 기준 정렬
+                            (평일만)
+                          </li>
                           <li>• 음식점 밀집지역, 업무지구 맛집가</li>
                           <li>• 직장인 외식 수요 반영</li>
                           <li>• 점심시간 배차간격 단축 검토</li>

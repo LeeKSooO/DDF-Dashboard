@@ -308,24 +308,35 @@ export function DashboardOverviewContent({
   );
 
   // KPI 툴팁 정보
-  const kpiTooltips = useMemo(() => ({
-    totalTraffic: "해당 지역의 모든 버스정류장에서 발생한 총 교통량입니다. 승차와 하차를 합친 수치로 지역의 대중교통 이용 규모를 보여줍니다.",
-    averageTraffic: selectedRegion === "전체" 
-      ? "서울시 25개 구의 평균 교통량입니다. 지역별 교통량 편차를 파악할 수 있습니다."
-      : "선택된 구의 정류장당 평균 교통량입니다. 각 정류장의 평균적인 이용 수준을 보여줍니다.",
-    maxTraffic: selectedRegion === "전체"
-      ? "서울시에서 가장 교통량이 많은 구의 수치입니다. 교통 집중 지역을 파악할 수 있습니다."
-      : "선택된 구에서 가장 이용객이 많은 정류장의 수치입니다.",
-    minTraffic: selectedRegion === "전체"
-      ? "서울시에서 가장 교통량이 적은 구의 수치입니다. 교통 소외 지역을 파악할 수 있습니다."
-      : "선택된 구에서 가장 이용객이 적은 정류장의 수치입니다.",
-    totalStations: "해당 지역의 전체 버스정류장 수입니다. 대중교통 인프라의 규모를 나타냅니다.",
-    boardingRatio: "승차 인원과 하차 인원의 비율입니다. 1.0에 가까울수록 균형잡힌 승하차 패턴을 의미합니다.",
-    concentrationIndex: selectedRegion === "전체"
-      ? "상위 5개 구가 전체 교통량에서 차지하는 비율입니다. 높을수록 특정 지역에 교통이 집중됨을 의미합니다."
-      : "상위 5개 정류장이 해당 구 교통량에서 차지하는 비율입니다.",
-    inequalityIndex: "교통량 격차 정도를 나타내는 지수입니다. 값이 클수록 지역간/정류장간 교통량 차이가 크며, DRT 서비스 도입 필요성이 높습니다. (5:1 이상시 DRT 검토 권장)"
-  }), [selectedRegion]);
+  const kpiTooltips = useMemo(
+    () => ({
+      totalTraffic:
+        "해당 지역의 모든 버스정류장에서 발생한 총 교통량입니다. 승차와 하차를 합친 수치로 지역의 대중교통 이용 규모를 보여줍니다.",
+      averageTraffic:
+        selectedRegion === "전체"
+          ? "서울시 25개 구의 평균 교통량입니다. 자치구별 교통량 평균을 파악할 수 있습니다."
+          : "선택된 구의 정류장당 평균 교통량입니다. 각 정류장의 평균적인 이용 수준을 보여줍니다.",
+      maxTraffic:
+        selectedRegion === "전체"
+          ? "서울시에서 가장 교통량이 많은 구의 수치입니다. 교통 집중 자치구를 파악할 수 있습니다."
+          : "선택된 구에서 가장 이용객이 많은 정류장의 수치입니다.",
+      minTraffic:
+        selectedRegion === "전체"
+          ? "서울시에서 가장 교통량이 적은 구의 수치입니다. 교통 소외 자치구를 파악할 수 있습니다."
+          : "선택된 구에서 가장 이용객이 적은 정류장의 수치입니다.",
+      totalStations:
+        "해당 지역의 전체 버스정류장 수입니다. 대중교통 인프라의 규모를 나타냅니다.",
+      boardingRatio:
+        "승차 인원과 하차 인원의 비율입니다. 1.0에 가까울수록 균형잡힌 승하차 패턴을 의미합니다.",
+      concentrationIndex:
+        selectedRegion === "전체"
+          ? "상위 5개 구가 전체 교통량에서 차지하는 비율입니다. 높을수록 특정 지역에 교통이 집중됨을 의미합니다."
+          : "상위 5개 정류장이 해당 구 교통량에서 차지하는 비율입니다.",
+      inequalityIndex:
+        "교통량 격차 정도를 나타내는 지수입니다. 값이 클수록 자치구간/정류장간 교통량 차이가 크며, DRT 서비스 도입의 지표로 참고할 수 있는 지표입니다.",
+    }),
+    [selectedRegion]
+  );
 
   // KPI 계산 (동적으로 변경) - useMemo로 메모이제이션하여 무한 렌더링 방지
   const kpiData = useMemo(
@@ -819,8 +830,8 @@ export function DashboardOverviewContent({
                               <HelpCircle size={14} />
                             </button>
                           </TooltipTrigger>
-                          <TooltipContent 
-                            side="top" 
+                          <TooltipContent
+                            side="top"
                             className="max-w-xs bg-gray-800 text-white text-sm p-3 rounded-lg shadow-lg"
                           >
                             {kpiTooltips[kpi.key as keyof typeof kpiTooltips]}
