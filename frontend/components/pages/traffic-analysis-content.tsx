@@ -28,21 +28,6 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { apiService, utils } from "@/lib/api";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  Legend,
-  ResponsiveContainer,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
-} from "recharts";
 import Image from "next/image";
 
 // Month names in Korean
@@ -81,34 +66,6 @@ export function TrafficAnalysisContent({
   const [areaTypeData, setAreaTypeData] = useState<any>(null);
   const [underutilizedData, setUnderutilizedData] = useState<any>(null);
 
-  // 차트 데이터 계산
-  const getChartData = () => {
-    if (!areaTypeData?.data?.residential_stations || !areaTypeData?.data?.business_stations) {
-      return [];
-    }
-    
-    const resStations = areaTypeData.data.residential_stations;
-    const bizStations = areaTypeData.data.business_stations;
-    
-    return [
-      {
-        name: "주거지역 평균",
-        "오전승차": Math.round(resStations.reduce((sum: number, item: any) => sum + (item.morning_ride || 0), 0) / resStations.length),
-        "오전하차": Math.round(resStations.reduce((sum: number, item: any) => sum + (item.morning_alight || 0), 0) / resStations.length),
-        "오후승차": Math.round(resStations.reduce((sum: number, item: any) => sum + (item.evening_ride || 0), 0) / resStations.length),
-        "오후하차": Math.round(resStations.reduce((sum: number, item: any) => sum + (item.evening_alight || 0), 0) / resStations.length),
-      },
-      {
-        name: "업무지역 평균",
-        "오전승차": Math.round(bizStations.reduce((sum: number, item: any) => sum + (item.morning_ride || 0), 0) / bizStations.length),
-        "오전하차": Math.round(bizStations.reduce((sum: number, item: any) => sum + (item.morning_alight || 0), 0) / bizStations.length),
-        "오후승차": Math.round(bizStations.reduce((sum: number, item: any) => sum + (item.evening_ride || 0), 0) / bizStations.length),
-        "오후하차": Math.round(bizStations.reduce((sum: number, item: any) => sum + (item.evening_alight || 0), 0) / bizStations.length),
-      }
-    ];
-  };
-  
-  const chartData = getChartData();
 
   // 애니메이션 상태
   const [animatedNumbers, setAnimatedNumbers] = useState<
@@ -219,6 +176,9 @@ export function TrafficAnalysisContent({
     }
   `;
 
+  // RAF ID 관리를 위한 ref
+  const rafIdsRef = useRef<Set<number>>(new Set());
+
   // 동적 숫자 애니메이션 훅 (무한 루프 방지)
   const animateNumber = useCallback(
     (key: string, targetValue: number, duration: number = 1500) => {
@@ -246,7 +206,8 @@ export function TrafficAnalysisContent({
         );
 
         if (progress < 1) {
-          requestAnimationFrame(step);
+          const rafId = requestAnimationFrame(step);
+          rafIdsRef.current.add(rafId);
         } else {
           // 마지막으로 정확히 맞춰줍
           setAnimatedNumbers((prev) =>
@@ -255,7 +216,8 @@ export function TrafficAnalysisContent({
         }
       };
 
-      requestAnimationFrame(step);
+      const rafId = requestAnimationFrame(step);
+      rafIdsRef.current.add(rafId);
     },
     [] // 의존성 없음: 함수 참조가 안정적이라 useEffect 재실행 유발 안 함
   );
@@ -268,7 +230,7 @@ export function TrafficAnalysisContent({
       animationTriggered.current = true; // 플래그 설정으로 중복 실행 방지
 
       // 데이터가 로드되면 애니메이션 시작
-      setTimeout(() => {
+      const timeout = setTimeout(() => {
         // 각 섹션의 숫자들을 애니메이션으로 시작
         if (weekendData?.data) {
           weekendData.data.forEach((item: any, index: number) => {
@@ -364,6 +326,15 @@ export function TrafficAnalysisContent({
           );
         }
       }, 300);
+      
+      return () => {
+        clearTimeout(timeout);
+        // 모든 RAF 정리
+        rafIdsRef.current.forEach((rafId) => {
+          cancelAnimationFrame(rafId);
+        });
+        rafIdsRef.current.clear();
+      };
     }
   }, [
     loading,
@@ -704,50 +675,6 @@ export function TrafficAnalysisContent({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {/* 4지표 비교 차트 */}
-            {areaTypeData?.data?.residential_stations && areaTypeData?.data?.business_stations && (
-              <div className="mb-8 p-6 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg">
-                <h4 className="text-xl font-bold text-gray-800 mb-4 text-center flex items-center justify-center gap-3">
-                  <Image
-                    src="/heatmap_icon/통계_히트맵.png"
-                    alt="통계 차트"
-                    width={24}
-                    height={24}
-                    className="flex-shrink-0"
-                  />
-                  주거지역 vs 업무지역 출퇴근 패턴 비교
-                </h4>
-                <div className="h-96">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={chartData}
-                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis dataKey="name" tick={{ fontSize: 12, fontWeight: 600 }} />
-                      <YAxis tick={{ fontSize: 11 }} />
-                      <RechartsTooltip 
-                        contentStyle={{ 
-                          backgroundColor: '#fff', 
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                        }}
-                        formatter={(value: number) => [`${value.toLocaleString()}명`, '']}
-                      />
-                      <Legend />
-                      <Bar dataKey="오전승차" fill="#3B82F6" name="오전 승차" radius={[2, 2, 0, 0]} />
-                      <Bar dataKey="오전하차" fill="#10B981" name="오전 하차" radius={[2, 2, 0, 0]} />
-                      <Bar dataKey="오후승차" fill="#F59E0B" name="오후 승차" radius={[2, 2, 0, 0]} />
-                      <Bar dataKey="오후하차" fill="#EF4444" name="오후 하차" radius={[2, 2, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="mt-4 text-sm text-gray-600 text-center">
-                  ℹ️ 주거지역은 오전 승차·오후 하차가, 업무지역은 오전 하차·오후 승차가 높은 특징
-                </div>
-              </div>
-            )}
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* 주거지역 특성 정류장 */}
