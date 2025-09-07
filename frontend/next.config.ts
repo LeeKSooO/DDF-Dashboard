@@ -3,6 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   
+  // Standalone output for Docker deployment
+  output: 'standalone',
+  
   // 환경변수를 클라이언트에서 사용 가능하도록 설정
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
@@ -13,21 +16,7 @@ const nextConfig: NextConfig = {
     domains: ['localhost'],
   },
   
-  
-  // CORS 및 헤더 설정
-  async headers() {
-    return [
-      {
-        source: '/api/:path*',
-        headers: [
-          { key: 'Access-Control-Allow-Credentials', value: 'true' },
-          { key: 'Access-Control-Allow-Origin', value: '*' },
-          { key: 'Access-Control-Allow-Methods', value: 'GET,OPTIONS,PATCH,DELETE,POST,PUT' },
-          { key: 'Access-Control-Allow-Headers', value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version' },
-        ],
-      },
-    ];
-  },
+  // CORS는 Nginx에서 처리하므로 Next.js에서는 불필요
 };
 
 export default nextConfig;

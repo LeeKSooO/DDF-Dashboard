@@ -1,5 +1,45 @@
-// 상수 정의
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+// 상수 정의 
+// 환경별 API URL 설정 (domain-based)
+
+// API Base URLs - 환경별 자동 설정
+export const getApiBaseUrl = () => {
+  // 개발 환경 (로컬)
+  if (process.env.NODE_ENV === 'development') {
+    return 'http://localhost:8000/api/v1';
+  }
+  
+  // Production 환경에서는 환경변수 또는 nginx proxy 사용
+  // NEXT_PUBLIC_API_URL이 설정되어 있으면 사용 (K8s 배포)
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  
+  // Server-side (SSR/API Routes)에서는 환경변수 사용
+  if (typeof window === 'undefined') {
+    return process.env.BACKEND_API_URL || 'http://backend-service:8000';
+  }
+  
+  // Client-side에서는 nginx proxy 사용
+  return '/api/v1';
+};
+
+// 클라이언트용 - 환경별 자동 설정
+export const API_BASE_URL = getApiBaseUrl();
+
+// 서버사이드용 - 직접 서비스 호출  
+export const BACKEND_API_URL = getApiBaseUrl();
+
+// RAG API URL - nginx 프록시를 통한 접근
+export const getRagApiUrl = () => {
+  // 브라우저에서는 항상 nginx 프록시를 통해 접근
+  if (typeof window !== 'undefined') {
+    return '/api/rag';  // nginx가 /api/rag/를 rag:8001/api/로 프록시
+  }
+  // 서버사이드에서는 직접 RAG 서비스 접근 (SSR 시)
+  return process.env.RAG_API_URL || 'http://rag:8001/api';
+};
+
+export const RAG_API_URL = getRagApiUrl();
 
 // 지역 목록
 export const REGIONS = [

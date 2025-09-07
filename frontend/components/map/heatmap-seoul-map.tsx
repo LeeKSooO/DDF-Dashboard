@@ -309,7 +309,7 @@ const HeatmapSeoulMapComponent = forwardRef<
 
           // Add all district features to map
           const geoJsonLayer = L.geoJSON(geoJsonData, {
-            style: (feature) => {
+            style: () => {
               // 초기 기본 스타일
               return {
                 fillColor: '#3B82F6',

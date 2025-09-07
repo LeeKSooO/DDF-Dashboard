@@ -28,7 +28,6 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { apiService, utils } from "@/lib/api";
-import Image from "next/image";
 
 // Month names in Korean
 const monthNames = [

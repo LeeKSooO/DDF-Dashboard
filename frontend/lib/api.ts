@@ -1,7 +1,41 @@
 // API 서비스 레이어
 // DRT Dashboard API 통신을 위한 함수들
 
-import { API_BASE_URL } from './constants';
+import { API_BASE_URL, RAG_API_URL } from './constants';
+
+// RAG API 타입 정의
+export interface RAGQueryRequest {
+  query: string;
+  max_results?: number;
+  similarity_threshold?: number;
+  use_multi_query?: boolean;
+  include_sources?: boolean;
+  backend_data?: boolean;
+  summary_only?: boolean;
+}
+
+export interface RAGQueryResponse {
+  status: string;
+  message: string;
+  query: string;
+  answer: string;
+  sources?: Array<{
+    reasoning_steps?: unknown[];
+    generated_queries?: string[];
+    documents_retrieved?: number;
+    documents_reranked?: number;
+    unique_sources?: number;
+    reranking_enabled?: boolean;
+    top_rerank_scores?: number[];
+  }>;
+  backend_data?: {
+    cot_enabled: boolean;
+    multi_query_enabled?: boolean;
+    query_mode?: string;
+    reranking_enabled?: boolean;
+  };
+  confidence?: number;
+}
 
 // Traffic API 타입 정의
 export interface HourlyPattern {
@@ -445,6 +479,85 @@ analysisMonth: string,
   ): Promise<any> {
     const url = `${API_BASE_URL}/anomaly-pattern/integration?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}&top_n=${topN}`;
     return this.fetchWithErrorHandling(url);
+  }
+
+  // RAG API 함수들
+  async queryRAG(request: RAGQueryRequest): Promise<RAGQueryResponse> {
+    try {
+      const response = await fetch(`${RAG_API_URL}/api/v1/query/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: request.query,
+          max_results: request.max_results || 10,
+          similarity_threshold: request.similarity_threshold || 0.5,
+          use_multi_query: request.use_multi_query || true,
+          include_sources: request.include_sources || true,
+          backend_data: request.backend_data || true,
+          summary_only: request.summary_only || false,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`RAG API error! status: ${response.status}`);
+      }
+
+      const data: RAGQueryResponse = await response.json();
+      
+      console.log('🤖 RAG API Response:', data);
+      
+      return data;
+    } catch (error) {
+      console.error('RAG API request failed:', error);
+      throw error;
+    }
+  }
+
+  // RAG 시스템 상태 확인
+  async getRAGHealth(): Promise<{ status: string; message?: string }> {
+    try {
+      const response = await fetch(`${RAG_API_URL}/api/v1/query/examples`);
+      
+      if (!response.ok) {
+        throw new Error(`RAG Health check failed! status: ${response.status}`);
+      }
+
+      return {
+        status: 'healthy',
+        message: 'RAG system is operational'
+      };
+    } catch (error) {
+      console.error('RAG Health check failed:', error);
+      return {
+        status: 'error',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  // RAG 예시 질문 가져오기
+  async getRAGExamples(): Promise<{ examples: string[] }> {
+    try {
+      const response = await fetch(`${RAG_API_URL}/api/v1/query/examples`);
+      
+      if (!response.ok) {
+        throw new Error(`RAG Examples API error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('RAG Examples API request failed:', error);
+      return {
+        examples: [
+          "DRT 시스템이 무엇인가요?",
+          "수요응답형 교통의 장점은 무엇인가요?",
+          "교통 데이터 분석 방법론에 대해 설명해주세요"
+        ]
+      };
+    }
   }
 }
 

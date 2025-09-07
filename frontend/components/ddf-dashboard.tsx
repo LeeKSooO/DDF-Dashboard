@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, lazy, Suspense, useRef, useEffect } from "react";
+import { apiService, RAGQueryResponse } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -71,6 +72,16 @@ type ActivePage =
   | "drt-analysis"
   | "chatbot";
 
+// 채팅 메시지 타입 정의
+interface ChatMessage {
+  id: string;
+  type: 'user' | 'ai';
+  content: string;
+  timestamp: Date;
+  isLoading?: boolean;
+  confidence?: number;
+}
+
 // Month names in Korean
 const monthNames = [
   "1월",
@@ -129,6 +140,12 @@ export function DDFDashboard() {
   const [selectedModel, setSelectedModel] = useState("교통취약지");
   const [selectedMonth, setSelectedMonth] = useState<string>("7");
   const [chatOpen, setChatOpen] = useState<boolean>(false);
+  
+  // 채팅 관련 상태
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [inputMessage, setInputMessage] = useState<string>("");
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // 탭별 기본 지역 설정
   const getDefaultRegionForPage = (pageId: ActivePage): string => {
@@ -168,6 +185,94 @@ export function DDFDashboard() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // 채팅 메시지 스크롤 자동 이동
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
+
+  // RAG API 호출 함수
+  const handleSendMessage = async (message: string) => {
+    if (!message.trim() || isProcessing) return;
+
+    // 사용자 메시지 추가
+    const userMessage: ChatMessage = {
+      id: Date.now().toString() + '-user',
+      type: 'user',
+      content: message.trim(),
+      timestamp: new Date(),
+    };
+
+    setChatMessages(prev => [...prev, userMessage]);
+    setInputMessage("");
+    setIsProcessing(true);
+
+    // 로딩 메시지 추가
+    const loadingMessage: ChatMessage = {
+      id: Date.now().toString() + '-ai-loading',
+      type: 'ai',
+      content: '답변을 생성 중입니다...',
+      timestamp: new Date(),
+      isLoading: true,
+    };
+
+    setChatMessages(prev => [...prev, loadingMessage]);
+
+    try {
+      const response: RAGQueryResponse = await apiService.queryRAG({
+        query: message.trim(),
+        use_multi_query: true,
+        include_sources: true,
+        backend_data: true,
+        summary_only: false,
+      });
+
+      // 로딩 메시지 제거하고 실제 응답 추가
+      setChatMessages(prev => {
+        const filteredMessages = prev.filter(msg => msg.id !== loadingMessage.id);
+        const aiResponse: ChatMessage = {
+          id: Date.now().toString() + '-ai',
+          type: 'ai',
+          content: response.answer,
+          timestamp: new Date(),
+          confidence: response.confidence,
+        };
+        return [...filteredMessages, aiResponse];
+      });
+
+    } catch (error) {
+      // 에러 처리
+      setChatMessages(prev => {
+        const filteredMessages = prev.filter(msg => msg.id !== loadingMessage.id);
+        const errorMessage: ChatMessage = {
+          id: Date.now().toString() + '-ai-error',
+          type: 'ai',
+          content: '죄송합니다. 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',
+          timestamp: new Date(),
+        };
+        return [...filteredMessages, errorMessage];
+      });
+      
+      console.error('RAG API Error:', error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // 예시 질문 클릭 핸들러
+  const handleExampleClick = (example: string) => {
+    handleSendMessage(example);
+  };
+
+  // Enter 키 처리
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage(inputMessage);
+    }
+  };
 
   const handleRegionSelect = (region: string) => {
     setSelectedRegion(region);
@@ -355,41 +460,99 @@ export function DDFDashboard() {
             
             {/* 채팅 영역 */}
             <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                {/* 시작 메시지 */}
-                <div className="flex justify-start">
-                  <div className="max-w-xs px-3 py-2 rounded-lg bg-white shadow-sm">
-                    <div className="flex items-start gap-2">
-                      <Image 
-                        src="/sidebar_icon/RAG채팅_사이드바.png" 
-                        alt="AI"
-                        width={16}
-                        height={16}
-                        className="w-4 h-4 mt-0.5 flex-shrink-0"
-                      />
-                      <div>
-                        <p className="text-xs text-gray-800">
-                          안녕하세요! 서울시 교통 분석 AI입니다. 
-                          궁금한 점을 자유롭게 질문해보세요.
-                        </p>
-                        <div className="mt-2 space-y-1">
-                          <div className="text-xs text-gray-500">💡 예시:</div>
-                          <div className="space-y-1 text-xs">
-                            <div className="bg-blue-50 px-2 py-1 rounded cursor-pointer hover:bg-blue-100 transition-colors">
-                              강남구 7월 교통량?
-                            </div>
-                            <div className="bg-blue-50 px-2 py-1 rounded cursor-pointer hover:bg-blue-100 transition-colors">
-                              DRT 필요 지역은?
-                            </div>
-                            <div className="bg-blue-50 px-2 py-1 rounded cursor-pointer hover:bg-blue-100 transition-colors">
-                              이상 패턴 특징?
+              <div 
+                ref={chatContainerRef}
+                className="flex-1 overflow-y-auto p-4 space-y-3"
+              >
+                {/* 초기 메시지 또는 채팅 메시지들 */}
+                {chatMessages.length === 0 ? (
+                  // 시작 메시지
+                  <div className="flex justify-start">
+                    <div className="max-w-xs px-3 py-2 rounded-lg bg-white shadow-sm">
+                      <div className="flex items-start gap-2">
+                        <Image 
+                          src="/sidebar_icon/RAG채팅_사이드바.png" 
+                          alt="AI"
+                          width={16}
+                          height={16}
+                          className="w-4 h-4 mt-0.5 flex-shrink-0"
+                        />
+                        <div>
+                          <p className="text-xs text-gray-800">
+                            안녕하세요! 서울시 교통 분석 AI입니다. 
+                            궁금한 점을 자유롭게 질문해보세요.
+                          </p>
+                          <div className="mt-2 space-y-1">
+                            <div className="text-xs text-gray-500">💡 예시:</div>
+                            <div className="space-y-1 text-xs">
+                              <div 
+                                className="bg-blue-50 px-2 py-1 rounded cursor-pointer hover:bg-blue-100 transition-colors"
+                                onClick={() => handleExampleClick("DRT 시스템이란 뭐야?")}
+                              >
+                                DRT 시스템이란 뭐야?
+                              </div>
+                              <div 
+                                className="bg-blue-50 px-2 py-1 rounded cursor-pointer hover:bg-blue-100 transition-colors"
+                                onClick={() => handleExampleClick("수요응답형 교통의 장점은?")}
+                              >
+                                수요응답형 교통의 장점은?
+                              </div>
+                              <div 
+                                className="bg-blue-50 px-2 py-1 rounded cursor-pointer hover:bg-blue-100 transition-colors"
+                                onClick={() => handleExampleClick("교통 데이터 분석 방법을 알려줘")}
+                              >
+                                교통 데이터 분석 방법을 알려줘
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  // 채팅 메시지들
+                  chatMessages.map((message) => (
+                    <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-xs px-3 py-2 rounded-lg ${
+                        message.type === 'user' 
+                          ? 'bg-blue-500 text-white' 
+                          : 'bg-white shadow-sm'
+                      }`}>
+                        {message.type === 'ai' && (
+                          <div className="flex items-start gap-2">
+                            <Image 
+                              src="/sidebar_icon/RAG채팅_사이드바.png" 
+                              alt="AI"
+                              width={16}
+                              height={16}
+                              className="w-4 h-4 mt-0.5 flex-shrink-0"
+                            />
+                            <div className="flex-1">
+                              <p className={`text-xs ${message.isLoading ? 'text-gray-500' : 'text-gray-800'}`}>
+                                {message.isLoading && (
+                                  <span className="inline-flex items-center gap-1">
+                                    <span className="animate-pulse">●</span>
+                                    <span className="animate-pulse delay-100">●</span>
+                                    <span className="animate-pulse delay-200">●</span>
+                                  </span>
+                                )}
+                                {message.content}
+                              </p>
+                              {message.confidence && !message.isLoading && (
+                                <div className="mt-1 text-xs text-gray-400">
+                                  신뢰도: {Math.round(message.confidence * 100)}%
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        {message.type === 'user' && (
+                          <p className="text-xs">{message.content}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
               
               {/* 입력 영역 */}
@@ -398,19 +561,32 @@ export function DDFDashboard() {
                   <input
                     type="text"
                     placeholder="질문을 입력하세요..."
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    onKeyDown={handleKeyDown}
                     className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    disabled
+                    disabled={isProcessing}
                   />
                   <button 
+                    onClick={() => handleSendMessage(inputMessage)}
                     className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                    disabled
+                    disabled={isProcessing || !inputMessage.trim()}
                   >
-                    전송
+                    {isProcessing ? (
+                      <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    ) : (
+                      '전송'
+                    )}
                   </button>
                 </div>
-                <div className="mt-1 text-xs text-gray-500 text-center">
-                  🚧 구현 중입니다
-                </div>
+                {isProcessing && (
+                  <div className="mt-1 text-xs text-blue-500 text-center animate-pulse">
+                    AI가 답변을 생성하고 있습니다...
+                  </div>
+                )}
               </div>
             </div>
           </div>
