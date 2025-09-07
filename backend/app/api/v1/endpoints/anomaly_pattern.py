@@ -56,7 +56,7 @@ logger = logging.getLogger(__name__)
     response_description="주말 우세 정류장 목록과 상세 분석 데이터",
 )
 async def get_weekend_dominant_stations(
-    district_name: str = Query(..., description="분석 대상 구명 (예: 강남구, 마포구)"),
+    district_name: Optional[str] = Query(None, description="분석 대상 구명 (예: 강남구, 마포구). 없으면 서울시 전체"),
     analysis_month: date = Query(..., description="분석 기준월 (YYYY-MM-DD 형식, 월 첫째 날)"),
     top_n: int = Query(5, ge=1, le=10, description="조회할 상위 정류장 수 (1-10개)"),
     db: AsyncSession = Depends(get_db)
@@ -74,7 +74,7 @@ async def get_weekend_dominant_stations(
         
         return success_response(
             data=result,
-            message=f"Weekend dominant stations for {district_name}"
+            message=f"Weekend dominant stations for {district_name or '서울시 전체'}"
         )
         
     except ValueError as e:
@@ -108,7 +108,7 @@ async def get_weekend_dominant_stations(
     response_description="심야시간 고수요 정류장 목록과 시간대별 승차량 데이터",
 )
 async def get_night_demand_stations(
-    district_name: str = Query(..., description="분석 대상 구명 (예: 강남구, 마포구)"),
+    district_name: Optional[str] = Query(None, description="분석 대상 구명 (예: 강남구, 마포구). 없으면 서울시 전체"),
     analysis_month: date = Query(..., description="분석 기준월 (YYYY-MM-DD 형식, 월 첫째 날)"),
     top_n: int = Query(5, ge=1, le=10, description="조회할 상위 정류장 수 (1-10개)"),
     db: AsyncSession = Depends(get_db)
@@ -126,7 +126,7 @@ async def get_night_demand_stations(
         
         return success_response(
             data=result,
-            message=f"Night demand stations for {district_name}"
+            message=f"Night demand stations for {district_name or '서울시 전체'}"
         )
         
     except ValueError as e:
@@ -161,7 +161,7 @@ async def get_night_demand_stations(
     response_description="오전/오후 러시아워 고수요 정류장 분석 결과",
 )
 async def get_rush_hour_stations(
-    district_name: str = Query(..., description="분석 대상 구명 (예: 강남구, 마포구)"),
+    district_name: Optional[str] = Query(None, description="분석 대상 구명 (예: 강남구, 마포구). 없으면 서울시 전체"),
     analysis_month: date = Query(..., description="분석 기준월 (YYYY-MM-DD 형식, 월 첫째 날)"),
     top_n: int = Query(5, ge=1, le=10, description="조회할 상위 정류장 수 (1-10개)"),
     db: AsyncSession = Depends(get_db)
@@ -179,7 +179,7 @@ async def get_rush_hour_stations(
         
         return success_response(
             data=result,
-            message=f"Rush hour stations for {district_name}"
+            message=f"Rush hour stations for {district_name or '서울시 전체'}"
         )
         
     except ValueError as e:
@@ -213,7 +213,7 @@ async def get_rush_hour_stations(
     response_description="점심시간 특화 정류장 목록과 시간대별 하차량 데이터",
 )
 async def get_lunch_time_stations(
-    district_name: str = Query(..., description="분석 대상 구명 (예: 강남구, 마포구)"),
+    district_name: Optional[str] = Query(None, description="분석 대상 구명 (예: 강남구, 마포구). 없으면 서울시 전체"),
     analysis_month: date = Query(..., description="분석 기준월 (YYYY-MM-DD 형식, 월 첫째 날)"),
     top_n: int = Query(5, ge=1, le=10, description="조회할 상위 정류장 수 (1-10개)"),
     db: AsyncSession = Depends(get_db)
@@ -231,7 +231,7 @@ async def get_lunch_time_stations(
         
         return success_response(
             data=result,
-            message=f"Lunch time stations for {district_name}"
+            message=f"Lunch time stations for {district_name or '서울시 전체'}"
         )
         
     except ValueError as e:
@@ -248,25 +248,73 @@ async def get_lunch_time_stations(
     description="""
     **지역 특성별 정류장 분석 (주거지역/업무지역)**
     
-    출퇴근시간대 승하차 불균형 비율을 통해 주거지역과 업무지역 특성을 가진 
+    출퇴근시간대 승하차 패턴을 통해 주거지역과 업무지역 특성을 가진 
     정류장을 각각 식별하여 도시 기능별 교통 패턴을 분석합니다.
     
-    **분석 기준:**
-    - 출퇴근 시간대: 06-09시(출근), 17-19시(퇴근) 평일만
-    - 1000명 이상 교통량 필터링으로 신뢰성 확보
-    - 주거지역: (출근승차/출근하차) × (퇴근하차/퇴근승차) > 1.0
-    - 업무지역: (출근하차/출근승차) × (퇴근승차/퇴근하차) > 1.0
+    ## 🏠 주거지역 특성 점수 (0~100점)
     
-    **활용 사례:**
+    **필터링 조건:**
+    - 출근시간(6-8시) 승차 > 하차 (집에서 나감)
+    - 퇴근시간(17-19시) 하차 > 승차 (집으로 돌아옴)
+    - 총 교통량 ≥ 2,000명 (평일 러시아워 기준)
+    - 각 시간대별 비중 ≥ 50%
+    
+    **점수 계산 공식:**
+    ```
+    출근_주거비중 = 출근승차 / (출근승차 + 출근하차)
+    퇴근_주거비중 = 퇴근하차 / (퇴근승차 + 퇴근하차)
+    
+    기본점수 = (출근_주거비중 + 퇴근_주거비중) / 2
+    
+    신뢰도가중치 = {
+        교통량 ≥ 10,000명: 1.0
+        교통량 5,000~9,999명: 0.8  
+        교통량 2,000~4,999명: 0.7
+    }
+    
+    최종점수 = 기본점수 × 신뢰도가중치 × 100
+    ```
+    
+    ## 🏢 업무지역 특성 점수 (0~100점)
+    
+    **필터링 조건:**
+    - 출근시간(6-8시) 하차 > 승차 (직장으로 출근)
+    - 퇴근시간(17-19시) 승차 > 하차 (직장에서 퇴근)
+    - 총 교통량 ≥ 2,000명 (평일 러시아워 기준)
+    - 각 시간대별 비중 ≥ 50%
+    
+    **점수 계산 공식:**
+    ```
+    출근_업무비중 = 출근하차 / (출근승차 + 출근하차)
+    퇴근_업무비중 = 퇴근승차 / (퇴근승차 + 퇴근하차)
+    
+    기본점수 = (출근_업무비중 + 퇴근_업무비중) / 2
+    
+    신뢰도가중치 = {
+        교통량 ≥ 10,000명: 1.0
+        교통량 5,000~9,999명: 0.8  
+        교통량 2,000~4,999명: 0.7
+    }
+    
+    최종점수 = 기본점수 × 신뢰도가중치 × 100
+    ```
+    
+    ## 📊 점수 해석
+    - **80점 이상**: 매우 전형적인 지역특성 (강력한 특성)
+    - **70~79점**: 뚜렷한 지역특성 (명확한 특성)
+    - **60~69점**: 보통 지역특성 (일반적인 특성)
+    - **50~59점**: 약한 지역특성 (경미한 특성)
+    
+    ## 💡 활용 사례
     - 도시계획 및 토지이용 패턴 파악
-    - 주거지역 vs 업무지역 대중교통 수요 특성 분석
+    - 주거지역 vs 업무지역 대중교통 수요 특성 분석  
     - 지역별 맞춤형 교통정책 수립
     - 도시 기능 분석을 통한 인프라 개발 계획
     """,
-    response_description="주거지역 정류장과 업무지역 정류장 분석 결과",
+    response_description="주거지역 정류장과 업무지역 정류장 분석 결과 (각각 특성점수 포함)",
 )
 async def get_area_type_analysis(
-    district_name: str = Query(..., description="분석 대상 구명 (예: 강남구, 마포구)"),
+    district_name: Optional[str] = Query(None, description="분석 대상 구명 (예: 강남구, 마포구). 없으면 서울시 전체"),
     analysis_month: date = Query(..., description="분석 기준월 (YYYY-MM-DD 형식, 월 첫째 날)"),
     top_n: int = Query(5, ge=1, le=10, description="조회할 상위 정류장 수 (1-10개)"),
     db: AsyncSession = Depends(get_db)
@@ -284,7 +332,7 @@ async def get_area_type_analysis(
         
         return success_response(
             data=result.dict(),
-            message=f"Area type analysis for {district_name}"
+            message=f"Area type analysis for {district_name or '서울시 전체'}"
         )
         
     except ValueError as e:
@@ -301,13 +349,13 @@ async def get_area_type_analysis(
     description="""
     **저활용 정류장 분석 (운영 최적화 대상)**
     
-    구별 하위 25% 교통량 기준으로 저활용 정류장을 선별하고,
+    구별 또는 서울시 전체 하위 25% 교통량 기준으로 저활용 정류장을 선별하고,
     연결 노선수와 교통량 효율성을 분석하여 운영 최적화 방안을 제시합니다.
     
     **분석 기준:**
-    - 구별 하위 25% 교통량 기준으로 저활용 정류장 선별
+    - 구별 또는 서울시 전체 하위 25% 교통량 기준으로 저활용 정류장 선별
     - 일평균 승하차 인원 기준 오름차순 정렬 (가장 적은 승객부터)
-    - 구 평균 대비 활용률 (%) 계산
+    - 구 평균 또는 서울시 평균 대비 활용률 (%) 계산
     - 효율성 점수: 일평균 승객수 ÷ 연결된 버스 노선수
     
     **활용 사례:**
@@ -319,7 +367,7 @@ async def get_area_type_analysis(
     response_description="저활용 정류장 목록과 운영 효율성 지표",
 )
 async def get_underutilized_stations(
-    district_name: str = Query(..., description="분석 대상 구명 (예: 강남구, 마포구)"),
+    district_name: Optional[str] = Query(None, description="분석 대상 구명 (예: 강남구, 마포구). 생략시 서울시 전체 분석"),
     analysis_month: date = Query(..., description="분석 기준월 (YYYY-MM-DD 형식, 월 첫째 날)"),
     top_n: int = Query(10, ge=1, le=20, description="조회할 상위 정류장 수 (1-20개)"),
     db: AsyncSession = Depends(get_db)
@@ -335,9 +383,10 @@ async def get_underutilized_stations(
             top_n=top_n
         )
         
+        area_name = district_name if district_name else "서울시 전체"
         return success_response(
             data=[station.dict() for station in result],
-            message=f"Underutilized stations for {district_name}"
+            message=f"Underutilized stations for {area_name}"
         )
         
     except ValueError as e:
@@ -356,9 +405,9 @@ async def get_underutilized_stations(
     "/integration",
     summary="교통 특이패턴 통합 분석",
     description="""
-    **구별 교통 특이패턴 통합 분석 (6개 패턴 종합)**
+    **교통 특이패턴 통합 분석 (6개 패턴 종합)**
     
-    한 번의 호출로 특정 구의 모든 교통 특이패턴을 종합 분석하여
+    한 번의 호출로 특정 구 또는 서울시 전체의 모든 교통 특이패턴을 종합 분석하여
     완전한 교통 패턴 인사이트를 제공합니다.
     
     **포함되는 6가지 패턴:**
@@ -371,11 +420,11 @@ async def get_underutilized_stations(
     
     **분석 장점:**
     - 한 번의 API 호출로 전체 패턴 파악
-    - 구별 교통 특성의 종합적 이해
+    - 구별 또는 서울시 전체 교통 특성의 종합적 이해
     - 다양한 시간대별/목적별 교통 패턴 동시 제공
     
     **활용 사례:**
-    - 구별 종합 교통정책 수립
+    - 구별 또는 시 단위 종합 교통정책 수립
     - 대중교통 운영 전략 수립
     - 도시계획 및 인프라 개발 계획
     - 교통 데이터 기반 의사결정 지원
@@ -383,7 +432,7 @@ async def get_underutilized_stations(
     response_description="6개 패턴의 통합 분석 결과와 메타 정보",
 )
 async def get_integrated_anomaly_patterns(
-    district_name: str = Query(..., description="분석 대상 구명 (예: 강남구, 마포구)"),
+    district_name: Optional[str] = Query(None, description="분석 대상 구명 (예: 강남구, 마포구). 생략시 서울시 전체 분석"),
     analysis_month: date = Query(..., description="분석 기준월 (YYYY-MM-DD 형식, 월 첫째 날)"),
     top_n: int = Query(5, ge=1, le=10, description="각 패턴별 상위 정류장 수 (1-10개)"),
     db: AsyncSession = Depends(get_db)
@@ -391,7 +440,8 @@ async def get_integrated_anomaly_patterns(
     try:
         service = AnomalyPatternService()
         
-        logger.info(f"Getting integrated anomaly patterns for {district_name}")
+        area_name = district_name if district_name else "서울시 전체"
+        logger.info(f"Getting integrated anomaly patterns for {area_name}")
         
         result = await service.get_integrated_anomaly_patterns(
             db=db,
@@ -402,7 +452,7 @@ async def get_integrated_anomaly_patterns(
         
         return success_response(
             data=result.dict(),
-            message=f"Integrated anomaly patterns analysis for {district_name}"
+            message=f"Integrated anomaly patterns analysis for {area_name}"
         )
         
     except ValueError as e:
