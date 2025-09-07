@@ -82,18 +82,18 @@ export function HeatmapContent({
     item.station?.station_id ??
     `${item.station?.station_name || 'unknown'}:${item.station?.latitude ?? 'x'}:${item.station?.longitude ?? 'y'}`;
 
-  // 패턴별 색상 매핑
-  const getPatternColor = (pattern: string) => {
-    const colorMap = {
-      weekend: "#10B981",     // 주말 - 에메랄드 그린
-      night: "#8B5CF6",       // 심야 - 보라색
-      underutilized: "#FBBF24", // 저활용 - 밝은 노란색
-      lunchtime: "#10B981",   // 점심시간 - 에메랄드 그린
-      rushhour: "#EC4899",    // 러시아워 - 핑크 (아침) / 보라 (오후)
-      areatype: "#0EA5E9"     // 지역특성 - 하늘색
-    };
-    return colorMap[pattern as keyof typeof colorMap] || "#6B7280";
-  };
+  // 패턴별 색상 매핑 (현재 사용하지 않음 - 추후 기능 추가시 활용)
+  // const getPatternColor = (pattern: string) => {
+  //   const colorMap = {
+  //     weekend: "#10B981",     // 주말 - 에메랄드 그린
+  //     night: "#8B5CF6",       // 심야 - 보라색
+  //     underutilized: "#FBBF24", // 저활용 - 밝은 노란색
+  //     lunchtime: "#10B981",   // 점심시간 - 에메랄드 그린
+  //     rushhour: "#EC4899",    // 러시아워 - 핑크 (아침) / 보라 (오후)
+  //     areatype: "#0EA5E9"     // 지역특성 - 하늘색
+  //   };
+  //   return colorMap[pattern as keyof typeof colorMap] || "#6B7280";
+  // };
 
   // 패턴별 배경 그라데이션 클래스
   const getPatternBgClass = (pattern: string) => {
@@ -204,7 +204,7 @@ export function HeatmapContent({
             setAreaTypeData(null);
             setUnderutilizedData(null);
           }
-        } catch (integrationError) {
+        } catch {
           // 실패해도 UI는 계속 동작하도록
           setWeekendData(null);
           setNightData(null);
@@ -558,7 +558,7 @@ export function HeatmapContent({
           setAreaTypeData(null);
           setUnderutilizedData(null);
         }
-      } catch (err) {
+      } catch {
       }
     };
 

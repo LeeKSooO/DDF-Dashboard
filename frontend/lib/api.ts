@@ -427,12 +427,12 @@ analysisMonth: string
       
       // 통합 응답을 기존 state 형태에 맞게 정리
       return {
-        success: (response as any)?.success || false,
-        data: (response as any)?.data || {},
-        message: (response as any)?.message || '',
-        timestamp: (response as any)?.timestamp || new Date().toISOString()
+        success: (response as Record<string, unknown>)?.success || false,
+        data: (response as Record<string, unknown>)?.data || {},
+        message: (response as Record<string, unknown>)?.message || '',
+        timestamp: (response as Record<string, unknown>)?.timestamp || new Date().toISOString()
       };
-    } catch (error) {
+    } catch {
       // 실패해도 UI가 자연스럽게 동작하도록 안전한 형태 반환
       return {
         success: false,
