@@ -7,8 +7,6 @@ from typing import Generator, Optional
 from fastapi import FastAPI, Depends
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
-from redis import Redis
-
 from app.core.config import settings
 from app.services.llm_service import LLMService
 from app.services.embedding_service import EmbeddingService
@@ -27,14 +25,6 @@ if settings.DATABASE_URL:
     )
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Redis setup
-redis_client: Optional[Redis] = None
-if settings.REDIS_URL:
-    try:
-        redis_client = Redis.from_url(settings.REDIS_URL, decode_responses=True)
-    except Exception as e:
-        logging.warning(f"Redis connection failed: {e}")
-
 # Service instances (will be initialized on startup)
 llm_service: Optional[LLMService] = None
 embedding_service: Optional[EmbeddingService] = None
@@ -51,11 +41,6 @@ def get_database() -> Generator[Session, None, None]:
         yield db
     finally:
         db.close()
-
-
-def get_redis() -> Optional[Redis]:
-    """Get Redis client"""
-    return redis_client
 
 
 def get_llm_service() -> LLMService:
@@ -112,8 +97,5 @@ async def cleanup_dependencies() -> None:
     
     if rag_service:
         await rag_service.cleanup()
-    
-    if redis_client:
-        await redis_client.close()
     
     logging.info("✅ RAG service cleanup completed")

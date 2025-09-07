@@ -41,9 +41,6 @@ class Settings(BaseSettings):
     DATABASE_POOL_SIZE: int = 20
     DATABASE_MAX_OVERFLOW: int = 30
     
-    # Redis settings (for caching)
-    REDIS_URL: Optional[str] = "redis://localhost:6379"
-    REDIS_CACHE_TTL: int = 3600  # 1 hour
     
     # Vector store settings
     VECTOR_STORE_TYPE: str = "chroma"  # chroma, pinecone, weaviate
