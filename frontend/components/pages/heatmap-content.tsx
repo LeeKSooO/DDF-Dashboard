@@ -82,6 +82,45 @@ export function HeatmapContent({
     item.station?.station_id ??
     `${item.station?.station_name || 'unknown'}:${item.station?.latitude ?? 'x'}:${item.station?.longitude ?? 'y'}`;
 
+  // 패턴별 색상 매핑
+  const getPatternColor = (pattern: string) => {
+    const colorMap = {
+      weekend: "#10B981",     // 주말 - 에메랄드 그린
+      night: "#8B5CF6",       // 심야 - 보라색
+      underutilized: "#FBBF24", // 저활용 - 밝은 노란색
+      lunchtime: "#10B981",   // 점심시간 - 에메랄드 그린
+      rushhour: "#EC4899",    // 러시아워 - 핑크 (아침) / 보라 (오후)
+      areatype: "#0EA5E9"     // 지역특성 - 하늘색
+    };
+    return colorMap[pattern as keyof typeof colorMap] || "#6B7280";
+  };
+
+  // 패턴별 배경 그라데이션 클래스
+  const getPatternBgClass = (pattern: string) => {
+    const bgMap = {
+      weekend: "bg-gradient-to-r from-emerald-500 to-emerald-600",
+      night: "bg-gradient-to-r from-purple-500 to-purple-600", 
+      underutilized: "bg-gradient-to-r from-yellow-400 to-yellow-500",
+      lunchtime: "bg-gradient-to-r from-emerald-500 to-emerald-600",
+      rushhour: "bg-gradient-to-r from-pink-500 to-purple-500",
+      areatype: "bg-gradient-to-r from-sky-500 to-sky-600"
+    };
+    return bgMap[pattern as keyof typeof bgMap] || "bg-gradient-to-r from-gray-500 to-gray-600";
+  };
+
+  // 패턴별 카드 배경 클래스 (연한 톤)
+  const getPatternCardBgClass = (pattern: string) => {
+    const cardBgMap = {
+      weekend: "bg-gradient-to-br from-emerald-50 to-emerald-100",
+      night: "bg-gradient-to-br from-purple-50 to-purple-100", 
+      underutilized: "bg-gradient-to-br from-yellow-50 to-yellow-100",
+      lunchtime: "bg-gradient-to-br from-emerald-50 to-emerald-100",
+      rushhour: "bg-gradient-to-br from-pink-50 to-purple-100",
+      areatype: "bg-gradient-to-br from-sky-50 to-sky-100"
+    };
+    return cardBgMap[pattern as keyof typeof cardBgMap] || "bg-gradient-to-br from-gray-50 to-gray-100";
+  };
+
   // 패턴별 데이터 가용성 체크
   const underutilizedAvailable = !!(underutilizedData?.success && underutilizedData?.data?.length > 0);
 
@@ -253,7 +292,7 @@ export function HeatmapContent({
             district_name: item.station?.district_name,
             administrative_dong: item.station?.administrative_dong,
             patternType: "underutilized",
-            patternColor: "#EF4444", // red
+            patternColor: "#FBBF24", // bright yellow
             patternInfo: `효율성: ${
               item.efficiency_score
             }% | 일평균: ${item.avg_daily_passengers?.toLocaleString()}명`,
@@ -291,7 +330,7 @@ export function HeatmapContent({
             district_name: item.station?.district_name,
             administrative_dong: item.station?.administrative_dong,
             patternType: "rushhour",
-            patternColor: "#FF6B35", // bright orange for morning
+            patternColor: "#EC4899", // hot pink for morning
             patternInfo: `오전 승차: ${item.total_morning_rush?.toLocaleString()}명`,
             rushType: "morning",
             total_morning_rush: item.total_morning_rush,
@@ -306,7 +345,7 @@ export function HeatmapContent({
             district_name: item.station?.district_name,
             administrative_dong: item.station?.administrative_dong,
             patternType: "rushhour",
-            patternColor: "#DC2626", // red for evening
+            patternColor: "#8B5CF6", // purple for evening
             patternInfo: `오후 승차: ${item.total_evening_rush?.toLocaleString()}명`,
             rushType: "evening",
             total_evening_rush: item.total_evening_rush,
@@ -625,8 +664,8 @@ export function HeatmapContent({
                           }}
                           className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
                             selectedPattern === "weekend"
-                              ? "bg-blue-600 text-white"
-                              : "bg-white text-gray-700 hover:bg-blue-50 border border-gray-200"
+                              ? `${getPatternBgClass("weekend")} text-white shadow-lg`
+                              : "bg-white text-gray-700 hover:bg-emerald-50 border border-gray-200"
                           }`}
                         >
                           <div className="flex items-center gap-2">
@@ -666,7 +705,7 @@ export function HeatmapContent({
                           }}
                           className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
                             selectedPattern === "night"
-                              ? "bg-purple-600 text-white"
+                              ? `${getPatternBgClass("night")} text-white shadow-lg`
                               : "bg-white text-gray-700 hover:bg-purple-50 border border-gray-200"
                           }`}
                         >
@@ -711,7 +750,7 @@ export function HeatmapContent({
                           }}
                           className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
                             selectedPattern === "underutilized"
-                              ? "bg-red-600 text-white"
+                              ? `${getPatternBgClass("underutilized")} text-white shadow-lg`
                               : "bg-white text-gray-700 hover:bg-red-50 border border-gray-200"
                           } ${!underutilizedAvailable ? "opacity-60 cursor-not-allowed" : ""}`}
                         >
@@ -757,7 +796,7 @@ export function HeatmapContent({
                           }}
                           className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
                             selectedPattern === "lunchtime"
-                              ? "bg-green-600 text-white"
+                              ? `${getPatternBgClass("lunchtime")} text-white shadow-lg`
                               : "bg-white text-gray-700 hover:bg-green-50 border border-gray-200"
                           }`}
                         >
@@ -798,7 +837,7 @@ export function HeatmapContent({
                           }}
                           className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
                             selectedPattern === "rushhour"
-                              ? "bg-orange-600 text-white"
+                              ? `${getPatternBgClass("rushhour")} text-white shadow-lg`
                               : "bg-white text-gray-700 hover:bg-orange-50 border border-gray-200"
                           }`}
                         >
@@ -841,7 +880,7 @@ export function HeatmapContent({
                           }}
                           className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
                             selectedPattern === "areatype"
-                              ? "bg-sky-600 text-white"
+                              ? `${getPatternBgClass("areatype")} text-white shadow-lg`
                               : "bg-white text-gray-700 hover:bg-sky-50 border border-gray-200"
                           }`}
                         >
@@ -1049,19 +1088,9 @@ export function HeatmapContent({
           {/* 주요 정류장 정보 */}
           <Card
             className={`shadow-lg border-0 ${
-              selectedPattern === "weekend"
-                ? "bg-gradient-to-br from-blue-50 to-blue-100"
-                : selectedPattern === "night"
-                ? "bg-gradient-to-br from-purple-50 to-purple-100"
-                : selectedPattern === "underutilized"
-                ? "bg-gradient-to-br from-red-50 to-red-100"
-                : selectedPattern === "lunchtime"
-                ? "bg-gradient-to-br from-green-50 to-green-100"
-                : selectedPattern === "rushhour"
-                ? "bg-gradient-to-br from-orange-50 to-orange-100"
-                : selectedPattern === "areatype"
-                ? "bg-gradient-to-br from-sky-50 to-sky-100"
-                : "bg-gradient-to-br from-green-50 to-emerald-50"
+              selectedPattern 
+                ? getPatternCardBgClass(selectedPattern)
+                : "bg-gradient-to-br from-gray-50 to-slate-100"
             }`}
           >
             <CardHeader className="pb-6">

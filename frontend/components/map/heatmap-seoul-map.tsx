@@ -365,8 +365,8 @@ const HeatmapSeoulMapComponent = forwardRef<
           clearTimeout(zoomUpdateTimeout);
           zoomUpdateTimeout = setTimeout(() => {
             const currentZoom = map.getZoom();
-            // 더 극적인 크기 변화: 줄아웃 시 매우 작게, 줌인 시 더 크게
-            const zoomFactor = Math.max(0.1, Math.min(2.5, (currentZoom - 9) * 0.35));
+            // 더 극적인 크기 변화: 줌아웃 시 매우 작게, 줌인 시 더 크게
+            const zoomFactor = Math.max(0.05, Math.min(2.0, Math.pow((currentZoom - 8) / 6, 2)));
             
             // 성능 최적화: 정류장 데이터를 Map으로 미리 생성
             const stationDataMap = new Map();
@@ -387,15 +387,15 @@ const HeatmapSeoulMapComponent = forwardRef<
                 const patternStation = patternStationMap.get(stationId);
                 
                 // 크기 재계산 - 더 극적인 변화
-                // 고정된 마커 크기 (교통량과 무관)
-                let iconSize = 6 * zoomFactor; // 기본 크기를 줌 레벨에만 연동
+                // 줌 레벨에 따른 동적 마커 크기 (교통량과 무관, 통일된 크기)
+                let iconSize = 2 + (6 * zoomFactor); // 기본 2px + 줌팩터에 따른 증가
                 
                 if (patternStation) {
-                  iconSize = 12 * zoomFactor; // 패턴 정류장은 2배 크게
+                  iconSize = 3 + (8 * zoomFactor); // 패턴 정류장은 조금 더 크게
                 }
                 
-                // 줌 레벨별 크기 제한
-                iconSize = Math.max(2, Math.min(iconSize, currentZoom > 13 ? (patternStation ? 20 : 10) : currentZoom > 11 ? (patternStation ? 15 : 8) : (patternStation ? 10 : 6)));
+                // 최소/최대 크기 제한 (더 작게)
+                iconSize = Math.max(0.5, Math.min(iconSize, patternStation ? 12 : 8));
                 
                 markerUpdates.push({marker, iconSize});
               }
@@ -571,7 +571,7 @@ const HeatmapSeoulMapComponent = forwardRef<
 
         // 성능 최적화: 공통 계산 미리 수행
         const currentZoom = mapInstanceRef.current.getZoom();
-        const zoomFactor = Math.max(0.1, Math.min(2.5, (currentZoom - 9) * 0.35));
+        const zoomFactor = Math.max(0.05, Math.min(2.0, Math.pow((currentZoom - 8) / 6, 2)));
         
         // 패턴 정류장 맵으로 변환 (빠른 조회)
         const patternStationMap = new Map(patternStations.map(ps => [ps.station_id, ps]));
@@ -589,32 +589,32 @@ const HeatmapSeoulMapComponent = forwardRef<
                 
                 // 줄 레벨 계산은 이미 위에서 수행됨
                 
-                // 고정된 마커 크기 (교통량과 무관)
-                let iconSize = 6 * zoomFactor; // 기본 크기를 줌 레벨에만 연동
+                // 줌 레벨에 따른 동적 마커 크기 (교통량과 무관, 통일된 크기)
+                let iconSize = 2 + (6 * zoomFactor); // 기본 2px + 줌팩터에 따른 증가
                 
-                // 패턴 정류장은 훨씬 크게 표시하여 강조
+                // 패턴 정류장은 조금 더 크게 표시하여 강조
                 if (patternStation) {
-                  iconSize = 12 * zoomFactor; // 패턴 정류장은 2배 크기
+                  iconSize = 3 + (8 * zoomFactor); // 패턴 정류장은 조금 더 크게
                 }
                 
-                // 줌 레벨별 크기 제한
-                iconSize = Math.max(2, Math.min(iconSize, currentZoom > 13 ? (patternStation ? 20 : 10) : currentZoom > 11 ? (patternStation ? 15 : 8) : (patternStation ? 10 : 6)));
+                // 최소/최대 크기 제한 (더 작게)
+                iconSize = Math.max(0.5, Math.min(iconSize, patternStation ? 12 : 8));
                 
                 // 우선순위별 색상 및 스타일 결정 (파스텔/반투명 스타일)
                 let fillColor, borderColor, borderWeight, fillOpacity;
                 
                 if (patternStation) {
-                  // 패턴 정류장 - 진하고 강렬한 색상으로 강조
+                  // 패턴 정류장 - 매우 진하고 강렬한 색상으로 강조
                   fillColor = patternStation.patternColor;
                   borderColor = patternStation.patternColor;
                   borderWeight = 3; // 더 두꺼운 테두리
-                  fillOpacity = 0.9; // 매우 진한 불투명도
+                  fillOpacity = 1.0; // 완전 불투명 (가장 진하게)
                 } else {
-                  // 일반 정류장 - 매우 부드러운 톤
+                  // 일반 정류장 - 매우 부드럽고 투명한 톤 (배경화)
                   fillColor = getStationTrafficColor(station.total_traffic);
                   borderColor = fillColor;
                   borderWeight = 1;
-                  fillOpacity = 0.7; // 덜 투명하게
+                  fillOpacity = 0.3; // 매우 투명하게 (배경으로)
                 }
 
                 // 모든 마커를 새로 생성 (깨끗한 상태에서 시작)
@@ -623,7 +623,7 @@ const HeatmapSeoulMapComponent = forwardRef<
                   fillColor: fillColor,
                   color: borderColor,
                   weight: borderWeight,
-                  opacity: 0.8, // 부드러운 경계선
+                  opacity: patternStation ? 1.0 : 0.4, // 패턴 정류장은 진한 경계선, 일반은 부드럽게
                   fillOpacity: fillOpacity,
                 });
                 icon.addTo(mapInstanceRef.current);
