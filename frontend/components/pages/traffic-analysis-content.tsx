@@ -71,6 +71,9 @@ export function TrafficAnalysisContent({
     Record<string, number>
   >({});
   const animatedTargetsRef = useRef<Record<string, number>>({});
+  
+  // 막대그래프 애니메이션 상태
+  const [progressBarsAnimated, setProgressBarsAnimated] = useState(false);
 
   // 중복된 정류장 이름을 감지하고 구분 표시하는 함수
   const checkDuplicateStationNames = (stations: any[]) => {
@@ -149,6 +152,16 @@ export function TrafficAnalysisContent({
       animation: progressBar 1.2s ease-out forwards;
     }
     
+    .progress-bar-animate {
+      width: 0%;
+      transition: width 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      transition-delay: var(--delay, 0ms);
+      will-change: width;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      perspective: 1000px;
+    }
+    
     .scrollable-list {
       max-height: 400px;
       overflow-y: auto;
@@ -177,6 +190,54 @@ export function TrafficAnalysisContent({
 
   // RAF ID 관리를 위한 ref
   const rafIdsRef = useRef<Set<number>>(new Set());
+
+  // 막대그래프 렌더링 함수
+  const renderProgressBar = (
+    value: number, 
+    maxValue: number, 
+    colorClass: string, 
+    index: number, 
+    delay: number = 0
+  ) => (
+    <div className="w-full bg-gray-200 rounded-full h-1.5">
+      <div
+        className={`${colorClass} h-1.5 rounded-full progress-bar-animate`}
+        style={{
+          width: progressBarsAnimated ? `${Math.min(100, (value / maxValue) * 100)}%` : '0%',
+          '--delay': `${index * 50 + delay}ms`,
+        } as React.CSSProperties}
+      ></div>
+    </div>
+  );
+
+  // 글로벌 최대값 계산 함수
+  const getGlobalMaxValues = () => {
+    const residential = areaTypeData?.data?.residential_stations || [];
+    const business = areaTypeData?.data?.business_stations || [];
+    
+    return {
+      morningRide: Math.max(
+        ...residential.map((s: any) => s.morning_ride || 0),
+        ...business.map((s: any) => s.morning_ride || 0),
+        1
+      ),
+      morningAlight: Math.max(
+        ...residential.map((s: any) => s.morning_alight || 0),
+        ...business.map((s: any) => s.morning_alight || 0),
+        1
+      ),
+      eveningRide: Math.max(
+        ...residential.map((s: any) => s.evening_ride || 0),
+        ...business.map((s: any) => s.evening_ride || 0),
+        1
+      ),
+      eveningAlight: Math.max(
+        ...residential.map((s: any) => s.evening_alight || 0),
+        ...business.map((s: any) => s.evening_alight || 0),
+        1
+      )
+    };
+  };
 
   // 동적 숫자 애니메이션 훅 (무한 루프 방지)
   const animateNumber = useCallback(
@@ -324,6 +385,7 @@ export function TrafficAnalysisContent({
             }
           );
         }
+        
       }, 300);
       
       return () => {
@@ -347,6 +409,17 @@ export function TrafficAnalysisContent({
     animateNumber,
   ]);
 
+  // 지역 특성 데이터가 로드되면 막대그래프 애니메이션 시작
+  useEffect(() => {
+    if (areaTypeData?.data && !loading && !error) {
+      const timer = setTimeout(() => {
+        setProgressBarsAnimated(true);
+      }, 800); // 숫자 애니메이션 완료 후
+      
+      return () => clearTimeout(timer);
+    }
+  }, [areaTypeData, loading, error]);
+
   // 데이터 로드
   useEffect(() => {
     const loadTrafficAnalysisData = async () => {
@@ -358,6 +431,7 @@ export function TrafficAnalysisContent({
         animationTriggered.current = false;
         animatedTargetsRef.current = {}; // 목표값 기록 초기화
         setAnimatedNumbers({}); // 애니메이션 숫자 상태 초기화
+        setProgressBarsAnimated(false); // 막대그래프 애니메이션 리셋
 
         console.log("🚌 Loading integrated traffic analysis data for:", {
           selectedMonth,
@@ -749,82 +823,44 @@ export function TrafficAnalysisContent({
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
-                          {/* 4개 지표 모두 표시 */}
-                          <div className="space-y-2">
-                            <div className="text-xs text-gray-500 font-medium">출근시간대 승차 ⬆️</div>
-                            <div className="font-medium text-blue-600">
-                              {(item.morning_ride || 0).toLocaleString()}명
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-1.5">
-                              <div
-                                className="bg-blue-500 h-1.5 rounded-full transition-all duration-1000"
-                                style={{
-                                  width: `${Math.min(100, ((item.morning_ride || 0) / Math.max(
-                                    ...((areaTypeData?.data?.residential_stations || []).map((s: any) => s.morning_ride || 0)),
-                                    ...((areaTypeData?.data?.business_stations || []).map((s: any) => s.morning_ride || 0)),
-                                    1
-                                  )) * 100)}%`,
-                                }}
-                              ></div>
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <div className="text-xs text-gray-500 font-medium">출근시간대 하차 ⬇️</div>
-                            <div className="font-medium text-gray-600">
-                              {(item.morning_alight || 0).toLocaleString()}명
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-1.5">
-                              <div
-                                className="bg-gray-400 h-1.5 rounded-full transition-all duration-1000"
-                                style={{
-                                  width: `${Math.min(100, ((item.morning_alight || 0) / Math.max(
-                                    ...((areaTypeData?.data?.residential_stations || []).map((s: any) => s.morning_alight || 0)),
-                                    ...((areaTypeData?.data?.business_stations || []).map((s: any) => s.morning_alight || 0)),
-                                    1
-                                  )) * 100)}%`,
-                                }}
-                              ></div>
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <div className="text-xs text-gray-500 font-medium">퇴근시간대 승차 ⬆️</div>
-                            <div className="font-medium text-gray-600">
-                              {(item.evening_ride || 0).toLocaleString()}명
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-1.5">
-                              <div
-                                className="bg-gray-400 h-1.5 rounded-full transition-all duration-1000"
-                                style={{
-                                  width: `${Math.min(100, ((item.evening_ride || 0) / Math.max(
-                                    ...((areaTypeData?.data?.residential_stations || []).map((s: any) => s.evening_ride || 0)),
-                                    ...((areaTypeData?.data?.business_stations || []).map((s: any) => s.evening_ride || 0)),
-                                    1
-                                  )) * 100)}%`,
-                                }}
-                              ></div>
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <div className="text-xs text-gray-500 font-medium">퇴근시간대 하차 ⬇️</div>
-                            <div className="font-medium text-blue-600">
-                              {(item.evening_alight || 0).toLocaleString()}명
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-1.5">
-                              <div
-                                className="bg-blue-600 h-1.5 rounded-full transition-all duration-1000"
-                                style={{
-                                  width: `${Math.min(100, ((item.evening_alight || 0) / Math.max(
-                                    ...((areaTypeData?.data?.residential_stations || []).map((s: any) => s.evening_alight || 0)),
-                                    ...((areaTypeData?.data?.business_stations || []).map((s: any) => s.evening_alight || 0)),
-                                    1
-                                  )) * 100)}%`,
-                                }}
-                              ></div>
-                            </div>
-                          </div>
+                          {(() => {
+                            const maxValues = getGlobalMaxValues();
+                            return (
+                              <>
+                                <div className="space-y-2">
+                                  <div className="text-xs text-gray-500 font-medium">출근시간대 승차 ⬆️</div>
+                                  <div className="font-medium text-blue-600">
+                                    {(item.morning_ride || 0).toLocaleString()}명
+                                  </div>
+                                  {renderProgressBar(item.morning_ride || 0, maxValues.morningRide, 'bg-blue-500', index, 0)}
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <div className="text-xs text-gray-500 font-medium">출근시간대 하차 ⬇️</div>
+                                  <div className="font-medium text-gray-600">
+                                    {(item.morning_alight || 0).toLocaleString()}명
+                                  </div>
+                                  {renderProgressBar(item.morning_alight || 0, maxValues.morningAlight, 'bg-gray-400', index, 25)}
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <div className="text-xs text-gray-500 font-medium">퇴근시간대 승차 ⬆️</div>
+                                  <div className="font-medium text-gray-600">
+                                    {(item.evening_ride || 0).toLocaleString()}명
+                                  </div>
+                                  {renderProgressBar(item.evening_ride || 0, maxValues.eveningRide, 'bg-gray-400', index, 50)}
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <div className="text-xs text-gray-500 font-medium">퇴근시간대 하차 ⬇️</div>
+                                  <div className="font-medium text-blue-600">
+                                    {(item.evening_alight || 0).toLocaleString()}명
+                                  </div>
+                                  {renderProgressBar(item.evening_alight || 0, maxValues.eveningAlight, 'bg-blue-600', index, 75)}
+                                </div>
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
                     )
@@ -908,82 +944,44 @@ export function TrafficAnalysisContent({
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
-                          {/* 4개 지표 모두 표시 */}
-                          <div className="space-y-2">
-                            <div className="text-xs text-gray-500 font-medium">출근시간대 승차 ⬆️</div>
-                            <div className="font-medium text-gray-600">
-                              {(item.morning_ride || 0).toLocaleString()}명
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-1.5">
-                              <div
-                                className="bg-gray-400 h-1.5 rounded-full transition-all duration-1000"
-                                style={{
-                                  width: `${Math.min(100, ((item.morning_ride || 0) / Math.max(
-                                    ...((areaTypeData?.data?.residential_stations || []).map((s: any) => s.morning_ride || 0)),
-                                    ...((areaTypeData?.data?.business_stations || []).map((s: any) => s.morning_ride || 0)),
-                                    1
-                                  )) * 100)}%`,
-                                }}
-                              ></div>
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <div className="text-xs text-gray-500 font-medium">출근시간대 하차 ⬇️</div>
-                            <div className="font-medium text-green-600">
-                              {(item.morning_alight || 0).toLocaleString()}명
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-1.5">
-                              <div
-                                className="bg-green-500 h-1.5 rounded-full transition-all duration-1000"
-                                style={{
-                                  width: `${Math.min(100, ((item.morning_alight || 0) / Math.max(
-                                    ...((areaTypeData?.data?.residential_stations || []).map((s: any) => s.morning_alight || 0)),
-                                    ...((areaTypeData?.data?.business_stations || []).map((s: any) => s.morning_alight || 0)),
-                                    1
-                                  )) * 100)}%`,
-                                }}
-                              ></div>
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <div className="text-xs text-gray-500 font-medium">퇴근시간대 승차 ⬆️</div>
-                            <div className="font-medium text-green-600">
-                              {(item.evening_ride || 0).toLocaleString()}명
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-1.5">
-                              <div
-                                className="bg-green-600 h-1.5 rounded-full transition-all duration-1000"
-                                style={{
-                                  width: `${Math.min(100, ((item.evening_ride || 0) / Math.max(
-                                    ...((areaTypeData?.data?.residential_stations || []).map((s: any) => s.evening_ride || 0)),
-                                    ...((areaTypeData?.data?.business_stations || []).map((s: any) => s.evening_ride || 0)),
-                                    1
-                                  )) * 100)}%`,
-                                }}
-                              ></div>
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <div className="text-xs text-gray-500 font-medium">퇴근시간대 하차 ⬇️</div>
-                            <div className="font-medium text-gray-600">
-                              {(item.evening_alight || 0).toLocaleString()}명
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-1.5">
-                              <div
-                                className="bg-gray-400 h-1.5 rounded-full transition-all duration-1000"
-                                style={{
-                                  width: `${Math.min(100, ((item.evening_alight || 0) / Math.max(
-                                    ...((areaTypeData?.data?.residential_stations || []).map((s: any) => s.evening_alight || 0)),
-                                    ...((areaTypeData?.data?.business_stations || []).map((s: any) => s.evening_alight || 0)),
-                                    1
-                                  )) * 100)}%`,
-                                }}
-                              ></div>
-                            </div>
-                          </div>
+                          {(() => {
+                            const maxValues = getGlobalMaxValues();
+                            return (
+                              <>
+                                <div className="space-y-2">
+                                  <div className="text-xs text-gray-500 font-medium">출근시간대 승차 ⬆️</div>
+                                  <div className="font-medium text-gray-600">
+                                    {(item.morning_ride || 0).toLocaleString()}명
+                                  </div>
+                                  {renderProgressBar(item.morning_ride || 0, maxValues.morningRide, 'bg-gray-400', index, 0)}
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <div className="text-xs text-gray-500 font-medium">출근시간대 하차 ⬇️</div>
+                                  <div className="font-medium text-green-600">
+                                    {(item.morning_alight || 0).toLocaleString()}명
+                                  </div>
+                                  {renderProgressBar(item.morning_alight || 0, maxValues.morningAlight, 'bg-green-500', index, 25)}
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <div className="text-xs text-gray-500 font-medium">퇴근시간대 승차 ⬆️</div>
+                                  <div className="font-medium text-green-600">
+                                    {(item.evening_ride || 0).toLocaleString()}명
+                                  </div>
+                                  {renderProgressBar(item.evening_ride || 0, maxValues.eveningRide, 'bg-green-600', index, 50)}
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <div className="text-xs text-gray-500 font-medium">퇴근시간대 하차 ⬇️</div>
+                                  <div className="font-medium text-gray-600">
+                                    {(item.evening_alight || 0).toLocaleString()}명
+                                  </div>
+                                  {renderProgressBar(item.evening_alight || 0, maxValues.eveningAlight, 'bg-gray-400', index, 75)}
+                                </div>
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
                     )
