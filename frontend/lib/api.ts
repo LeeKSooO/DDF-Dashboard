@@ -398,87 +398,48 @@ analysisMonth: string
   ): Promise<any> { // eslint-disable-line @typescript-eslint/no-explicit-any
     const url = `${API_BASE_URL}/anomaly-pattern/integration?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}`;
     
-    console.log('🌐 Anomaly Pattern API Request:', { url, districtName, analysisMonth });
-    
     const result = await this.fetchWithErrorHandling(url);
-    console.log('🌐 Anomaly Pattern API Response:', result);
     
     return result;
   }
 
-  // 주말 우세 정류장 조회
-  async getWeekendDominantStations(
-    districtName: string,
-analysisMonth: string,
-    topN: number = 5
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ): Promise<any> {
-    const url = `${API_BASE_URL}/anomaly-pattern/weekend-dominant?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}&top_n=${topN}`;
-    return this.fetchWithErrorHandling(url);
-  }
+  // 📝 개별 패턴 API들은 getIntegratedPatterns()로 통합됨
 
-  // 야간 수요 정류장 조회
-  async getNightDemandStations(
-    districtName: string,
-analysisMonth: string,
-    topN: number = 5
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ): Promise<any> {
-    const url = `${API_BASE_URL}/anomaly-pattern/night-demand?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}&top_n=${topN}`;
-    return this.fetchWithErrorHandling(url);
-  }
-
-  // 러시아워 분석
-  async getRushHourAnalysis(
-    districtName: string,
-analysisMonth: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ): Promise<any> {
-    const url = `${API_BASE_URL}/anomaly-pattern/rush-hour?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}`;
-    return this.fetchWithErrorHandling(url);
-  }
-
-  // 점심시간 특화 정류장 조회
-  async getLunchTimeStations(
-    districtName: string,
-analysisMonth: string,
-    topN: number = 5
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ): Promise<any> {
-    const url = `${API_BASE_URL}/anomaly-pattern/lunch-time?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}&top_n=${topN}`;
-    return this.fetchWithErrorHandling(url);
-  }
-
-  // 지역 특성별 정류장 분석
-  async getAreaTypeAnalysis(
-    districtName: string,
-analysisMonth: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ): Promise<any> {
-    const url = `${API_BASE_URL}/anomaly-pattern/area-type?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}`;
-    return this.fetchWithErrorHandling(url);
-  }
-
-  // 저활용 정류장 분석
-  async getUnderutilizedStations(
-    districtName: string,
-analysisMonth: string,
-    topN: number = 5
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ): Promise<any> {
-    const url = `${API_BASE_URL}/anomaly-pattern/underutilized?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}&top_n=${topN}`;
-    return this.fetchWithErrorHandling(url);
-  }
-
-  // 통합 이상 패턴 분석 (6개 패턴 종합)
-  async getIntegratedAnomalyAnalysis(
-    districtName: string,
+  // 통합 패턴 분석 (서울 전체 또는 구별 - 6개 패턴 종합)
+  async getIntegratedPatterns(
     analysisMonth: string,
-    topN: number = 10
+    districtName?: string,
+    topN: number = 5
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> {
-    const url = `${API_BASE_URL}/anomaly-pattern/integration?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}&top_n=${topN}`;
-    return this.fetchWithErrorHandling(url);
+    try {
+      const params = new URLSearchParams({
+        analysis_month: analysisMonth,
+        top_n: String(topN)
+      });
+      
+      if (districtName) {
+        params.append('district_name', districtName);
+      }
+      
+      const url = `${API_BASE_URL}/anomaly-pattern/integration?${params.toString()}`;
+      const response = await this.fetchWithErrorHandling(url);
+      
+      // 통합 응답을 기존 state 형태에 맞게 정리
+      return {
+        success: (response as any)?.success || false,
+        data: (response as any)?.data || {},
+        message: (response as any)?.message || '',
+        timestamp: (response as any)?.timestamp || new Date().toISOString()
+      };
+    } catch (error) {
+      // 실패해도 UI가 자연스럽게 동작하도록 안전한 형태 반환
+      return {
+        success: false,
+        data: {},
+        message: `Pattern data not available for ${districtName || '서울시 전체'}`
+      };
+    }
   }
 
   // RAG API 함수들
@@ -506,7 +467,6 @@ analysisMonth: string,
 
       const data: RAGQueryResponse = await response.json();
       
-      console.log('🤖 RAG API Response:', data);
       
       return data;
     } catch (error) {
