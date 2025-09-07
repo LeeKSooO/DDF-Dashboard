@@ -258,16 +258,8 @@ const HeatmapSeoulMapComponent = forwardRef<
 
     useEffect(() => {
       if (!isClient || !L || !mapRef.current || mapInstanceRef.current) {
-        console.log("Map initialization skipped:", {
-          isClient,
-          hasL: !!L,
-          hasMapRef: !!mapRef.current,
-          hasMapInstance: !!mapInstanceRef.current,
-        });
         return;
       }
-
-      console.log("🗺️ Initializing heatmap map...");
 
       // Initialize map with CartoDB Positron style and Seoul bounds constraints
       const map = L.map(mapRef.current, {
