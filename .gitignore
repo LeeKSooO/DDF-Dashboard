@@ -50,6 +50,13 @@ infrastructure/.DS_Store
 infrastructure/database/.DS_Store
 
 # ===========================================
+# Kubernetes Secrets
+# ===========================================
+k8s/**/secret.yaml
+k8s/**/secrets.yaml
+k8s/**/secret-*.yaml
+
+# ===========================================
 # RAG Service
 # ===========================================
 RAG/.env

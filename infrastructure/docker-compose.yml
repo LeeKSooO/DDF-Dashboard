@@ -35,7 +35,7 @@ services:
   # FastAPI Backend Server
   backend:
     build: ../backend
-    image: ddf-backend:v1
+    image: ddf-backend:v2
     container_name: ddf-backend
     env_file:
       - ../.env
@@ -61,8 +61,8 @@ services:
       context: ./nginx
       dockerfile: Dockerfile
       args:
-        BUILD_ENV: dev
-    image: ddf-nginx:v1
+        BUILD_ENV: prod
+    image: ddf-nginx:v2
     container_name: ddf-nginx
     environment:
       TZ: Asia/Seoul
@@ -88,7 +88,7 @@ services:
       dockerfile: Dockerfile
       args:
         NODE_ENV: production
-    image: ddf-frontend:v5
+    image: ddf-frontend:v8
     container_name: ddf-frontend
     environment:
       TZ: Asia/Seoul
