@@ -61,10 +61,6 @@ export const TrafficContent = memo(function TrafficContent({
   selectedMonth,
   selectedRegion,
 }: TrafficContentProps) {
-  console.log("🚀 TrafficContent initialized with:", {
-    selectedMonth,
-    selectedRegion,
-  });
 
   const [activeTab, setActiveTab] = useState<TabType>("seoul");
   const [currentData, setCurrentData] = useState<TrafficResponse | null>(null);
@@ -92,12 +88,6 @@ export const TrafficContent = memo(function TrafficContent({
       0
     );
 
-    console.log("🚌 서울 전체 통계 계산:", {
-      totalWeekdayRide: totalWeekdayRide.toFixed(0),
-      totalWeekdayAlight: totalWeekdayAlight.toFixed(0),
-      totalWeekendRide: totalWeekendRide.toFixed(0),
-      totalWeekendAlight: totalWeekendAlight.toFixed(0),
-    });
 
     return {
       totalWeekdayRide: totalWeekdayRide.toFixed(2),
@@ -126,9 +116,7 @@ export const TrafficContent = memo(function TrafficContent({
         }
 
         setCurrentData(response);
-        console.log("📄 현재 데이터 로드 완료:", { selectedRegion, response });
       } catch (error) {
-        console.error("데이터 로드 실패:", error);
       } finally {
         setLoadingCurrent(false);
       }
@@ -790,11 +778,36 @@ export const TrafficContent = memo(function TrafficContent({
                       }}
                     />
                     <Tooltip
-                      labelFormatter={(label) => `시간: ${label}`}
-                      formatter={(value: number, name: string) => [
-                        `${value.toFixed(1)}명`,
-                        name === "weekday_boarding" ? "승차" : "하차",
-                      ]}
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          // 승차 먼저, 하차 나중에 정렬
+                          const sortedPayload = [...payload].sort((a, b) => {
+                            const aIsBoarding = a.dataKey?.toString().includes('boarding');
+                            const bIsBoarding = b.dataKey?.toString().includes('boarding');
+                            if (aIsBoarding && !bIsBoarding) return -1;
+                            if (!aIsBoarding && bIsBoarding) return 1;
+                            return 0;
+                          });
+                          
+                          return (
+                            <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+                              <p className="font-medium mb-2">{`시간: ${label}시`}</p>
+                              {sortedPayload.map((entry, index) => (
+                                <div key={index} className="flex items-center gap-2">
+                                  <div
+                                    className="w-3 h-3 rounded-full"
+                                    style={{ backgroundColor: entry.color }}
+                                  />
+                                  <span className="text-sm">
+                                    {entry.dataKey?.toString().includes('boarding') ? '승차' : '하차'}: {Number(entry.value).toFixed(1)}명
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
                     />
                     <Line
                       type="monotone"
@@ -853,11 +866,36 @@ export const TrafficContent = memo(function TrafficContent({
                       }}
                     />
                     <Tooltip
-                      labelFormatter={(label) => `시간: ${label}`}
-                      formatter={(value: number, name: string) => [
-                        `${value.toFixed(1)}명`,
-                        name === "weekend_boarding" ? "승차" : "하차",
-                      ]}
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          // 승차 먼저, 하차 나중에 정렬
+                          const sortedPayload = [...payload].sort((a, b) => {
+                            const aIsBoarding = a.dataKey?.toString().includes('boarding');
+                            const bIsBoarding = b.dataKey?.toString().includes('boarding');
+                            if (aIsBoarding && !bIsBoarding) return -1;
+                            if (!aIsBoarding && bIsBoarding) return 1;
+                            return 0;
+                          });
+                          
+                          return (
+                            <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+                              <p className="font-medium mb-2">{`시간: ${label}시`}</p>
+                              {sortedPayload.map((entry, index) => (
+                                <div key={index} className="flex items-center gap-2">
+                                  <div
+                                    className="w-3 h-3 rounded-full"
+                                    style={{ backgroundColor: entry.color }}
+                                  />
+                                  <span className="text-sm">
+                                    {entry.dataKey?.toString().includes('boarding') ? '승차' : '하차'}: {Number(entry.value).toFixed(1)}명
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
                     />
                     <Line
                       type="monotone"
@@ -939,14 +977,12 @@ export const TrafficContent = memo(function TrafficContent({
     }, [lastSelectedRegion]);
 
     const loadDistrictData = async (districts: string[]) => {
-      console.log("🚀 데이터 로드 시작:", districts);
       setLoading(true);
       const newData: Record<string, TrafficResponse> = {};
 
       try {
         await Promise.all(
           districts.map(async (district) => {
-            console.log("📊 API 호출:", district);
             const analysisMonth = utils.formatSelectedMonth(selectedMonth);
             const data = await apiService.getHourlyTraffic(
               analysisMonth,
@@ -954,13 +990,10 @@ export const TrafficContent = memo(function TrafficContent({
               district
             );
             newData[district] = data;
-            console.log("✅ API 응답 받음:", district);
           })
         );
-        console.log("🎉 모든 데이터 로드 완료:", Object.keys(newData));
         setDistrictData(newData);
       } catch (error) {
-        console.error("❌ 구별 데이터 로드 실패:", error);
       } finally {
         setLoading(false);
       }
@@ -969,7 +1002,6 @@ export const TrafficContent = memo(function TrafficContent({
     // selectedDistricts 변경 시 데이터 로드 (초기 마운트 포함)
     useEffect(() => {
       if (selectedDistricts.length > 0) {
-        console.log("📊 구별 데이터 로드 시작:", selectedDistricts);
         loadDistrictData(selectedDistricts);
       }
     }, [selectedDistricts]);
@@ -1514,10 +1546,36 @@ export const TrafficContent = memo(function TrafficContent({
                           <XAxis dataKey="district" tick={{ fontSize: 12 }} />
                           <YAxis tick={{ fontSize: 13 }} />
                           <Tooltip
-                            formatter={(value: number, name: string) => [
-                              `${value.toLocaleString()}명`,
-                              name === "weekday_boarding" ? "승차" : "하차",
-                            ]}
+                            content={({ active, payload, label }) => {
+                              if (active && payload && payload.length) {
+                                // 승차 먼저, 하차 나중에 정렬
+                                const sortedPayload = [...payload].sort((a, b) => {
+                                  const aIsBarding = a.dataKey?.toString().includes('boarding');
+                                  const bIsBoarding = b.dataKey?.toString().includes('boarding');
+                                  if (aIsBarding && !bIsBoarding) return -1;
+                                  if (!aIsBarding && bIsBoarding) return 1;
+                                  return 0;
+                                });
+                                
+                                return (
+                                  <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+                                    <p className="font-medium mb-2">{`구: ${label}`}</p>
+                                    {sortedPayload.map((entry, index) => (
+                                      <div key={index} className="flex items-center gap-2">
+                                        <div
+                                          className="w-3 h-3 rounded-full"
+                                          style={{ backgroundColor: entry.color }}
+                                        />
+                                        <span className="text-sm">
+                                          {entry.dataKey?.toString().includes('boarding') ? '승차' : '하차'}: {entry.value?.toLocaleString()}명
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
                           />
                           <Bar
                             dataKey="weekday_boarding"
@@ -1560,10 +1618,36 @@ export const TrafficContent = memo(function TrafficContent({
                           <XAxis dataKey="district" tick={{ fontSize: 12 }} />
                           <YAxis tick={{ fontSize: 13 }} />
                           <Tooltip
-                            formatter={(value: number, name: string) => [
-                              `${value.toLocaleString()}명`,
-                              name === "weekend_boarding" ? "승차" : "하차",
-                            ]}
+                            content={({ active, payload, label }) => {
+                              if (active && payload && payload.length) {
+                                // 승차 먼저, 하차 나중에 정렬
+                                const sortedPayload = [...payload].sort((a, b) => {
+                                  const aIsBoarding = a.dataKey?.toString().includes('boarding');
+                                  const bIsBoarding = b.dataKey?.toString().includes('boarding');
+                                  if (aIsBoarding && !bIsBoarding) return -1;
+                                  if (!aIsBoarding && bIsBoarding) return 1;
+                                  return 0;
+                                });
+                                
+                                return (
+                                  <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+                                    <p className="font-medium mb-2">{`구: ${label}`}</p>
+                                    {sortedPayload.map((entry, index) => (
+                                      <div key={index} className="flex items-center gap-2">
+                                        <div
+                                          className="w-3 h-3 rounded-full"
+                                          style={{ backgroundColor: entry.color }}
+                                        />
+                                        <span className="text-sm">
+                                          {entry.dataKey?.toString().includes('boarding') ? '승차' : '하차'}: {entry.value?.toLocaleString()}명
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
                           />
                           <Bar
                             dataKey="weekend_boarding"

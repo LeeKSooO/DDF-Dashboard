@@ -192,15 +192,15 @@ const HeatmapSeoulMapComponent = forwardRef<
       return "#6B7280"; // Gray - Very Low (150만명 미만)
     };
 
-    // Station-level traffic colors (정류장별) - 10명-5만명 범위로 조정
+    // Station-level traffic colors (정류장별) - 7단계 붉은계열 색상 스케일
     const getStationTrafficColor = (traffic: number): string => {
-      if (traffic > 40000) return "#DC2626"; // Red - Very High (4만명 이상)
-      if (traffic > 30000) return "#EA580C"; // Orange-Red - High (3-4만명)
-      if (traffic > 20000) return "#F59E0B"; // Orange - Medium-High (2-3만명)
-      if (traffic > 10000) return "#EAB308"; // Yellow - Medium (1만-2만명)
-      if (traffic > 5000) return "#16A34A"; // Green - Medium-Low (5천-1만명)
-      if (traffic > 1000) return "#2563EB"; // Blue - Low (1천-5천명)
-      return "#6B7280"; // Gray - Very Low (1천명 미만)
+      if (traffic > 50000) return "#7F1D1D"; // 다크 마룬 - Extremely High (5만명 이상)
+      if (traffic > 30000) return "#991B1B"; // 깊은 빨강 - Very High (3만-5만명)
+      if (traffic > 20000) return "#B91C1C"; // 진한 빨강 - High+ (2만-3만명)
+      if (traffic > 10000) return "#DC2626"; // 빨강 - High (1만-2만명)
+      if (traffic > 5000) return "#EF4444";  // 밝은 빨강 - Medium-High (5천-1만명)
+      if (traffic > 2000) return "#F87171";  // 연빨강 - Medium (2천-5천명)
+      return "#FCA5A5"; // 매우 연한 빨강 - Low (2천명 미만)
     };
 
 
@@ -258,16 +258,8 @@ const HeatmapSeoulMapComponent = forwardRef<
 
     useEffect(() => {
       if (!isClient || !L || !mapRef.current || mapInstanceRef.current) {
-        console.log("Map initialization skipped:", {
-          isClient,
-          hasL: !!L,
-          hasMapRef: !!mapRef.current,
-          hasMapInstance: !!mapInstanceRef.current,
-        });
         return;
       }
-
-      console.log("🗺️ Initializing heatmap map...");
 
       // Initialize map with CartoDB Positron style and Seoul bounds constraints
       const map = L.map(mapRef.current, {
@@ -365,8 +357,8 @@ const HeatmapSeoulMapComponent = forwardRef<
           clearTimeout(zoomUpdateTimeout);
           zoomUpdateTimeout = setTimeout(() => {
             const currentZoom = map.getZoom();
-            // 더 극적인 크기 변화: 줄아웃 시 매우 작게, 줌인 시 더 크게
-            const zoomFactor = Math.max(0.1, Math.min(2.5, (currentZoom - 9) * 0.35));
+            // 더 극적인 크기 변화: 줌아웃 시 매우 작게, 줌인 시 더 크게
+            const zoomFactor = Math.max(0.05, Math.min(2.0, Math.pow((currentZoom - 8) / 6, 2)));
             
             // 성능 최적화: 정류장 데이터를 Map으로 미리 생성
             const stationDataMap = new Map();
@@ -387,19 +379,15 @@ const HeatmapSeoulMapComponent = forwardRef<
                 const patternStation = patternStationMap.get(stationId);
                 
                 // 크기 재계산 - 더 극적인 변화
-                const baseIconSize = Math.min(
-                  Math.max(stationData.total_traffic / 30000, 2.5), // 기본 크기 더 작게
-                  12 // 기본 최대 크기 더 작게
-                );
-                
-                let iconSize = Math.max(baseIconSize * zoomFactor, 0.8); // 줄아웃 시 최소 크기 더 작게
+                // 줌 레벨에 따른 동적 마커 크기 (교통량과 무관, 통일된 크기)
+                let iconSize = 2 + (6 * zoomFactor); // 기본 2px + 줌팩터에 따른 증가
                 
                 if (patternStation) {
-                  iconSize = Math.max(iconSize * 2.2, 1.5 * zoomFactor);
+                  iconSize = 3 + (8 * zoomFactor); // 패턴 정류장은 조금 더 크게
                 }
                 
-                // 줄아웃 시 최소/줄인 시 최대 크기를 더 극적으로 조정
-                iconSize = Math.max(0.8, Math.min(iconSize, currentZoom > 13 ? 45 : currentZoom > 11 ? 25 : 15));
+                // 최소/최대 크기 제한 (더 작게)
+                iconSize = Math.max(0.5, Math.min(iconSize, patternStation ? 12 : 8));
                 
                 markerUpdates.push({marker, iconSize});
               }
@@ -575,7 +563,7 @@ const HeatmapSeoulMapComponent = forwardRef<
 
         // 성능 최적화: 공통 계산 미리 수행
         const currentZoom = mapInstanceRef.current.getZoom();
-        const zoomFactor = Math.max(0.1, Math.min(2.5, (currentZoom - 9) * 0.35));
+        const zoomFactor = Math.max(0.05, Math.min(2.0, Math.pow((currentZoom - 8) / 6, 2)));
         
         // 패턴 정류장 맵으로 변환 (빠른 조회)
         const patternStationMap = new Map(patternStations.map(ps => [ps.station_id, ps]));
@@ -593,37 +581,32 @@ const HeatmapSeoulMapComponent = forwardRef<
                 
                 // 줄 레벨 계산은 이미 위에서 수행됨
                 
-                // Create custom icon based on traffic + zoom level
-                const baseIconSize = Math.min(
-                  Math.max(station.total_traffic / 30000, 2.5), // 기본 최소 크기 더 작게
-                  12 // 기본 최대 크기 더 작게
-                );
+                // 줌 레벨에 따른 동적 마커 크기 (교통량과 무관, 통일된 크기)
+                let iconSize = 2 + (6 * zoomFactor); // 기본 2px + 줌팩터에 따른 증가
                 
-                let iconSize = Math.max(baseIconSize * zoomFactor, 0.8); // 줄아웃 시 최소 0.8px
-                
-                // 우선순위별 크기 조정 (줄 레벨 고려)
+                // 패턴 정류장은 조금 더 크게 표시하여 강조
                 if (patternStation) {
-                  iconSize = Math.max(iconSize * 2.2, 1.5 * zoomFactor); // 패턴 정류장
+                  iconSize = 3 + (8 * zoomFactor); // 패턴 정류장은 조금 더 크게
                 }
                 
-                // 줄아웃 시 최소/최대 크기 제한 (더 극적으로)
-                iconSize = Math.max(0.8, Math.min(iconSize, currentZoom > 13 ? 45 : currentZoom > 11 ? 25 : 15));
+                // 최소/최대 크기 제한 (더 작게)
+                iconSize = Math.max(0.5, Math.min(iconSize, patternStation ? 12 : 8));
                 
                 // 우선순위별 색상 및 스타일 결정 (파스텔/반투명 스타일)
                 let fillColor, borderColor, borderWeight, fillOpacity;
                 
                 if (patternStation) {
-                  // 패턴 정류장 - 부드러운 파스텔 톤으로 강조
+                  // 패턴 정류장 - 매우 진하고 강렬한 색상으로 강조
                   fillColor = patternStation.patternColor;
                   borderColor = patternStation.patternColor;
-                  borderWeight = 2;
-                  fillOpacity = 0.6; // 반투명
+                  borderWeight = 3; // 더 두꺼운 테두리
+                  fillOpacity = 1.0; // 완전 불투명 (가장 진하게)
                 } else {
-                  // 일반 정류장 - 매우 부드러운 톤
+                  // 일반 정류장 - 매우 부드럽고 투명한 톤 (배경화)
                   fillColor = getStationTrafficColor(station.total_traffic);
                   borderColor = fillColor;
                   borderWeight = 1;
-                  fillOpacity = 0.5; // 반투명
+                  fillOpacity = 0.3; // 매우 투명하게 (배경으로)
                 }
 
                 // 모든 마커를 새로 생성 (깨끗한 상태에서 시작)
@@ -632,7 +615,7 @@ const HeatmapSeoulMapComponent = forwardRef<
                   fillColor: fillColor,
                   color: borderColor,
                   weight: borderWeight,
-                  opacity: 0.8, // 부드러운 경계선
+                  opacity: patternStation ? 1.0 : 0.4, // 패턴 정류장은 진한 경계선, 일반은 부드럽게
                   fillOpacity: fillOpacity,
                 });
                 icon.addTo(mapInstanceRef.current);
@@ -905,50 +888,50 @@ const HeatmapSeoulMapComponent = forwardRef<
           {/* 정류장별 모드 범례 - 상황별 표시 */}
           {viewMode === "station" && !selectedPattern && (
             <div className="space-y-1">
-              {/* 기본 상태: 상세한 범례 */}
+              {/* 기본 상태: 상세한 범례 (7단계) */}
               {!selectedDistrict ? (
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
+                    <div className="w-4 h-3 bg-[#7F1D1D] rounded-sm"></div>
+                    <span>5만명 이상</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-3 bg-[#991B1B] rounded-sm"></div>
+                    <span>3만-5만명</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-3 bg-[#B91C1C] rounded-sm"></div>
+                    <span>2만-3만명</span>
+                  </div>
+                  <div className="flex items-center gap-2">
                     <div className="w-4 h-3 bg-[#DC2626] rounded-sm"></div>
-                    <span>4만명 이상</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-3 bg-[#EA580C] rounded-sm"></div>
-                    <span>3-4만명</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-3 bg-[#F59E0B] rounded-sm"></div>
-                    <span>2-3만명</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-3 bg-[#EAB308] rounded-sm"></div>
                     <span>1만-2만명</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-4 h-3 bg-[#16A34A] rounded-sm"></div>
+                    <div className="w-4 h-3 bg-[#EF4444] rounded-sm"></div>
                     <span>5천-1만명</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-4 h-3 bg-[#2563EB] rounded-sm"></div>
-                    <span>1천-5천명</span>
+                    <div className="w-4 h-3 bg-[#F87171] rounded-sm"></div>
+                    <span>2천-5천명</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-4 h-3 bg-[#6B7280] rounded-sm"></div>
-                    <span>1천명 미만</span>
+                    <div className="w-4 h-3 bg-[#FCA5A5] rounded-sm"></div>
+                    <span>2천명 미만</span>
                   </div>
                 </div>
               ) : (
-                /* 구 선택 시: 컴팩트 범례 */
+                /* 구 선택 시: 컴팩트 범례 (7단계) */
                 <div>
                   <div className="text-xs text-gray-600 mb-1">정류장 교통량</div>
                   <div className="flex flex-wrap gap-1">
-                    <div className="w-4 h-4 bg-[#DC2626] rounded" title="4만명 이상"></div>
-                    <div className="w-4 h-4 bg-[#EA580C] rounded" title="3-4만명"></div>
-                    <div className="w-4 h-4 bg-[#F59E0B] rounded" title="2-3만명"></div>
-                    <div className="w-4 h-4 bg-[#EAB308] rounded" title="1만-2만명"></div>
-                    <div className="w-4 h-4 bg-[#16A34A] rounded" title="5천-1만명"></div>
-                    <div className="w-4 h-4 bg-[#2563EB] rounded" title="1천-5천명"></div>
-                    <div className="w-4 h-4 bg-[#6B7280] rounded" title="1천명 미만"></div>
+                    <div className="w-4 h-4 bg-[#7F1D1D] rounded" title="5만명 이상"></div>
+                    <div className="w-4 h-4 bg-[#991B1B] rounded" title="3만-5만명"></div>
+                    <div className="w-4 h-4 bg-[#B91C1C] rounded" title="2만-3만명"></div>
+                    <div className="w-4 h-4 bg-[#DC2626] rounded" title="1만-2만명"></div>
+                    <div className="w-4 h-4 bg-[#EF4444] rounded" title="5천-1만명"></div>
+                    <div className="w-4 h-4 bg-[#F87171] rounded" title="2천-5천명"></div>
+                    <div className="w-4 h-4 bg-[#FCA5A5] rounded" title="2천명 미만"></div>
                   </div>
                   <div className="text-xs text-gray-500 mt-1">높음 → 낮음</div>
                 </div>

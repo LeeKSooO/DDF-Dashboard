@@ -67,6 +67,63 @@ export function HeatmapContent({
   const [selectedAreaType, setSelectedAreaType] = useState<"residential" | "business">("residential");
   const mapRef = useRef<HeatmapSeoulMapRef>(null);
 
+  // 안정적인 키 생성 유틸
+  const stableKey = (s: any, idx: number) => {
+    const id = s.station_id ?? s.station?.station_id ?? '';
+    const name = s.station_name ?? s.station?.station_name ?? '';
+    const rush = s.rushType ?? '';
+    const area = s.areaType ?? '';
+    const pat = s.patternType ?? selectedPattern ?? '';
+    return `${pat}::${rush}::${area}::${id || name}::${idx}`;
+  };
+
+  // 안전한 fallback ID 생성
+  const fallbackId = (item: any) =>
+    item.station?.station_id ??
+    `${item.station?.station_name || 'unknown'}:${item.station?.latitude ?? 'x'}:${item.station?.longitude ?? 'y'}`;
+
+  // 패턴별 색상 매핑
+  const getPatternColor = (pattern: string) => {
+    const colorMap = {
+      weekend: "#10B981",     // 주말 - 에메랄드 그린
+      night: "#8B5CF6",       // 심야 - 보라색
+      underutilized: "#FBBF24", // 저활용 - 밝은 노란색
+      lunchtime: "#10B981",   // 점심시간 - 에메랄드 그린
+      rushhour: "#EC4899",    // 러시아워 - 핑크 (아침) / 보라 (오후)
+      areatype: "#0EA5E9"     // 지역특성 - 하늘색
+    };
+    return colorMap[pattern as keyof typeof colorMap] || "#6B7280";
+  };
+
+  // 패턴별 배경 그라데이션 클래스
+  const getPatternBgClass = (pattern: string) => {
+    const bgMap = {
+      weekend: "bg-gradient-to-r from-emerald-500 to-emerald-600",
+      night: "bg-gradient-to-r from-purple-500 to-purple-600", 
+      underutilized: "bg-gradient-to-r from-yellow-400 to-yellow-500",
+      lunchtime: "bg-gradient-to-r from-emerald-500 to-emerald-600",
+      rushhour: "bg-gradient-to-r from-pink-500 to-purple-500",
+      areatype: "bg-gradient-to-r from-sky-500 to-sky-600"
+    };
+    return bgMap[pattern as keyof typeof bgMap] || "bg-gradient-to-r from-gray-500 to-gray-600";
+  };
+
+  // 패턴별 카드 배경 클래스 (연한 톤)
+  const getPatternCardBgClass = (pattern: string) => {
+    const cardBgMap = {
+      weekend: "bg-gradient-to-br from-emerald-50 to-emerald-100",
+      night: "bg-gradient-to-br from-purple-50 to-purple-100", 
+      underutilized: "bg-gradient-to-br from-yellow-50 to-yellow-100",
+      lunchtime: "bg-gradient-to-br from-emerald-50 to-emerald-100",
+      rushhour: "bg-gradient-to-br from-pink-50 to-purple-100",
+      areatype: "bg-gradient-to-br from-sky-50 to-sky-100"
+    };
+    return cardBgMap[pattern as keyof typeof cardBgMap] || "bg-gradient-to-br from-gray-50 to-gray-100";
+  };
+
+  // 패턴별 데이터 가용성 체크
+  const underutilizedAvailable = !!(underutilizedData?.success && underutilizedData?.data?.length > 0);
+
   // API 데이터 로드
   useEffect(() => {
     const loadHeatmapData = async () => {
@@ -74,14 +131,17 @@ export function HeatmapContent({
         setLoading(true);
         setError(null);
 
-        console.log("🗺️ Loading heatmap and pattern data for:", {
-          selectedMonth,
-          selectedRegion,
-        });
 
         // 지역이 변경되면 패턴 선택 초기화
         setSelectedPattern(null);
-        console.log("🔄 패턴 선택 초기화 - 지역 변경:", selectedRegion);
+
+        // 지역 변경 시 패턴 데이터도 초기화
+        setWeekendData(null);
+        setNightData(null);
+        setRushHourData(null);
+        setLunchTimeData(null);
+        setAreaTypeData(null);
+        setUnderutilizedData(null);
 
         const analysisMonth = utils.formatSelectedMonth(selectedMonth);
 
@@ -91,56 +151,61 @@ export function HeatmapContent({
           true // 항상 정류장 상세 정보 포함
         );
 
-        console.log("🗺️ Heatmap API response:", heatmapResponse);
         setHeatmapData(heatmapResponse);
 
-        // 선택된 지역에 따른 이상 패턴 분석 데이터 로드
-        if (selectedRegion !== "전체") {
-          console.log(
-            "📊 Loading pattern analysis for district:",
-            selectedRegion
+        // 통합 패턴 분석 API 호출 (전체 또는 구별)
+        try {
+          const integrationResponse = await apiService.getIntegratedPatterns(
+            analysisMonth,
+            selectedRegion !== "전체" ? selectedRegion : undefined,
+            5
           );
 
-          // 모든 패턴 분석 API 병렬 호출
-          const [
-            weekendResult,
-            nightResult,
-            rushHourResult,
-            lunchTimeResult,
-            areaTypeResult,
-            underutilizedResult,
-          ] = await Promise.allSettled([
-            apiService.getWeekendDominantStations(
-              selectedRegion,
-              analysisMonth,
-              5
-            ),
-            apiService.getNightDemandStations(selectedRegion, analysisMonth, 5),
-            apiService.getRushHourAnalysis(selectedRegion, analysisMonth),
-            apiService.getLunchTimeStations(selectedRegion, analysisMonth, 5),
-            apiService.getAreaTypeAnalysis(selectedRegion, analysisMonth),
-            apiService.getUnderutilizedStations(
-              selectedRegion,
-              analysisMonth,
-              5
-            ),
-          ]);
 
-          // 성공한 결과들 저장
-          if (weekendResult.status === "fulfilled")
-            setWeekendData(weekendResult.value);
-          if (nightResult.status === "fulfilled")
-            setNightData(nightResult.value);
-          if (rushHourResult.status === "fulfilled")
-            setRushHourData(rushHourResult.value);
-          if (lunchTimeResult.status === "fulfilled")
-            setLunchTimeData(lunchTimeResult.value);
-          if (areaTypeResult.status === "fulfilled")
-            setAreaTypeData(areaTypeResult.value);
-          if (underutilizedResult.status === "fulfilled")
-            setUnderutilizedData(underutilizedResult.value);
-        } else {
-          // 전체 선택시 패턴 데이터 초기화
+          if (integrationResponse?.success && integrationResponse?.data) {
+            const d = integrationResponse.data;
+            
+            // 각 패턴별로 기존 state 형태에 맞게 변환
+            setWeekendData(d.weekend_dominant_stations ? { 
+              success: true, 
+              data: d.weekend_dominant_stations 
+            } : null);
+            
+            setNightData(d.night_demand_stations ? { 
+              success: true, 
+              data: d.night_demand_stations 
+            } : null);
+            
+            setRushHourData(d.rush_hour_stations ? { 
+              success: true, 
+              data: d.rush_hour_stations 
+            } : null);
+            
+            setLunchTimeData(d.lunch_time_stations ? { 
+              success: true, 
+              data: d.lunch_time_stations 
+            } : null);
+            
+            setAreaTypeData(d.area_type_analysis ? { 
+              success: true, 
+              data: d.area_type_analysis 
+            } : null);
+            
+            setUnderutilizedData(d.underutilized_stations ? { 
+              success: true, 
+              data: d.underutilized_stations 
+            } : null);
+          } else {
+            // 통합 API 실패시 모든 패턴 데이터 초기화
+            setWeekendData(null);
+            setNightData(null);
+            setRushHourData(null);
+            setLunchTimeData(null);
+            setAreaTypeData(null);
+            setUnderutilizedData(null);
+          }
+        } catch (integrationError) {
+          // 실패해도 UI는 계속 동작하도록
           setWeekendData(null);
           setNightData(null);
           setRushHourData(null);
@@ -149,7 +214,6 @@ export function HeatmapContent({
           setUnderutilizedData(null);
         }
       } catch (err) {
-        console.error("🚨 Heatmap API error:", err);
         setError(
           err instanceof Error ? err.message : "Failed to load heatmap data"
         );
@@ -179,66 +243,112 @@ export function HeatmapContent({
     if (!selectedPattern || (selectedRegion === "전체" && !selectedDistrict))
       return [];
 
+
     switch (selectedPattern) {
       case "weekend":
         return (
-          weekendData?.data?.map((item: any) => ({
-            ...item.station,
+          weekendData?.success && weekendData?.data?.length > 0 
+            ? weekendData.data.map((item: any) => ({
+            station_id: fallbackId(item),
+            station_name: item.station?.station_name,
+            latitude: item.station?.latitude,
+            longitude: item.station?.longitude,
+            district_name: item.station?.district_name,
+            administrative_dong: item.station?.administrative_dong,
             patternType: "weekend",
             patternColor: "#3B82F6", // blue
             patternInfo: `주말 교통량: ${item.weekend_total_traffic?.toLocaleString()}명`,
-          })) || []
+            weekend_total_traffic: item.weekend_total_traffic,
+          }))
+            : []
         );
 
       case "night":
         return (
-          nightData?.data?.map((item: any) => ({
-            ...item.station,
+          nightData?.success && nightData?.data?.length > 0
+            ? nightData.data.map((item: any) => ({
+            station_id: fallbackId(item),
+            station_name: item.station?.station_name,
+            latitude: item.station?.latitude,
+            longitude: item.station?.longitude,
+            district_name: item.station?.district_name,
+            administrative_dong: item.station?.administrative_dong,
             patternType: "night",
             patternColor: "#8B5CF6", // purple
             patternInfo: `심야 승차: ${item.total_night_ride?.toLocaleString()}명`,
-          })) || []
+            total_night_ride: item.total_night_ride,
+          }))
+            : []
         );
 
       case "underutilized":
         return (
-          underutilizedData?.data?.map((item: any) => ({
-            ...item.station,
+          underutilizedData?.success && underutilizedData?.data?.length > 0
+            ? underutilizedData.data.map((item: any) => ({
+            station_id: fallbackId(item),
+            station_name: item.station?.station_name,
+            latitude: item.station?.latitude,
+            longitude: item.station?.longitude,
+            district_name: item.station?.district_name,
+            administrative_dong: item.station?.administrative_dong,
             patternType: "underutilized",
-            patternColor: "#EF4444", // red
+            patternColor: "#FBBF24", // bright yellow
             patternInfo: `효율성: ${
               item.efficiency_score
             }% | 일평균: ${item.avg_daily_passengers?.toLocaleString()}명`,
-          })) || []
+            efficiency_score: item.efficiency_score,
+            avg_daily_passengers: item.avg_daily_passengers,
+          }))
+            : []
         );
 
       case "lunchtime":
         return (
-          lunchTimeData?.data?.map((item: any) => ({
-            ...item.station,
+          lunchTimeData?.success && lunchTimeData?.data?.length > 0
+            ? lunchTimeData.data.map((item: any) => ({
+            station_id: fallbackId(item),
+            station_name: item.station?.station_name,
+            latitude: item.station?.latitude,
+            longitude: item.station?.longitude,
+            district_name: item.station?.district_name,
+            administrative_dong: item.station?.administrative_dong,
             patternType: "lunchtime",
             patternColor: "#10B981", // green
             patternInfo: `점심시간 하차: ${item.total_lunch_alight?.toLocaleString()}명`,
-          })) || []
+            total_lunch_alight: item.total_lunch_alight,
+          }))
+            : []
         );
 
       case "rushhour":
         const morningStations =
           rushHourData?.data?.morning_rush?.map((item: any) => ({
-            ...item.station,
+            station_id: fallbackId(item),
+            station_name: item.station?.station_name,
+            latitude: item.station?.latitude,
+            longitude: item.station?.longitude,
+            district_name: item.station?.district_name,
+            administrative_dong: item.station?.administrative_dong,
             patternType: "rushhour",
-            patternColor: "#FF6B35", // bright orange for morning
+            patternColor: "#EC4899", // hot pink for morning
             patternInfo: `오전 승차: ${item.total_morning_rush?.toLocaleString()}명`,
             rushType: "morning",
+            total_morning_rush: item.total_morning_rush,
           })) || [];
 
         const eveningStations =
           rushHourData?.data?.evening_rush?.map((item: any) => ({
-            ...item.station,
+            station_id: fallbackId(item),
+            station_name: item.station?.station_name,
+            latitude: item.station?.latitude,
+            longitude: item.station?.longitude,
+            district_name: item.station?.district_name,
+            administrative_dong: item.station?.administrative_dong,
             patternType: "rushhour",
-            patternColor: "#DC2626", // red for evening
+            patternColor: "#8B5CF6", // purple for evening
             patternInfo: `오후 승차: ${item.total_evening_rush?.toLocaleString()}명`,
             rushType: "evening",
+            total_evening_rush: item.total_evening_rush,
           })) || [];
 
         return [...morningStations, ...eveningStations];
@@ -246,7 +356,12 @@ export function HeatmapContent({
       case "areatype":
         const residentialStations =
           areaTypeData?.data?.residential_stations?.map((item: any) => ({
-            ...item.station,
+            station_id: fallbackId(item),
+            station_name: item.station?.station_name,
+            latitude: item.station?.latitude,
+            longitude: item.station?.longitude,
+            district_name: item.station?.district_name,
+            administrative_dong: item.station?.administrative_dong,
             patternType: "areatype",
             patternColor: "#0EA5E9", // sky blue - 하늘색으로 변경
             patternInfo: `승차: ${item.morning_ride?.toLocaleString()} (오전) | 하차: ${item.evening_alight?.toLocaleString()} (오후) | 불균형: ${item.imbalance_ratio?.toFixed(1)}배`,
@@ -262,7 +377,12 @@ export function HeatmapContent({
 
         const businessStations =
           areaTypeData?.data?.business_stations?.map((item: any) => ({
-            ...item.station,
+            station_id: fallbackId(item),
+            station_name: item.station?.station_name,
+            latitude: item.station?.latitude,
+            longitude: item.station?.longitude,
+            district_name: item.station?.district_name,
+            administrative_dong: item.station?.administrative_dong,
             patternType: "areatype",
             patternColor: "#8B5CF6", // purple
             patternInfo: `하차: ${item.morning_alight?.toLocaleString()} (오전) | 승차: ${item.evening_ride?.toLocaleString()} (오후) | 불균형: ${item.imbalance_ratio?.toFixed(1)}배`,
@@ -362,13 +482,10 @@ export function HeatmapContent({
   };
 
   // 지도에서 구 클릭 시 호출
-  const handleDistrictClick = (districtName: string, districtCode: string) => {
-    console.log(`District clicked: ${districtName} (${districtCode})`);
-
+  const handleDistrictClick = (districtName: string) => {
     // 새로운 구를 선택할 때 패턴 선택 초기화
     if (selectedDistrict !== districtName) {
       setSelectedPattern(null);
-      console.log("🔄 패턴 선택 초기화 - 새로운 구 선택:", districtName);
     }
 
     setSelectedDistrict(districtName);
@@ -380,54 +497,68 @@ export function HeatmapContent({
 
     const loadDistrictPatternData = async () => {
       try {
-        console.log(
-          "📊 Loading pattern analysis for clicked district:",
-          selectedDistrict
-        );
+
+        // 새로운 구를 클릭할 때 이전 데이터 즉시 초기화
+        setWeekendData(null);
+        setNightData(null);
+        setRushHourData(null);
+        setLunchTimeData(null);
+        setAreaTypeData(null);
+        setUnderutilizedData(null);
 
         const analysisMonth = utils.formatSelectedMonth(selectedMonth);
 
-        // 클릭된 구의 패턴 분석 데이터 로드 (기존 selectedRegion 패턴과 동일)
-        const [
-          weekendResult,
-          nightResult,
-          rushHourResult,
-          lunchTimeResult,
-          areaTypeResult,
-          underutilizedResult,
-        ] = await Promise.allSettled([
-          apiService.getWeekendDominantStations(
-            selectedDistrict,
-            analysisMonth,
-            5
-          ),
-          apiService.getNightDemandStations(selectedDistrict, analysisMonth, 5),
-          apiService.getRushHourAnalysis(selectedDistrict, analysisMonth),
-          apiService.getLunchTimeStations(selectedDistrict, analysisMonth, 5),
-          apiService.getAreaTypeAnalysis(selectedDistrict, analysisMonth),
-          apiService.getUnderutilizedStations(
-            selectedDistrict,
-            analysisMonth,
-            5
-          ),
-        ]);
+        // 통합 패턴 분석 API 호출 (클릭된 구)
+        const integrationResponse = await apiService.getIntegratedPatterns(
+          analysisMonth,
+          selectedDistrict,
+          5
+        );
 
-        // 성공한 결과들 저장
-        if (weekendResult.status === "fulfilled")
-          setWeekendData(weekendResult.value);
-        if (nightResult.status === "fulfilled") setNightData(nightResult.value);
-        if (rushHourResult.status === "fulfilled")
-          setRushHourData(rushHourResult.value);
-        if (lunchTimeResult.status === "fulfilled")
-          setLunchTimeData(lunchTimeResult.value);
-        if (areaTypeResult.status === "fulfilled")
-          setAreaTypeData(areaTypeResult.value);
-        if (underutilizedResult.status === "fulfilled")
-          setUnderutilizedData(underutilizedResult.value);
 
-        console.log("✅ Pattern data loaded for district:", selectedDistrict);
+        if (integrationResponse?.success && integrationResponse?.data) {
+          const d = integrationResponse.data;
+          
+          // 각 패턴별로 기존 state 형태에 맞게 변환
+          setWeekendData(d.weekend_dominant_stations ? { 
+            success: true, 
+            data: d.weekend_dominant_stations 
+          } : null);
+          
+          setNightData(d.night_demand_stations ? { 
+            success: true, 
+            data: d.night_demand_stations 
+          } : null);
+          
+          setRushHourData(d.rush_hour_stations ? { 
+            success: true, 
+            data: d.rush_hour_stations 
+          } : null);
+          
+          setLunchTimeData(d.lunch_time_stations ? { 
+            success: true, 
+            data: d.lunch_time_stations 
+          } : null);
+          
+          setAreaTypeData(d.area_type_analysis ? { 
+            success: true, 
+            data: d.area_type_analysis 
+          } : null);
+          
+          setUnderutilizedData(d.underutilized_stations ? { 
+            success: true, 
+            data: d.underutilized_stations 
+          } : null);
+        } else {
+          // 통합 API 실패시 모든 패턴 데이터 초기화
+          setWeekendData(null);
+          setNightData(null);
+          setRushHourData(null);
+          setLunchTimeData(null);
+          setAreaTypeData(null);
+          setUnderutilizedData(null);
+        }
       } catch (err) {
-        console.error("🚨 Failed to load district pattern data:", err);
       }
     };
 
@@ -533,8 +664,8 @@ export function HeatmapContent({
                           }}
                           className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
                             selectedPattern === "weekend"
-                              ? "bg-blue-600 text-white"
-                              : "bg-white text-gray-700 hover:bg-blue-50 border border-gray-200"
+                              ? `${getPatternBgClass("weekend")} text-white shadow-lg`
+                              : "bg-white text-gray-700 hover:bg-emerald-50 border border-gray-200"
                           }`}
                         >
                           <div className="flex items-center gap-2">
@@ -574,7 +705,7 @@ export function HeatmapContent({
                           }}
                           className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
                             selectedPattern === "night"
-                              ? "bg-purple-600 text-white"
+                              ? `${getPatternBgClass("night")} text-white shadow-lg`
                               : "bg-white text-gray-700 hover:bg-purple-50 border border-gray-200"
                           }`}
                         >
@@ -607,7 +738,9 @@ export function HeatmapContent({
                     <HelpTooltip>
                       <HelpTooltipTrigger asChild>
                         <button
+                          disabled={!underutilizedAvailable}
                           onClick={() => {
+                            if (!underutilizedAvailable) return;
                             setSelectedPattern(
                               selectedPattern === "underutilized"
                                 ? null
@@ -617,9 +750,9 @@ export function HeatmapContent({
                           }}
                           className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
                             selectedPattern === "underutilized"
-                              ? "bg-red-600 text-white"
+                              ? `${getPatternBgClass("underutilized")} text-white shadow-lg`
                               : "bg-white text-gray-700 hover:bg-red-50 border border-gray-200"
-                          }`}
+                          } ${!underutilizedAvailable ? "opacity-60 cursor-not-allowed" : ""}`}
                         >
                           <div className="flex items-center gap-2">
                             <Image
@@ -640,7 +773,10 @@ export function HeatmapContent({
                             운영 최적화 대상 정류장
                           </p>
                           <p className="mt-1">
-                            {underutilizedData?.data?.length || 0}개 정류장 발견
+                            {underutilizedAvailable 
+                              ? `${underutilizedData?.data?.length || 0}개 정류장 발견`
+                              : "데이터 준비 중"
+                            }
                           </p>
                         </div>
                       </HelpTooltipContent>
@@ -660,7 +796,7 @@ export function HeatmapContent({
                           }}
                           className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
                             selectedPattern === "lunchtime"
-                              ? "bg-green-600 text-white"
+                              ? `${getPatternBgClass("lunchtime")} text-white shadow-lg`
                               : "bg-white text-gray-700 hover:bg-green-50 border border-gray-200"
                           }`}
                         >
@@ -701,7 +837,7 @@ export function HeatmapContent({
                           }}
                           className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
                             selectedPattern === "rushhour"
-                              ? "bg-orange-600 text-white"
+                              ? `${getPatternBgClass("rushhour")} text-white shadow-lg`
                               : "bg-white text-gray-700 hover:bg-orange-50 border border-gray-200"
                           }`}
                         >
@@ -744,7 +880,7 @@ export function HeatmapContent({
                           }}
                           className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
                             selectedPattern === "areatype"
-                              ? "bg-sky-600 text-white"
+                              ? `${getPatternBgClass("areatype")} text-white shadow-lg`
                               : "bg-white text-gray-700 hover:bg-sky-50 border border-gray-200"
                           }`}
                         >
@@ -952,19 +1088,9 @@ export function HeatmapContent({
           {/* 주요 정류장 정보 */}
           <Card
             className={`shadow-lg border-0 ${
-              selectedPattern === "weekend"
-                ? "bg-gradient-to-br from-blue-50 to-blue-100"
-                : selectedPattern === "night"
-                ? "bg-gradient-to-br from-purple-50 to-purple-100"
-                : selectedPattern === "underutilized"
-                ? "bg-gradient-to-br from-red-50 to-red-100"
-                : selectedPattern === "lunchtime"
-                ? "bg-gradient-to-br from-green-50 to-green-100"
-                : selectedPattern === "rushhour"
-                ? "bg-gradient-to-br from-orange-50 to-orange-100"
-                : selectedPattern === "areatype"
-                ? "bg-gradient-to-br from-sky-50 to-sky-100"
-                : "bg-gradient-to-br from-green-50 to-emerald-50"
+              selectedPattern 
+                ? getPatternCardBgClass(selectedPattern)
+                : "bg-gradient-to-br from-gray-50 to-slate-100"
             }`}
           >
             <CardHeader className="pb-6">
@@ -1207,7 +1333,7 @@ export function HeatmapContent({
                                   );
                                   return (
                                     <div
-                                      key={station.station_id}
+                                      key={stableKey(station, index)}
                                       className="flex items-center justify-between p-2 bg-orange-50 rounded"
                                     >
                                       <div className="flex items-center gap-2">
@@ -1266,7 +1392,7 @@ export function HeatmapContent({
                                   );
                                   return (
                                     <div
-                                      key={station.station_id}
+                                      key={stableKey(station, index)}
                                       className="flex items-center justify-between p-2 bg-red-50 rounded"
                                     >
                                       <div className="flex items-center gap-2">
@@ -1329,7 +1455,7 @@ export function HeatmapContent({
                                   );
                                   return (
                                     <div
-                                      key={station.station_id}
+                                      key={stableKey(station, index)}
                                       className="bg-white border border-sky-200 rounded-lg shadow-sm"
                                     >
                                       {/* 상단: 순위와 정류장명 */}
@@ -1438,7 +1564,7 @@ export function HeatmapContent({
                                   );
                                   return (
                                     <div
-                                      key={station.station_id}
+                                      key={stableKey(station, index)}
                                       className="bg-white border border-purple-200 rounded-lg shadow-sm"
                                     >
                                       {/* 상단: 순위와 정류장명 */}
@@ -1543,7 +1669,7 @@ export function HeatmapContent({
 
                         return (
                           <div
-                            key={station.station_id}
+                            key={stableKey(station, index)}
                             className={`flex items-center justify-between p-3 rounded-lg border-l-4 ${
                               isTop3
                                 ? `bg-gradient-to-r ${
@@ -2077,7 +2203,24 @@ export function HeatmapContent({
                 <div className="text-base text-gray-600">
                   {`${
                     selectedDistrict || selectedRegion
-                  } 지역의 ${selectedPattern} 패턴 분석 결과입니다.`}
+                  } 지역의 ${(() => {
+                    switch (selectedPattern) {
+                      case "weekend":
+                        return "주말";
+                      case "night":
+                        return "심야";
+                      case "underutilized":
+                        return "저활용";
+                      case "lunchtime":
+                        return "점심";
+                      case "rushhour":
+                        return "러시아워";
+                      case "areatype":
+                        return "지역 특성";
+                      default:
+                        return "";
+                    }
+                  })()} 패턴 분석 결과입니다.`}
                 </div>
 
                 {/* 패턴별 간단 요약 */}

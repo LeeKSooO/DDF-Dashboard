@@ -441,143 +441,24 @@ export function TrafficAnalysisContent({
         const analysisMonth = utils.formatSelectedMonth(selectedMonth);
 
         if (selectedRegion === "전체") {
-          // 전체 서울 분석: 모든 구의 데이터를 병합
-          const allDistricts = [
-            "강남구", "강동구", "강북구", "강서구", "관악구", "광진구", 
-            "구로구", "금천구", "노원구", "도봉구", "동대문구", "동작구",
-            "마포구", "서대문구", "서초구", "성동구", "성북구", "송파구",
-            "양천구", "영등포구", "용산구", "은평구", "종로구", "중구", "중랑구"
-          ];
-
-          // 모든 구의 데이터를 병렬로 가져와서 병합
-          const allDistrictResults = await Promise.allSettled(
-            allDistricts.map(district => 
-              apiService.getIntegratedAnomalyAnalysis(district, analysisMonth)
-            )
+          // 서울 전체 분석: 통합 API 사용 (district_name 생략)
+          const integrationResult = await apiService.getIntegratedPatterns(
+            analysisMonth,
+            undefined, // district_name을 생략하면 서울 전체 데이터
+            10
           );
-
-          // 성공한 결과들만 필터링하고 데이터 병합
-          const successfulResults: any[] = allDistrictResults
-            .filter((result): result is PromiseFulfilledResult<any> => 
-              result.status === 'fulfilled' && result.value?.success
-            )
-            .map(result => result.value.data);
-
-          if (successfulResults.length > 0) {
-            // 모든 구의 데이터를 패턴별로 병합
-            const mergedData = {
-              district_name: "서울시 전체",
-              analysis_month: successfulResults[0].analysis_month,
-              generated_at: new Date().toISOString(),
-              weekend_dominant_stations: [] as any[],
-              night_demand_stations: [] as any[],
-              rush_hour_stations: { morning_rush: [] as any[], evening_rush: [] as any[] },
-              lunch_time_stations: [] as any[],
-              area_type_analysis: { residential_stations: [] as any[], business_stations: [] as any[] },
-              underutilized_stations: [] as any[]
-            };
-
-            // 각 패턴별로 모든 구의 데이터를 합치고 상위 10개씩 선택
-            successfulResults.forEach((districtData: any) => {
-                mergedData.weekend_dominant_stations.push(...((districtData.weekend_dominant_stations as any[]) || []));
-              mergedData.night_demand_stations.push(...((districtData.night_demand_stations as any[]) || []));
-              mergedData.rush_hour_stations.morning_rush.push(...((districtData.rush_hour_stations?.morning_rush as any[]) || []));
-              mergedData.rush_hour_stations.evening_rush.push(...((districtData.rush_hour_stations?.evening_rush as any[]) || []));
-              mergedData.lunch_time_stations.push(...((districtData.lunch_time_stations as any[]) || []));
-              mergedData.area_type_analysis.residential_stations.push(...((districtData.area_type_analysis?.residential_stations as any[]) || []));
-              mergedData.area_type_analysis.business_stations.push(...((districtData.area_type_analysis?.business_stations as any[]) || []));
-              mergedData.underutilized_stations.push(...((districtData.underutilized_stations as any[]) || []));
-            });
-
-            // 각 패턴별로 정렬하고 상위 10개만 선택
-            mergedData.weekend_dominant_stations = (mergedData.weekend_dominant_stations as any[])
-              .sort((a: any, b: any) => (b.weekend_total_traffic || 0) - (a.weekend_total_traffic || 0))
-              .slice(0, 10);
-
-            mergedData.night_demand_stations = (mergedData.night_demand_stations as any[])
-              .sort((a: any, b: any) => (b.total_night_ride || 0) - (a.total_night_ride || 0))
-              .slice(0, 10);
-
-            mergedData.rush_hour_stations.morning_rush = (mergedData.rush_hour_stations.morning_rush as any[])
-              .sort((a: any, b: any) => (b.total_morning_rush || 0) - (a.total_morning_rush || 0))
-              .slice(0, 10);
-
-            mergedData.rush_hour_stations.evening_rush = (mergedData.rush_hour_stations.evening_rush as any[])
-              .sort((a: any, b: any) => (b.total_evening_rush || 0) - (a.total_evening_rush || 0))
-              .slice(0, 10);
-
-            mergedData.lunch_time_stations = (mergedData.lunch_time_stations as any[])
-              .sort((a: any, b: any) => (b.total_lunch_alight || 0) - (a.total_lunch_alight || 0))
-              .slice(0, 10);
-
-            mergedData.area_type_analysis.residential_stations = (mergedData.area_type_analysis.residential_stations as any[])
-              .sort((a: any, b: any) => (b.imbalance_ratio || 0) - (a.imbalance_ratio || 0))
-              .slice(0, 10);
-
-            mergedData.area_type_analysis.business_stations = (mergedData.area_type_analysis.business_stations as any[])
-              .sort((a: any, b: any) => (b.imbalance_ratio || 0) - (a.imbalance_ratio || 0))
-              .slice(0, 10);
-
-            mergedData.underutilized_stations = (mergedData.underutilized_stations as any[])
-              .sort((a: any, b: any) => (a.efficiency_score || Infinity) - (b.efficiency_score || Infinity))
-              .slice(0, 10);
-
-            // 병합된 데이터를 사용
-            const integrationResult = { success: true, data: mergedData };
-            processIntegrationResult(integrationResult);
-          } else {
-            throw new Error("모든 구의 데이터 로드에 실패했습니다.");
-          }
+          processIntegrationResult(integrationResult);
         } else {
-          // 개별 구 분석
-          try {
-            const integrationResult = await apiService.getIntegratedAnomalyAnalysis(
-              selectedRegion,
-              analysisMonth
-            );
-            processIntegrationResult(integrationResult);
-          } catch (integrationError) {
-            console.warn("🔄 통합 API 실패, 개별 패턴 API로 폴백 시도:", integrationError);
-            
-            // 통합 API 실패 시 개별 패턴 API들을 병렬로 호출
-            const fallbackResults = await Promise.allSettled([
-              apiService.getWeekendDominantStations(selectedRegion, analysisMonth, 10),
-              apiService.getNightDemandStations(selectedRegion, analysisMonth, 10),
-              apiService.getRushHourAnalysis(selectedRegion, analysisMonth),
-              apiService.getLunchTimeStations(selectedRegion, analysisMonth, 10),
-              apiService.getAreaTypeAnalysis(selectedRegion, analysisMonth),
-              apiService.getUnderutilizedStations(selectedRegion, analysisMonth, 10)
-            ]);
-
-            // 성공한 개별 API 결과들을 통합 형태로 변환
-            const [weekendResult, nightResult, rushHourResult, lunchTimeResult, areaTypeResult, underutilizedResult] = fallbackResults;
-
-            const fallbackData = {
-              district_name: selectedRegion,
-              analysis_month: analysisMonth,
-              generated_at: new Date().toISOString(),
-              weekend_dominant_stations: weekendResult.status === 'fulfilled' && weekendResult.value?.success 
-                ? weekendResult.value.data : [],
-              night_demand_stations: nightResult.status === 'fulfilled' && nightResult.value?.success 
-                ? nightResult.value.data : [],
-              rush_hour_stations: rushHourResult.status === 'fulfilled' && rushHourResult.value?.success 
-                ? rushHourResult.value.data : { morning_rush: [], evening_rush: [] },
-              lunch_time_stations: lunchTimeResult.status === 'fulfilled' && lunchTimeResult.value?.success 
-                ? lunchTimeResult.value.data : [],
-              area_type_analysis: areaTypeResult.status === 'fulfilled' && areaTypeResult.value?.success 
-                ? areaTypeResult.value.data : { residential_stations: [], business_stations: [] },
-              underutilized_stations: underutilizedResult.status === 'fulfilled' && underutilizedResult.value?.success 
-                ? underutilizedResult.value.data : []
-            };
-
-            const fallbackIntegrationResult = { success: true, data: fallbackData };
-            console.log("✅ 개별 API 폴백 성공:", fallbackIntegrationResult);
-            processIntegrationResult(fallbackIntegrationResult);
-          }
+          // 개별 구 분석: 새로운 통합 API 사용
+          const integrationResult = await apiService.getIntegratedPatterns(
+            analysisMonth,
+            selectedRegion,
+            10
+          );
+          processIntegrationResult(integrationResult);
         }
 
         function processIntegrationResult(integrationResult: any) {
-          console.log("🚌 Integrated API Result:", integrationResult);
 
           // 데이터 검증 및 구조 확인
           if (!integrationResult?.success) {
