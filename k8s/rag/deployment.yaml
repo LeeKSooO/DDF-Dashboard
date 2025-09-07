@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rag-deployment
+  namespace: ddf-system
+  labels:
+    app: rag
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: rag
+  template:
+    metadata:
+      labels:
+        app: rag
+    spec:
+      containers:
+      - name: rag
+        image: 204572980322.dkr.ecr.ap-northeast-2.amazonaws.com/ddf-rag:v1
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8001
+        env:
+        - name: TZ
+          value: "Asia/Seoul"
+        - name: PROJECT_NAME
+          value: "DDF RAG Service"
+        - name: DEBUG
+          value: "false"
+        - name: HOST
+          value: "0.0.0.0"
+        - name: PORT
+          value: "8001"
+        - name: SECRET_KEY
+          value: "ddf-rag-production-secret-key"
+        - name: ALLOWED_HOSTS
+          value: "*"
+        - name: WATSON_URL
+          value: "https://us-south.ml.cloud.ibm.com"
+        - name: WATSON_MODEL_ID
+          value: "ibm/granite-3-8b-instruct"
+        - name: WATSON_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: rag-secret
+              key: WATSON_API_KEY
+        - name: WATSON_PROJECT_ID
+          valueFrom:
+            secretKeyRef:
+              name: rag-secret
+              key: WATSON_PROJECT_ID
+        - name: BACKEND_API_URL
+          value: "http://backend-service:8000"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: backend-secret
+              key: DATABASE_URL
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /api/v1/health/
+            port: 8001
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/v1/health/
+            port: 8001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3

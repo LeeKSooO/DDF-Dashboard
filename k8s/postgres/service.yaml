@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: ddf-system
+  labels:
+    app: postgres
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+  selector:
+    app: postgres
+---
+# 외부 접근용 NodePort (개발용)
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-nodeport
+  namespace: ddf-system
+  labels:
+    app: postgres
+spec:
+  type: NodePort
+  ports:
+  - port: 5432
+    targetPort: 5432
+    nodePort: 30432  # 외부에서 30432 포트로 접근 가능 (psql로 직접 접근시)
+    protocol: TCP
+  selector:
+    app: postgres
