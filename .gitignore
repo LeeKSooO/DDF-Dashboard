@@ -114,8 +114,9 @@ package-lock.json
 *.sqlite3
 
 # PostgreSQL data volume (contains database files)
-postgres/
-postgres_backup/
+# Note: Only ignoring root-level postgres directories, not k8s/postgres
+/postgres/
+/postgres_backup/
 
 # ===========================================
 # Logs
