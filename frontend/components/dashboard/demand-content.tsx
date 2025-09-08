@@ -562,7 +562,7 @@ export const DemandContent = memo(function DemandContent({
         <div className="col-span-1">
           <Card className="h-fit shadow-lg border-0 bg-gradient-to-br from-gray-50 to-slate-100">
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base font-bold text-gray-800">
+              <CardTitle className="flex items-center gap-2 text-xl font-bold text-gray-800">
                 <Image 
                   src="/sidebar_icon/DRT분석_사이드바.png" 
                   alt="DRT 분석" 
@@ -570,7 +570,10 @@ export const DemandContent = memo(function DemandContent({
                   height={20}
                   className="h-5 w-5"
                 />
-                DRT 모델
+                <div className="leading-tight">
+                  <div>DRT</div>
+                  <div>모델</div>
+                </div>
               </CardTitle>
               <CardDescription className="text-sm text-gray-600">
                 수요응답형 교통 모델
@@ -631,7 +634,7 @@ export const DemandContent = memo(function DemandContent({
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>정류장별 DRT 적합성 지도</CardTitle>
+                  <CardTitle className="text-2xl font-bold">정류장별 DRT 적합성 지도</CardTitle>
                   <CardDescription>
                     구를 클릭하여 정류장을 표시하고, 정류장을 클릭하여 상세 분석을 확인하세요
                   </CardDescription>
@@ -760,7 +763,7 @@ export const DemandContent = memo(function DemandContent({
         {/* 모델별 특성 분석 (정류장 기준) */}
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-2xl font-bold">
               정류장 피크 특성 분석
               <TooltipProvider>
                 <Tooltip>
@@ -906,7 +909,7 @@ export const DemandContent = memo(function DemandContent({
         {/* 시계열 그래프 */}
         <Card className="lg:col-span-3">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-2xl font-bold">
               시간대별 DRT 점수
               <TooltipProvider>
                 <Tooltip>

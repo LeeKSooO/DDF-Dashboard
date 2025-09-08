@@ -594,7 +594,7 @@ export function TrafficAnalysisContent({
         {/* 지역 특성별 정류장 분석 - 상단으로 이동 */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-2xl font-bold">
               <MapPin className="h-5 w-5 text-purple-500" />
               지역 특성별 정류장 분석
               <TooltipProvider>
@@ -882,7 +882,7 @@ export function TrafficAnalysisContent({
           {/* 러시아워 고수요 정류장 */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-2xl font-bold">
                 <Zap className="h-5 w-5 text-orange-500" />
                 러시아워 고수요 정류장
                 <TooltipProvider>
@@ -1043,7 +1043,7 @@ export function TrafficAnalysisContent({
           {/* 저활용 정류장 분석 */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-2xl font-bold">
                 <TrendingDown className="h-5 w-5 text-red-500" />
                 저활용 정류장 분석
                 <TooltipProvider>
@@ -1184,7 +1184,7 @@ export function TrafficAnalysisContent({
           {/* 주말 우세 정류장 */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-2xl font-bold">
                 <Activity className="h-5 w-5 text-blue-500" />
                 주말 우세 정류장
                 <TooltipProvider>
@@ -1266,7 +1266,7 @@ export function TrafficAnalysisContent({
           {/* 심야 고수요 정류장 */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-2xl font-bold">
                 <Clock className="h-5 w-5 text-purple-500" />
                 심야 고수요 정류장
                 <TooltipProvider>
@@ -1345,7 +1345,7 @@ export function TrafficAnalysisContent({
           {/* 점심시간 특화 정류장 */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-2xl font-bold">
                 <Users className="h-5 w-5 text-green-500" />
                 점심시간 특화 정류장
                 <TooltipProvider>

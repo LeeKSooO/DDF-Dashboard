@@ -821,7 +821,7 @@ export function DashboardOverviewContent({
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         {kpi.icon || <span className="text-lg">📊</span>}
-                        <span className="text-base font-bold text-gray-700">
+                        <span className="text-2xl font-bold text-gray-700">
                           {kpi.title}
                         </span>
                         <UITooltip>
@@ -844,12 +844,12 @@ export function DashboardOverviewContent({
                       >
                         {kpi.value}
                       </div>
-                      <div className="text-base text-gray-600">
+                      <div className="text-lg text-gray-600">
                         {kpi.subtitle}
                       </div>
 
                       <div className="mt-3">
-                        <div className="text-base font-medium text-gray-800">
+                        <div className="text-lg font-medium text-gray-800">
                           {kpi.income}
                         </div>
                       </div>
@@ -890,7 +890,7 @@ export function DashboardOverviewContent({
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         {card.icon || <span className="text-lg">🎯</span>}
-                        <span className="text-base font-bold text-gray-700">
+                        <span className="text-2xl font-bold text-gray-700">
                           {card.title}
                         </span>
                       </div>
@@ -900,15 +900,15 @@ export function DashboardOverviewContent({
                       >
                         {card.value}
                       </div>
-                      <div className="text-base text-gray-600">
+                      <div className="text-lg text-gray-600">
                         {card.subtitle}
                       </div>
 
                       <div className="mt-3">
-                        <div className="text-base font-medium text-gray-800">
+                        <div className="text-lg font-medium text-gray-800">
                           {card.income}
                         </div>
-                        <div className="text-xs text-gray-500 mt-1">
+                        <div className="text-sm text-gray-500 mt-1">
                           {card.description}
                         </div>
                       </div>
@@ -934,8 +934,8 @@ export function DashboardOverviewContent({
       {/* 하단 분석 섹션 */}
       <Card>
         <CardHeader>
-          <CardTitle>🚌 교통량 현황</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-2xl font-bold">🚌 교통량 현황</CardTitle>
+          <CardDescription className="text-lg">
             {monthNames[Number.parseInt(selectedMonth) - 1]}{" "}
             {currentData.regionName} 버스 이용량 분석
           </CardDescription>
@@ -946,7 +946,7 @@ export function DashboardOverviewContent({
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 relative">
               {/* 왼쪽: 교통량 지도 */}
               <div className="relative z-10">
-                <h3 className="text-lg font-medium mb-4">
+                <h3 className="text-xl font-medium mb-4">
                   🗺️{" "}
                   {selectedRegion === "전체"
                     ? "서울시 전체 교통량 현황"
@@ -972,7 +972,7 @@ export function DashboardOverviewContent({
                     width={28}
                     height={28}
                   />
-                  <h3 className="text-2xl font-bold">
+                  <h3 className="text-3xl font-bold">
                     {selectedRegion === "전체" ? "전국" : selectedRegion} 인기
                     정류장 TOP 5
                   </h3>

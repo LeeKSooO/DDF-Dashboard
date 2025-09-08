@@ -218,7 +218,7 @@ export const TrafficContent = memo(function TrafficContent({
                 <Users className="h-7 w-7 text-blue-500" />
                 <div className="flex items-center gap-2">
                   <div>
-                    <span className="text-lg font-semibold text-gray-600">
+                    <span className="text-2xl font-semibold text-gray-600">
                       {regionDisplayName} 주중 승차
                     </span>
                     <span className="text-base text-gray-500 ml-2">
@@ -255,7 +255,7 @@ export const TrafficContent = memo(function TrafficContent({
                 <Users className="h-7 w-7 text-red-500" />
                 <div className="flex items-center gap-2">
                   <div>
-                    <span className="text-lg font-semibold text-gray-600">
+                    <span className="text-2xl font-semibold text-gray-600">
                       {regionDisplayName} 주중 하차
                     </span>
                     <span className="text-base text-gray-500 ml-2">
@@ -292,7 +292,7 @@ export const TrafficContent = memo(function TrafficContent({
                 <Users className="h-7 w-7 text-green-500" />
                 <div className="flex items-center gap-2">
                   <div>
-                    <span className="text-lg font-semibold text-gray-600">
+                    <span className="text-2xl font-semibold text-gray-600">
                       {regionDisplayName} 주말 승차
                     </span>
                     <span className="text-base text-gray-500 ml-2">
@@ -329,7 +329,7 @@ export const TrafficContent = memo(function TrafficContent({
                 <Users className="h-7 w-7 text-yellow-500" />
                 <div className="flex items-center gap-2">
                   <div>
-                    <span className="text-lg font-semibold text-gray-600">
+                    <span className="text-2xl font-semibold text-gray-600">
                       {regionDisplayName} 주말 하차
                     </span>
                     <span className="text-base text-gray-500 ml-2">
@@ -756,7 +756,7 @@ export const TrafficContent = memo(function TrafficContent({
           {/* 주중 차트 */}
           <Card className="bg-gray-50">
             <CardHeader>
-              <CardTitle>주중 승하차 패턴 (월~금)</CardTitle>
+              <CardTitle className="text-2xl font-bold">주중 승하차 패턴 (월~금)</CardTitle>
               <CardDescription>주중 24시간 승차/하차 변화 추이</CardDescription>
             </CardHeader>
             <CardContent>
@@ -844,7 +844,7 @@ export const TrafficContent = memo(function TrafficContent({
           {/* 주말 차트 */}
           <Card className="bg-gray-50">
             <CardHeader>
-              <CardTitle>주말 승하차 패턴 (토~일)</CardTitle>
+              <CardTitle className="text-2xl font-bold">주말 승하차 패턴 (토~일)</CardTitle>
               <CardDescription>주말 24시간 승차/하차 변화 추이</CardDescription>
             </CardHeader>
             <CardContent>
@@ -1143,7 +1143,7 @@ export const TrafficContent = memo(function TrafficContent({
             <CardTitle className="flex items-center justify-between text-2xl font-bold">
               <div className="flex items-center space-x-3">
                 <MapPin className="h-8 w-8" />
-                <span>비교할 구 선택</span>
+                <span className="text-3xl font-bold">비교할 구 선택</span>
               </div>
               {selectedRegion && selectedRegion !== "전체" && (
                 <Badge variant="default" className="text-sm bg-blue-600">
@@ -1534,7 +1534,7 @@ export const TrafficContent = memo(function TrafficContent({
                 {/* 주중 승하차 바 차트 */}
                 <Card className="bg-gray-50">
                   <CardHeader>
-                    <CardTitle className="text-lg">
+                    <CardTitle className="text-2xl font-bold">
                       구별 주중 승하차 비교
                     </CardTitle>
                   </CardHeader>
@@ -1606,7 +1606,7 @@ export const TrafficContent = memo(function TrafficContent({
                 {/* 주말 승하차 바 차트 */}
                 <Card className="bg-gray-50">
                   <CardHeader>
-                    <CardTitle className="text-lg">
+                    <CardTitle className="text-2xl font-bold">
                       구별 주말 승하차 비교
                     </CardTitle>
                   </CardHeader>

@@ -633,9 +633,12 @@ export function HeatmapContent({
         <div className="lg:col-span-1 order-2 lg:order-1">
           <Card className="h-fit shadow-lg border-0 bg-gradient-to-br from-gray-50 to-slate-100">
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base font-bold text-gray-800">
+              <CardTitle className="flex items-center gap-2 text-lg font-bold text-gray-800">
                 <Activity className="h-5 w-5 text-purple-600" />
-                패턴 분석
+                <div className="leading-tight">
+                  <div>패턴</div>
+                  <div>분석</div>
+                </div>
               </CardTitle>
               <CardDescription className="text-sm text-gray-600">
                 {selectedRegion === "전체" && !selectedDistrict
@@ -662,7 +665,7 @@ export function HeatmapContent({
                             );
                             setViewMode("station");
                           }}
-                          className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
+                          className={`w-full py-3 px-3 text-base font-bold rounded transition-all ${
                             selectedPattern === "weekend"
                               ? `${getPatternBgClass("weekend")} text-white shadow-lg`
                               : "bg-white text-gray-700 hover:bg-emerald-50 border border-gray-200"
@@ -703,7 +706,7 @@ export function HeatmapContent({
                             );
                             setViewMode("station");
                           }}
-                          className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
+                          className={`w-full py-3 px-3 text-base font-bold rounded transition-all ${
                             selectedPattern === "night"
                               ? `${getPatternBgClass("night")} text-white shadow-lg`
                               : "bg-white text-gray-700 hover:bg-purple-50 border border-gray-200"
@@ -748,7 +751,7 @@ export function HeatmapContent({
                             );
                             setViewMode("station");
                           }}
-                          className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
+                          className={`w-full py-3 px-3 text-base font-bold rounded transition-all ${
                             selectedPattern === "underutilized"
                               ? `${getPatternBgClass("underutilized")} text-white shadow-lg`
                               : "bg-white text-gray-700 hover:bg-red-50 border border-gray-200"
@@ -794,7 +797,7 @@ export function HeatmapContent({
                             );
                             setViewMode("station");
                           }}
-                          className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
+                          className={`w-full py-3 px-3 text-base font-bold rounded transition-all ${
                             selectedPattern === "lunchtime"
                               ? `${getPatternBgClass("lunchtime")} text-white shadow-lg`
                               : "bg-white text-gray-700 hover:bg-green-50 border border-gray-200"
@@ -835,7 +838,7 @@ export function HeatmapContent({
                             );
                             setViewMode("station");
                           }}
-                          className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
+                          className={`w-full py-3 px-3 text-base font-bold rounded transition-all ${
                             selectedPattern === "rushhour"
                               ? `${getPatternBgClass("rushhour")} text-white shadow-lg`
                               : "bg-white text-gray-700 hover:bg-orange-50 border border-gray-200"
@@ -878,7 +881,7 @@ export function HeatmapContent({
                             );
                             setViewMode("station");
                           }}
-                          className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
+                          className={`w-full py-3 px-3 text-base font-bold rounded transition-all ${
                             selectedPattern === "areatype"
                               ? `${getPatternBgClass("areatype")} text-white shadow-lg`
                               : "bg-white text-gray-700 hover:bg-sky-50 border border-gray-200"
