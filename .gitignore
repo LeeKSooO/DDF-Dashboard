@@ -50,6 +50,13 @@ infrastructure/.DS_Store
 infrastructure/database/.DS_Store
 
 # ===========================================
+# Kubernetes Secrets
+# ===========================================
+k8s/**/secret.yaml
+k8s/**/secrets.yaml
+k8s/**/secret-*.yaml
+
+# ===========================================
 # RAG Service
 # ===========================================
 RAG/.env
@@ -107,8 +114,9 @@ package-lock.json
 *.sqlite3
 
 # PostgreSQL data volume (contains database files)
-postgres/
-postgres_backup/
+# Note: Only ignoring root-level postgres directories, not k8s/postgres
+/postgres/
+/postgres_backup/
 
 # ===========================================
 # Logs

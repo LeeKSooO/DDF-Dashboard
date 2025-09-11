@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+  namespace: ddf-system
+  labels:
+    app: frontend
+spec:
+  replicas: 1 
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0  # replicas가 1개일 때는 0으로 설정
+      maxSurge: 1        # 새 Pod 먼저 생성 후 기존 Pod 종료
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: 204572980322.dkr.ecr.ap-northeast-2.amazonaws.com/ddf-frontend:v8
+        imagePullPolicy: IfNotPresent 
+        ports:
+        - containerPort: 3000  # Next.js SSR port
+        env:
+        - name: TZ
+          value: "Asia/Seoul"
+        - name: NODE_ENV
+          value: "production"
+        - name: NEXT_PUBLIC_API_URL
+          value: "/api/v1"  # nginx proxy를 통한 API 호출
+        - name: BACKEND_API_URL
+          value: "http://backend-service:8000"  # SSR용 내부 호출
+        - name: RAG_API_URL
+          value: "http://rag-service:8001"
+        resources:
+          requests:
+            memory: "512Mi"  # Next.js SSR (2x increase)
+            cpu: "200m"      # 2x increase for better performance
+          limits:
+            memory: "1Gi"    # SSR processing (2x increase)
+            cpu: "500m"      
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 3000  # Next.js port
+          initialDelaySeconds: 40
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 3000  # Next.js port
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3

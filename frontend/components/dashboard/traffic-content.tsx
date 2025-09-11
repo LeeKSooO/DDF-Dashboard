@@ -116,7 +116,7 @@ export const TrafficContent = memo(function TrafficContent({
         }
 
         setCurrentData(response);
-      } catch (error) {
+      } catch {
       } finally {
         setLoadingCurrent(false);
       }
@@ -993,7 +993,7 @@ export const TrafficContent = memo(function TrafficContent({
           })
         );
         setDistrictData(newData);
-      } catch (error) {
+      } catch {
       } finally {
         setLoading(false);
       }
