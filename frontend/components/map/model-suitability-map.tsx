@@ -66,6 +66,7 @@ interface ModelSuitabilityMapProps {
   onDistrictAnalysis?: (districtName: string, analysis: DistrictAnalysis) => void
   height?: string
   focusStation?: { lat: number; lng: number; stationName: string } | null
+  filteredStations?: DRTStationData[]
 }
 
 interface StationAnalysis {
@@ -85,7 +86,8 @@ function ModelSuitabilityMapComponent({
   initialDistrictName,
   onDistrictAnalysis,
   height = "600px",
-  focusStation
+  focusStation,
+  filteredStations
 }: ModelSuitabilityMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
@@ -146,9 +148,11 @@ function ModelSuitabilityMapComponent({
       // Clear previous station selection
       setSelectedStation(null)
       
-      // Add station markers to map
+      // Add station markers to map - use filteredStations if provided
       if (mapInstanceRef.current && L) {
-        addStationMarkers(response.stations || [])
+        const stationsToShow = filteredStations || response.stations || []
+        addStationMarkers(stationsToShow)
+        console.log(`🔍 Displaying ${stationsToShow.length} stations (filtered: ${filteredStations ? 'yes' : 'no'})`)
       }
       
     } catch (err) {
@@ -492,6 +496,21 @@ function ModelSuitabilityMapComponent({
     }, 6000)
     
   }, [focusStation, isClient])
+  
+  // Update station markers when filteredStations changes
+  useEffect(() => {
+    if (!isClient || !mapInstanceRef.current || !L) return
+    
+    // If we have station data and filteredStations is provided, update the markers
+    if (stationData.length > 0 && filteredStations) {
+      console.log(`🔄 Updating markers with filtered data: ${filteredStations.length}/${stationData.length} stations`)
+      addStationMarkers(filteredStations)
+    } else if (stationData.length > 0 && !filteredStations) {
+      // If no filter is applied, show all stations
+      console.log(`🔄 Showing all stations: ${stationData.length} stations`)
+      addStationMarkers(stationData)
+    }
+  }, [filteredStations, stationData, isClient])
   
   // Update district styles when needed
   useEffect(() => {

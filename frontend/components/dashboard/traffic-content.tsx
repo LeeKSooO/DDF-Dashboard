@@ -218,12 +218,12 @@ export const TrafficContent = memo(function TrafficContent({
                 <Users className="h-7 w-7 text-blue-500" />
                 <div className="flex items-center gap-2">
                   <div>
-                    <span className="text-2xl font-semibold text-gray-600">
+                    <div className="text-2xl font-semibold text-gray-600">
                       {regionDisplayName} 주중 승차
-                    </span>
-                    <span className="text-base text-gray-500 ml-2">
+                    </div>
+                    <div className="text-base text-gray-500">
                       (정류장 평균)
-                    </span>
+                    </div>
                   </div>
                   <UITooltip>
                     <TooltipTrigger asChild>
@@ -255,12 +255,12 @@ export const TrafficContent = memo(function TrafficContent({
                 <Users className="h-7 w-7 text-red-500" />
                 <div className="flex items-center gap-2">
                   <div>
-                    <span className="text-2xl font-semibold text-gray-600">
+                    <div className="text-2xl font-semibold text-gray-600">
                       {regionDisplayName} 주중 하차
-                    </span>
-                    <span className="text-base text-gray-500 ml-2">
+                    </div>
+                    <div className="text-base text-gray-500">
                       (정류장 평균)
-                    </span>
+                    </div>
                   </div>
                   <UITooltip>
                     <TooltipTrigger asChild>
@@ -292,12 +292,12 @@ export const TrafficContent = memo(function TrafficContent({
                 <Users className="h-7 w-7 text-green-500" />
                 <div className="flex items-center gap-2">
                   <div>
-                    <span className="text-2xl font-semibold text-gray-600">
+                    <div className="text-2xl font-semibold text-gray-600">
                       {regionDisplayName} 주말 승차
-                    </span>
-                    <span className="text-base text-gray-500 ml-2">
+                    </div>
+                    <div className="text-base text-gray-500">
                       (정류장 평균)
-                    </span>
+                    </div>
                   </div>
                   <UITooltip>
                     <TooltipTrigger asChild>
@@ -329,12 +329,12 @@ export const TrafficContent = memo(function TrafficContent({
                 <Users className="h-7 w-7 text-yellow-500" />
                 <div className="flex items-center gap-2">
                   <div>
-                    <span className="text-2xl font-semibold text-gray-600">
+                    <div className="text-2xl font-semibold text-gray-600">
                       {regionDisplayName} 주말 하차
-                    </span>
-                    <span className="text-base text-gray-500 ml-2">
+                    </div>
+                    <div className="text-base text-gray-500">
                       (정류장 평균)
-                    </span>
+                    </div>
                   </div>
                   <UITooltip>
                     <TooltipTrigger asChild>

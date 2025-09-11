@@ -726,18 +726,18 @@ export function DashboardOverviewContent({
         ),
       },
       {
-        key: "traffic-analysis",
-        title: "이상 패턴 분석",
-        value: "6가지",
-        subtitle: "특수 패턴 랭킹",
-        income: "야간/주말/지역별 등",
-        color: "#DC2626",
-        tabId: "traffic-analysis",
-        description: "교통 패턴 & 최적화",
+        key: "od-analysis",
+        title: "OD 분석",
+        value: "이동패턴",
+        subtitle: "출발지-목적지",
+        income: "지역간 흐름 분석",
+        color: "#0EA5E9",
+        tabId: "od-analysis",
+        description: "Origin-Destination 이동 분석",
         icon: (
           <Image
-            src="/navigation_icon/이상패턴분석.png"
-            alt="이상 패턴 분석"
+            src="/sidebar_icon/OD분석_사이드바.png"
+            alt="OD 분석"
             width={20}
             height={20}
           />
@@ -756,6 +756,24 @@ export function DashboardOverviewContent({
           <Image
             src="/navigation_icon/DRT분석.png"
             alt="DRT 분석"
+            width={20}
+            height={20}
+          />
+        ),
+      },
+      {
+        key: "traffic-analysis",
+        title: "이상 패턴 분석",
+        value: "6가지",
+        subtitle: "특수 패턴 랭킹",
+        income: "야간/주말/지역별 등",
+        color: "#DC2626",
+        tabId: "traffic-analysis",
+        description: "교통 패턴 & 최적화",
+        icon: (
+          <Image
+            src="/navigation_icon/이상패턴분석.png"
+            alt="이상 패턴 분석"
             width={20}
             height={20}
           />
@@ -877,7 +895,7 @@ export function DashboardOverviewContent({
               상세 분석 바로가기
             </h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             {navigationCards.map((card) => (
               <Card
                 key={card.key}
