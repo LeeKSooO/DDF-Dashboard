@@ -37,18 +37,18 @@ async def get_seoul_heatmap(
     """
     서울시 교통량 히트맵 데이터 조회
     
-    **주요 기능**:
+    === 주요 기능 === 
     - 서울시 25개 구별 교통량 집계 및 순위
     - 구별 경계 좌표 데이터 (지도 렌더링용)
     - 정류장별 상세 교통량 및 좌표 (선택적)
     - 히트맵 색상 구간을 위한 통계 (사분위수, 최대/최소값)
     
-    **사용 예시**:
+    === 사용 예시 === 
     - 구별 집계만: `?analysis_month=2025-07-01&include_station_details=false`
     - 상세 데이터: `?analysis_month=2025-07-01&include_station_details=true`
     - 필터링: `?analysis_month=2025-07-01&min_traffic_threshold=5000`
     
-    **응답 구조**:
+    === 응답 구조 === 
     ```json
     {
       "seoul_boundary": "서울시 전체 경계 좌표",
@@ -68,7 +68,7 @@ async def get_seoul_heatmap(
     }
     ```
     
-    **참고**: 현재 2025년 7월 16일~31일 데이터만 존재합니다.
+    참고: 현재 2025년 7월 16일~31일 데이터만 존재합니다.
     """
     start_time = time.time()
     
@@ -130,16 +130,16 @@ async def get_district_heatmap(
     """
     특정 구의 정류장별 상세 히트맵 데이터 조회
     
-    **주요 기능**:
+    === 주요 기능 ===
     - 특정 구 내 정류장별 교통량 및 좌표
     - 구 경계 좌표 데이터
     - 정류장별 교통량 순위
     
-    **사용 예시**:
+    === 사용 예시 === 
     - `/districts/강남구?analysis_month=2025-07`
     - `/districts/마포구?analysis_month=2025-07&min_traffic_threshold=1000`
     
-    **참고**: 구명은 URL 인코딩 필요 (강남구 → %EA%B0%95%EB%82%A8%EA%B5%AC)
+    참고: 구명은 URL 인코딩 필요 (강남구 → %EA%B0%95%EB%82%A8%EA%B5%AC)
     """
     start_time = time.time()
     
@@ -197,12 +197,12 @@ async def get_heatmap_statistics(
     """
     히트맵 통계 데이터만 조회 (빠른 로딩용)
     
-    **주요 기능**:
+    === 주요 기능 === 
     - 구별/정류장별 교통량 통계
     - 히트맵 색상 구간 계산용 사분위수
     - 전체 집계 정보
     
-    **사용 예시**:
+    === 사용 예시 === 
     - 히트맵 초기화시 색상 범위 설정
     - 대시보드 통계 카드 표시
     """
