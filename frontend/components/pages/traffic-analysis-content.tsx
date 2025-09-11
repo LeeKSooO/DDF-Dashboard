@@ -433,10 +433,6 @@ export function TrafficAnalysisContent({
         setAnimatedNumbers({}); // 애니메이션 숫자 상태 초기화
         setProgressBarsAnimated(false); // 막대그래프 애니메이션 리셋
 
-        console.log("🚌 Loading integrated traffic analysis data for:", {
-          selectedMonth,
-          selectedRegion,
-        });
 
         const analysisMonth = utils.formatSelectedMonth(selectedMonth);
 
@@ -526,7 +522,6 @@ export function TrafficAnalysisContent({
             data: validateAndNormalize(data.underutilized_stations, '저활용 정류장', []),
           });
 
-          console.log("✅ 모든 패턴 데이터 처리 완료");
         }
       } catch (err) {
         console.error("🚨 Integrated Traffic Analysis API error:", err);
