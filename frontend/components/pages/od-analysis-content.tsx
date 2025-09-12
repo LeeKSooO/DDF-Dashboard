@@ -17,7 +17,6 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -71,7 +70,6 @@ interface MismatchAnalysisData {
 
 interface ODAnalysisContentProps {
   selectedMonth?: string;
-  selectedRegion?: string;
 }
 
 // 분석 모드 정의 (2개만)
@@ -161,7 +159,6 @@ const getServiceQualityColor = (
 
 export const ODAnalysisContent = ({
   selectedMonth = "2025-07-01",
-  selectedRegion = "전체",
 }: ODAnalysisContentProps) => {
   // 기본 상태 관리
   const [selectedStation, setSelectedStation] = useState<string | null>(null);
