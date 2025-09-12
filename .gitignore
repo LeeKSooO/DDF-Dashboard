@@ -271,3 +271,8 @@ legacy
 
 # Reference files (API docs, swagger files, etc.)
 frontend/reference/frontend_bak/
+
+
+data/raw/0715-0731
+data/processed/od/
+data/OD_process

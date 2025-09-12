@@ -4,7 +4,7 @@ OD 데이터 기반 DRT 도입 우선순위 분석 서비스
 """
 
 from typing import List, Optional
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 import logging
@@ -494,6 +494,8 @@ class ODService:
                 SELECT 
                     from_station_id, from_station_name, from_station_num, from_district_name,
                     to_station_id, to_station_name, to_station_num, to_district_name,
+                    from_coordinates_x, from_coordinates_y,
+                    to_coordinates_x, to_coordinates_y,
                     monthly_total_passengers, daily_avg_passengers, avg_distance_km,
                     min_direct_connections, 
                     common_routes, from_routes, to_routes
@@ -537,9 +539,11 @@ class ODService:
                             from_station_id=row.from_station_id,
                             from_station_name=row.from_station_name,
                             from_station_num=row.from_station_num,
+                            from_coordinates={"x": float(row.from_coordinates_x), "y": float(row.from_coordinates_y)},
                             to_station_id=row.to_station_id,
                             to_station_name=row.to_station_name,
                             to_station_num=row.to_station_num,
+                            to_coordinates={"x": float(row.to_coordinates_x), "y": float(row.to_coordinates_y)},
                             from_district=row.from_district_name,
                             to_district=row.to_district_name,
                             distance_km=round(float(row.avg_distance_km), 2)
