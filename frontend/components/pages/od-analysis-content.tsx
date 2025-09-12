@@ -1,104 +1,174 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import DeckGL from '@deck.gl/react';
-import { ArcLayer, ScatterplotLayer, GeoJsonLayer, BitmapLayer } from '@deck.gl/layers';
-import { TileLayer } from '@deck.gl/geo-layers';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import DeckGL from "@deck.gl/react";
+import {
+  ArcLayer,
+  ScatterplotLayer,
+  GeoJsonLayer,
+  BitmapLayer,
+} from "@deck.gl/layers";
+import { TileLayer } from "@deck.gl/geo-layers";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { MapPin } from "lucide-react";
+import { MapPin, Clock, AlertTriangle, X } from "lucide-react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  ReferenceLine
+} from "recharts";
+import { Badge } from "@/components/ui/badge";
 import { ensureFeatureCollection } from "@/lib/geojson-utils";
+import {
+  odAPI,
+  ODAnalysisUtils,
+  type TimeBasedOriginAnalysisResponse,
+  type DemandSupplyMismatchData,
+  type ODPairHourlyAnalysis,
+  type Station,
+  type TimeBasedOriginAnalysis,
+  type DestinationStation,
+} from "@/lib/od-api";
 
-// TypeScript interfaces - 새로운 API 구조에 맞게 수정
-interface Station {
-  id: string;
-  name: string;
-  lat: number;
-  lng: number;
-  totalVolume?: number;
-  station_num?: string;
-  district?: string;
+// TypeScript interfaces - 2개 분석 모드
+interface AnalysisMode {
+  type: "time_based" | "mismatch";
+  label: string;
+  description: string;
 }
 
-interface ODPair {
-  from_station_id: string;
-  from_station_name: string;
-  from_station_num: string;
-  to_station_id: string;
-  to_station_name: string;
-  to_station_num: string;
-  from_district: string;
-  to_district: string;
-  distance_km: number;
+// 시간대별 분석 데이터
+interface TimeAnalysisData {
+  morning_peak?: TimeBasedOriginAnalysisResponse;
+  evening_peak?: TimeBasedOriginAnalysisResponse;
+  daytime?: TimeBasedOriginAnalysisResponse;
+  night?: TimeBasedOriginAnalysisResponse;
 }
 
-interface ODData {
-  od_pair: ODPair;
-  daily_demand: number;
-  transfer_required: boolean;
-  priority_category: string;
-  // 시각화를 위한 추가 필드
-  origin?: Station;
-  destination?: Station;
+// 미스매치 분석 데이터
+interface MismatchAnalysisData {
+  data: DemandSupplyMismatchData[];
+  loading: boolean;
+  error: string | null;
 }
+
 
 interface ODAnalysisContentProps {
   selectedMonth?: string;
   selectedRegion?: string;
 }
 
-// 우선순위 카테고리별 색상 매핑 함수
-const getColorByPriority = (category: string): [number, number, number, number] => {
-  if (category.includes('P1_고수요_환승구간')) return [220, 38, 38, 220];    // 빨간색 - 긴급
-  if (category.includes('P1_저수요_환승구간')) return [249, 115, 22, 200];   // 주황색 - 중요
-  if (category.includes('P2')) return [59, 130, 246, 180];                 // 파란색 - 개선 필요
-  if (category.includes('P3')) return [147, 51, 234, 160];                 // 보라색 - 통합 검토
-  return [156, 163, 175, 140];                                             // 회색 - 기본
+// 분석 모드 정의 (2개만)
+const ANALYSIS_MODES: AnalysisMode[] = [
+  {
+    type: "time_based",
+    label: "시간대별 분석",
+    description: "4개 시간대별 출발지 패턴 분석",
+  },
+  {
+    type: "mismatch",
+    label: "수요-공급 미스매치",
+    description: "DRT 도입 필요성 분석 (24시간 상세분석 포함)",
+  },
+];
+
+// 시간대 정의
+const TIME_PERIODS = [
+  { key: "morning_peak", label: "출근시간", time: "07-09시", color: "#ef4444" },
+  { key: "evening_peak", label: "퇴근시간", time: "17-19시", color: "#f97316" },
+  { key: "daytime", label: "주간시간", time: "10-16시", color: "#3b82f6" },
+  { key: "night", label: "심야시간", time: "23-06시", color: "#8b5cf6" },
+] as const;
+
+// 수요 레벨별 색상
+const getDemandLevelColor = (
+  demand: number
+): [number, number, number, number] => {
+  if (demand >= 1000) return [220, 38, 38, 220]; // 고수요 - 빨간색
+  if (demand >= 500) return [249, 115, 22, 200]; // 중수요 - 주황색
+  if (demand >= 100) return [59, 130, 246, 180]; // 일반 - 파란색
+  if (demand >= 50) return [34, 197, 94, 160]; // 저수요 - 초록색
+  return [156, 163, 175, 140]; // 카테고리 외 - 회색
 };
 
-// 우선순위별 표시 텍스트
-const getPriorityLabel = (category: string): string => {
-  if (category.includes('P1_고수요_환승구간')) return '🚨 P1 고수요 환승';
-  if (category.includes('P1_저수요_환승구간')) return '⚠️ P1 저수요 환승';
-  if (category.includes('P2')) return '🔄 P2 직행부족';
-  if (category.includes('P3')) return '📏 P3 장거리';
-  return '기타';
+// 24시간 차트 데이터 포맷팅
+const formatHourlyChartData = (hourlyPassengers: Record<string, number>, dailyAvg: number) => {
+  return Array.from({ length: 24 }, (_, hour) => ({
+    hour: `${hour}시`,
+    passengers: hourlyPassengers[hour.toString()] || 0,
+    평균선: Math.round(dailyAvg / 24),
+    hourNumber: hour,
+  }));
 };
 
-// 정류장 이름으로 좌표를 매핑하는 함수 (실제로는 API에서 받아와야 함)
-const getStationCoordinates = (stationName: string): { lat: number; lng: number } => {
-  const stationCoords: { [key: string]: { lat: number; lng: number } } = {
-    "대방역": { lat: 37.5136, lng: 126.9267 },
-    "국회의사당역.KB국민은행": { lat: 37.5292, lng: 126.9171 },
-    "경복궁.국립민속박물관": { lat: 37.5796, lng: 126.9770 },
-    "안국역6번출구.인사동문화의거리": { lat: 37.5759, lng: 126.9852 },
-    "남산서울타워": { lat: 37.5512, lng: 126.9882 },
-    "광화문역2번출구.KT광화문지사": { lat: 37.5709, lng: 126.9768 },
-    "남대문세무서": { lat: 37.5582, lng: 126.9783 },
-    "춘추문": { lat: 37.5808, lng: 126.9742 },
-    "미아사거리역": { lat: 37.6129, lng: 127.0257 },
-    "정릉길음시장.길음뉴타운9단지": { lat: 37.6059, lng: 127.0264 },
-    "강남역": { lat: 37.4979, lng: 127.0276 },
-    "역삼역": { lat: 37.5006, lng: 127.0365 },
-    "수서역": { lat: 37.4875, lng: 127.1008 },
-    "명동역": { lat: 37.5638, lng: 126.9822 }
+// 패턴 타입별 색상 및 설정
+const getPatternTypeConfig = (patternType: string) => {
+  const configs = {
+    '출근시간 집중형': {
+      color: '#ef4444',
+      bgColor: 'bg-red-100',
+      textColor: 'text-red-800',
+      icon: '🌅',
+    },
+    '퇴근시간 집중형': {
+      color: '#f97316',
+      bgColor: 'bg-orange-100',
+      textColor: 'text-orange-800',
+      icon: '🌆',
+    },
+    '주간 분산형': {
+      color: '#3b82f6',
+      bgColor: 'bg-blue-100',
+      textColor: 'text-blue-800',
+      icon: '☀️',
+    },
+    '균등 분산형': {
+      color: '#059669',
+      bgColor: 'bg-emerald-100',
+      textColor: 'text-emerald-800',
+      icon: '⚖️',
+    }
   };
-  
-  return stationCoords[stationName] || { lat: 37.5665, lng: 126.9780 }; // 기본값: 서울 중심
+  return configs[patternType as keyof typeof configs] || configs['균등 분산형'];
 };
 
-export const ODAnalysisContent = ({ selectedMonth = "7", selectedRegion = "전체" }: ODAnalysisContentProps) => {
+
+// 서비스 품질 점수별 색상
+const getServiceQualityColor = (
+  score: number
+): [number, number, number, number] => {
+  if (score >= 80) return [34, 197, 94, 180]; // 우수 - 초록색
+  if (score >= 60) return [59, 130, 246, 180]; // 양호 - 파란색
+  if (score >= 40) return [249, 115, 22, 200]; // 보통 - 주황색
+  return [220, 38, 38, 220]; // 불량 - 빨간색
+};
+
+export const ODAnalysisContent = ({
+  selectedMonth = "2025-07-01",
+  selectedRegion = "전체",
+}: ODAnalysisContentProps) => {
+  // 기본 상태 관리
   const [selectedStation, setSelectedStation] = useState<string | null>(null);
   const [hoveredStation, setHoveredStation] = useState<string | null>(null);
-  const [odData, setOdData] = useState<ODData[]>([]);
   const [stationData, setStationData] = useState<Station[]>([]);
-  const [seoulCtprvnGeoJson, setSeoulCtprvnGeoJson] = useState<any>(null); // 시도 (서울특별시)
-  const [seoulSigGeoJson, setSeoulSigGeoJson] = useState<any>(null);       // 구 (25개)
-  const [seoulEmdGeoJson, setSeoulEmdGeoJson] = useState<any>(null);       // 동 (467개)
+  const [seoulCtprvnGeoJson, setSeoulCtprvnGeoJson] = useState<any>(null);
+  const [seoulSigGeoJson, setSeoulSigGeoJson] = useState<any>(null);
+  const [seoulEmdGeoJson, setSeoulEmdGeoJson] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [viewState, setViewState] = useState({
     longitude: 127.0276,
@@ -108,421 +178,769 @@ export const ODAnalysisContent = ({ selectedMonth = "7", selectedRegion = "전�
     bearing: 0,
   });
 
-  // 필터 상태 - 새로운 우선순위 체계
-  const [filters, setFilters] = useState({
-    showP1High: true,     // P1 고수요 환승구간
-    showP1Low: true,      // P1 저수요 환승구간
-    showP2: false,        // P2 직행부족
-    showP3: false,        // P3 장거리
-    selectedPriority: 'P1' as 'P1' | 'P2' | 'P3' | 'ALL',
-    flowDirection: 'both' as 'outbound' | 'inbound' | 'both',
-    showMapBackground: true,
-    showDistrictBoundaries: false,  // 구 경계
-    showDetailedBoundaries: false   // 동 경계
+  // 분석 모드 상태
+  const [currentMode, setCurrentMode] =
+    useState<AnalysisMode["type"]>("time_based");
+
+  // 시간대별 분석 데이터
+  const [timeAnalysis, setTimeAnalysis] = useState<TimeAnalysisData>({});
+  const [selectedTimePeriod, setSelectedTimePeriod] =
+    useState<(typeof TIME_PERIODS)[number]["key"]>("morning_peak");
+
+  // 미스매치 분석 데이터
+  const [mismatchAnalysis, setMismatchAnalysis] =
+    useState<MismatchAnalysisData>({
+      data: [],
+      loading: false,
+      error: null,
+    });
+
+  // 24시간 상세분석 상태
+  const [hourlyAnalysis, setHourlyAnalysis] = useState<{
+    data: ODPairHourlyAnalysis | null;
+    loading: boolean;
+    error: string | null;
+  }>({
+    data: null,
+    loading: false,
+    error: null
   });
 
-  // 데이터 로드 (임시 더미 데이터 + GeoJSON)
+
+
+  // 필터 상태
+  const [filters, setFilters] = useState({
+    // 시간대별 분석용
+    showTimeBasedOrigins: true,
+    showTopDestinations: true,
+    minDemand: 50,
+
+    // 미스매치 분석용
+    minServiceQuality: 40,
+    showHighRiskOnly: false,
+
+    // 일반 설정
+    flowDirection: "both" as "outbound" | "inbound" | "both",
+    showMapBackground: true,
+    showDistrictBoundaries: false,
+    showDetailedBoundaries: false,
+  });
+
+  // 데이터 로드 - 지도 데이터 및 API 데이터
   useEffect(() => {
-    const loadData = async () => {
+    const loadMapData = async () => {
       setLoading(true);
       try {
-        // 3단계 행정구역 GeoJSON 데이터 로드 (한글 인코딩 수정된 버전)
+        // GeoJSON 데이터 로드
         const loadPromises = [
-          // 1. 시도 (서울특별시)
-          fetch('/reference/seoul_ctprvn_fixed.json').then(r => r.json()).then(data => {
-            setSeoulCtprvnGeoJson(ensureFeatureCollection(data));
-            console.log(`✅ Seoul CTPRVN data loaded: ${data.features?.length || 0} features`);
-          }).catch(e => console.warn('시도 지도 로드 실패:', e)),
-          
-          // 2. 구 (25개 구)
-          fetch('/reference/seoul_sig_fixed.json').then(r => r.json()).then(data => {
-            setSeoulSigGeoJson(ensureFeatureCollection(data));
-            console.log(`✅ Seoul SIG data loaded: ${data.features?.length || 0} features`);
-          }).catch(e => console.warn('구 단위 지도 로드 실패:', e)),
-          
-          // 3. 동 (467개 동)
-          fetch('/reference/seoul_emd_fixed.json').then(r => r.json()).then(data => {
-            setSeoulEmdGeoJson(ensureFeatureCollection(data));
-            console.log(`✅ Seoul EMD data loaded: ${data.features?.length || 0} features`);
-          }).catch(e => console.warn('동 단위 지도 로드 실패:', e))
+          fetch("/reference/seoul_ctprvn_fixed.json")
+            .then((r) => r.json())
+            .then((data) => {
+              setSeoulCtprvnGeoJson(ensureFeatureCollection(data));
+            })
+            .catch((e) => console.warn("시도 지도 로드 실패:", e)),
+
+          fetch("/reference/seoul_sig_fixed.json")
+            .then((r) => r.json())
+            .then((data) => {
+              setSeoulSigGeoJson(ensureFeatureCollection(data));
+            })
+            .catch((e) => console.warn("구 단위 지도 로드 실패:", e)),
+
+          fetch("/reference/seoul_emd_fixed.json")
+            .then((r) => r.json())
+            .then((data) => {
+              setSeoulEmdGeoJson(ensureFeatureCollection(data));
+            })
+            .catch((e) => console.warn("동 단위 지도 로드 실패:", e)),
         ];
-        
-        // 모든 지도 데이터 로드를 병렬로 실행
+
         await Promise.allSettled(loadPromises);
-        
-        // 실제 API 호출로 교체 가능
-        // const loadODPriorityData = async (priority: 'P1' | 'P2' | 'P3') => {
-        //   try {
-        //     const response = await fetch(`http://localhost:8000/api/v1/od/priority/${priority.toLowerCase()}?analysis_month=2025-07-01&top_n=20`);
-        //     const data = await response.json();
-        //     return data as ODData[];
-        //   } catch (error) {
-        //     console.warn(`Failed to load ${priority} data:`, error);
-        //     return [];
-        //   }
-        // };
 
-        // 모든 우선순위 데이터를 병렬로 로드
-        // const [p1Data, p2Data, p3Data] = await Promise.all([
-        //   loadODPriorityData('P1'),
-        //   loadODPriorityData('P2'), 
-        //   loadODPriorityData('P3')
-        // ]);
-        // const allODData = [...p1Data, ...p2Data, ...p3Data];
-        
-        // 새로운 API 구조에 맞는 더미 데이터 (팀장님이 제공한 실제 데이터 기반)
-        const dummyODData: ODData[] = [
-          {
-            od_pair: {
-              from_station_id: "118000215",
-              from_station_name: "대방역",
-              from_station_num: "19306.0",
-              to_station_id: "118000047",
-              to_station_name: "국회의사당역.KB국민은행",
-              to_station_num: "19132.0",
-              from_district: "영등포구",
-              to_district: "영등포구",
-              distance_km: 1.8
-            },
-            daily_demand: 158,
-            transfer_required: true,
-            priority_category: "P1_고수요_환승구간"
-          },
-          {
-            od_pair: {
-              from_station_id: "100000418",
-              from_station_name: "경복궁.국립민속박물관",
-              from_station_num: "1603.0",
-              to_station_id: "100000104",
-              to_station_name: "안국역6번출구.인사동문화의거리",
-              to_station_num: "1200.0",
-              from_district: "종로구",
-              to_district: "종로구",
-              distance_km: 0.57
-            },
-            daily_demand: 141,
-            transfer_required: true,
-            priority_category: "P1_고수요_환승구간"
-          },
-          {
-            od_pair: {
-              from_station_id: "102000226",
-              from_station_name: "남산서울타워",
-              from_station_num: "3320.0",
-              to_station_id: "100000023",
-              to_station_name: "광화문역2번출구.KT광화문지사",
-              to_station_num: "1118.0",
-              from_district: "중구",
-              to_district: "종로구",
-              distance_km: 2.66
-            },
-            daily_demand: 138,
-            transfer_required: true,
-            priority_category: "P1_고수요_환승구간"
-          },
-          {
-            od_pair: {
-              from_station_id: "100000418",
-              from_station_name: "경복궁.국립민속박물관",
-              from_station_num: "1603.0",
-              to_station_id: "101000001",
-              to_station_name: "남대문세무서",
-              to_station_num: "2001.0",
-              from_district: "종로구",
-              to_district: "중구",
-              distance_km: 1.75
-            },
-            daily_demand: 96,
-            transfer_required: true,
-            priority_category: "P1_저수요_환승구간"
-          },
-          {
-            od_pair: {
-              from_station_id: "100000023",
-              from_station_name: "광화문역2번출구.KT광화문지사",
-              from_station_num: "1118.0",
-              to_station_id: "100000417",
-              to_station_name: "춘추문",
-              to_station_num: "1602.0",
-              from_district: "종로구",
-              to_district: "종로구",
-              distance_km: 1.22
-            },
-            daily_demand: 90,
-            transfer_required: true,
-            priority_category: "P1_저수요_환승구간"
-          },
-          {
-            od_pair: {
-              from_station_id: "108000011",
-              from_station_name: "미아사거리역",
-              from_station_num: "9011.0",
-              to_station_id: "107000032",
-              to_station_name: "정릉길음시장.길음뉴타운9단지",
-              to_station_num: "8122.0",
-              from_district: "강북구",
-              to_district: "성북구",
-              distance_km: 1.55
-            },
-            daily_demand: 88,
-            transfer_required: true,
-            priority_category: "P1_저수요_환승구간"
-          },
-          // P2, P3 샘플 데이터 추가
-          {
-            od_pair: {
-              from_station_id: "121000001",
-              from_station_name: "강남역",
-              from_station_num: "21001.0",
-              to_station_id: "121000002",
-              to_station_name: "역삼역",
-              to_station_num: "21002.0",
-              from_district: "강남구",
-              to_district: "강남구",
-              distance_km: 2.1
-            },
-            daily_demand: 340,
-            transfer_required: false,
-            priority_category: "P2_직행부족"
-          },
-          {
-            od_pair: {
-              from_station_id: "125000001",
-              from_station_name: "수서역",
-              from_station_num: "25001.0",
-              to_station_id: "101000010",
-              to_station_name: "명동역",
-              to_station_num: "2010.0",
-              from_district: "강남구",
-              to_district: "중구",
-              distance_km: 15.2
-            },
-            daily_demand: 42,
-            transfer_required: false,
-            priority_category: "P3_장거리"
-          }
-        ];
+        // 즉시 fallback 데이터부터 로드하여 시각화가 바로 표시되도록 함
+        console.log("🔄 Loading fallback data for immediate visualization...");
+        loadFallbackTimeBasedData();
 
-        // 정류장 데이터를 OD 데이터에서 추출
-        const stationMap = new Map<string, Station>();
-        
-        dummyODData.forEach(od => {
-          // 출발지 정류장
-          const fromKey = od.od_pair.from_station_id;
-          if (!stationMap.has(fromKey)) {
-            // 정류장 좌표 - 실제로는 API에서 받아와야 함
-            const coords = getStationCoordinates(od.od_pair.from_station_name);
-            stationMap.set(fromKey, {
-              id: fromKey,
-              name: od.od_pair.from_station_name,
-              lat: coords.lat,
-              lng: coords.lng,
-              station_num: od.od_pair.from_station_num,
-              district: od.od_pair.from_district
-            });
-          }
-          
-          // 도착지 정류장
-          const toKey = od.od_pair.to_station_id;
-          if (!stationMap.has(toKey)) {
-            const coords = getStationCoordinates(od.od_pair.to_station_name);
-            stationMap.set(toKey, {
-              id: toKey,
-              name: od.od_pair.to_station_name,
-              lat: coords.lat,
-              lng: coords.lng,
-              station_num: od.od_pair.to_station_num,
-              district: od.od_pair.to_district
-            });
-          }
-          
-          // OD 데이터에 origin, destination 추가
-          od.origin = stationMap.get(fromKey);
-          od.destination = stationMap.get(toKey);
-        });
-
-        const dummyStations = Array.from(stationMap.values());
-
-        setStationData(dummyStations);
-        setOdData(dummyODData);
+        // 그 다음 실제 API 호출 시도
+        await loadAnalysisData();
       } catch (error) {
-        console.error("Failed to load OD data:", error);
+        console.error("Failed to load map data:", error);
+        // 오류 발생시에도 fallback 데이터 로드
+        loadFallbackTimeBasedData();
       } finally {
         setLoading(false);
       }
     };
 
-    loadData();
-  }, [selectedMonth, selectedRegion]);
+    loadMapData();
+  }, []);
 
-  // 선택된 정류장의 OD 플로우 필터링
-  const selectedStationFlows = useMemo(() => {
-    if (!selectedStation) return [];
-    
-    let flows = odData.filter(od => {
-      if (filters.flowDirection === 'outbound') {
-        return od.origin?.id === selectedStation;
-      } else if (filters.flowDirection === 'inbound') {
-        return od.destination?.id === selectedStation;
-      } else {
-        return od.origin?.id === selectedStation || od.destination?.id === selectedStation;
+  // 분석 데이터 로드 함수
+  const loadAnalysisData = async () => {
+    try {
+      if (currentMode === "time_based") {
+        await loadTimeBasedAnalysis();
+      } else if (currentMode === "mismatch") {
+        await loadMismatchAnalysis();
+      }
+    } catch (error) {
+      console.error("Failed to load analysis data:", error);
+    }
+  };
+
+  // 시간대별 분석 데이터 로드
+  const loadTimeBasedAnalysis = async () => {
+    try {
+      const results = await odAPI.getAllTimeBasedAnalysis(selectedMonth, 20);
+      setTimeAnalysis(results);
+
+      // 정류장 데이터 업데이트
+      const allStations = new Map<string, Station>();
+      Object.values(results).forEach((timeData) => {
+        timeData.origins.forEach((origin) => {
+          if (origin.from_station) {
+            allStations.set(
+              origin.from_station.station_id,
+              origin.from_station
+            );
+          }
+          origin.to_stations.forEach((dest) => {
+            allStations.set(dest.station_id, {
+              station_id: dest.station_id,
+              station_name: dest.station_name,
+              station_num: dest.station_num,
+              district_name: dest.district_name,
+              coordinates: dest.coordinates,
+            });
+          });
+        });
+      });
+      setStationData(Array.from(allStations.values()));
+    } catch (error) {
+      console.error("Failed to load time-based analysis:", error);
+      // Fallback 데이터 사용
+      loadFallbackTimeBasedData();
+    }
+  };
+
+  // 미스매치 분석 데이터 로드
+  const loadMismatchAnalysis = async () => {
+    setMismatchAnalysis((prev) => ({ ...prev, loading: true, error: null }));
+    try {
+      const data = await odAPI.getDemandSupplyMismatchAnalysis(
+        selectedMonth,
+        10,
+        50
+      );
+      setMismatchAnalysis({ data, loading: false, error: null });
+
+      // 정류장 데이터 업데이트 - 미스매치 데이터에서 직접 추출
+      const stationMap = new Map<string, Station>();
+      data.forEach((item) => {
+        // 출발지 정류장
+        if (!stationMap.has(item.od_pair.from_station_id)) {
+          stationMap.set(item.od_pair.from_station_id, {
+            station_id: item.od_pair.from_station_id,
+            station_name: item.od_pair.from_station_name,
+            station_num: item.od_pair.from_station_num,
+            district_name: item.od_pair.from_district,
+            coordinates: item.od_pair.from_coordinates,
+          });
+        }
+        // 도착지 정류장
+        if (!stationMap.has(item.od_pair.to_station_id)) {
+          stationMap.set(item.od_pair.to_station_id, {
+            station_id: item.od_pair.to_station_id,
+            station_name: item.od_pair.to_station_name,
+            station_num: item.od_pair.to_station_num,
+            district_name: item.od_pair.to_district,
+            coordinates: item.od_pair.to_coordinates,
+          });
+        }
+      });
+      setStationData(Array.from(stationMap.values()));
+    } catch (error) {
+      console.error("Failed to load mismatch analysis:", error);
+      // Fallback 데이터 사용
+      loadFallbackMismatchData();
+      setMismatchAnalysis((prev) => ({
+        ...prev,
+        loading: false,
+        error: "API 연결 실패 - 샘플 데이터 표시 중",
+      }));
+    }
+  };
+
+  // Fallback 시간대별 데이터 로드
+  const loadFallbackTimeBasedData = () => {
+    const fallbackTimeAnalysis: TimeAnalysisData = {
+      morning_peak: {
+        time_period: "morning_peak",
+        time_period_name: "출근시간 (07-09시)",
+        analysis_month: selectedMonth,
+        total_origins: 15,
+        total_demand: 8500,
+        avg_destinations_per_origin: 12.5,
+        origins: [
+          {
+            from_station: {
+              station_id: "118000215",
+              station_name: "대방역",
+              station_num: "19306",
+              district_name: "영등포구",
+              coordinates: { x: 126.9267, y: 37.5136 },
+            },
+            destination_count: 15,
+            time_period_demand: 850,
+            avg_distance_km: 5.2,
+            drt_potential: "높음",
+            service_recommendation: "DRT 서비스 도입 권장",
+            to_stations: [
+              {
+                station_id: "100000023",
+                station_name: "광화문역2번출구.KT광화문지사",
+                station_num: "1118",
+                district_name: "종로구",
+                coordinates: { x: 126.9768, y: 37.5709 },
+                demand: 158,
+                rank: 1,
+              },
+              {
+                station_id: "121000001",
+                station_name: "강남역",
+                station_num: "21001",
+                district_name: "강남구",
+                coordinates: { x: 127.0276, y: 37.4979 },
+                demand: 142,
+                rank: 2,
+              },
+              {
+                station_id: "102000226",
+                station_name: "남산서울타워",
+                station_num: "3320",
+                district_name: "중구",
+                coordinates: { x: 126.9882, y: 37.5512 },
+                demand: 138,
+                rank: 3,
+              },
+            ],
+          },
+          {
+            from_station: {
+              station_id: "121000001",
+              station_name: "강남역",
+              station_num: "21001",
+              district_name: "강남구",
+              coordinates: { x: 127.0276, y: 37.4979 },
+            },
+            destination_count: 18,
+            time_period_demand: 1200,
+            avg_distance_km: 8.1,
+            drt_potential: "보통",
+            service_recommendation: "기존 노선 개선 검토",
+            to_stations: [
+              {
+                station_id: "100000023",
+                station_name: "광화문역2번출구.KT광화문지사",
+                station_num: "1118",
+                district_name: "종로구",
+                coordinates: { x: 126.9768, y: 37.5709 },
+                demand: 320,
+                rank: 1,
+              },
+              {
+                station_id: "121000002",
+                station_name: "역삼역",
+                station_num: "21002",
+                district_name: "강남구",
+                coordinates: { x: 127.0365, y: 37.5006 },
+                demand: 280,
+                rank: 2,
+              },
+            ],
+          },
+        ],
+      },
+      evening_peak: {
+        time_period: "evening_peak",
+        time_period_name: "퇴근시간 (17-19시)",
+        analysis_month: selectedMonth,
+        total_origins: 12,
+        total_demand: 7200,
+        avg_destinations_per_origin: 10.8,
+        origins: [],
+      },
+      daytime: {
+        time_period: "daytime",
+        time_period_name: "주간시간 (10-16시)",
+        analysis_month: selectedMonth,
+        total_origins: 8,
+        total_demand: 4500,
+        avg_destinations_per_origin: 8.5,
+        origins: [],
+      },
+      night: {
+        time_period: "night",
+        time_period_name: "심야시간 (23-06시)",
+        analysis_month: selectedMonth,
+        total_origins: 5,
+        total_demand: 1200,
+        avg_destinations_per_origin: 4.2,
+        origins: [],
+      },
+    };
+
+    setTimeAnalysis(fallbackTimeAnalysis);
+
+    // 정류장 데이터 업데이트
+    const allStations = new Map<string, Station>();
+    Object.values(fallbackTimeAnalysis).forEach((timeData) => {
+      if (timeData?.origins) {
+        timeData.origins.forEach((origin) => {
+          if (origin.from_station) {
+            allStations.set(
+              origin.from_station.station_id,
+              origin.from_station
+            );
+          }
+          origin.to_stations.forEach((dest) => {
+            allStations.set(dest.station_id, {
+              station_id: dest.station_id,
+              station_name: dest.station_name,
+              station_num: dest.station_num,
+              district_name: dest.district_name,
+              coordinates: dest.coordinates,
+            });
+          });
+        });
       }
     });
+    const stationArray = Array.from(allStations.values());
+    setStationData(stationArray);
 
-    // 우선순위별 필터링
-    flows = flows.filter(od => {
-      if (od.priority_category.includes('P1_고수요_환승구간') && filters.showP1High) return true;
-      if (od.priority_category.includes('P1_저수요_환승구간') && filters.showP1Low) return true;
-      if (od.priority_category.includes('P2') && filters.showP2) return true;
-      if (od.priority_category.includes('P3') && filters.showP3) return true;
-      return false;
+    // 디버깅용 로그
+    console.log(`✅ Fallback time-based data loaded:`);
+    console.log(`   - Stations: ${stationArray.length}`);
+    console.log(
+      `   - Morning peak origins: ${
+        fallbackTimeAnalysis.morning_peak?.origins.length || 0
+      }`
+    );
+    console.log(`   - First station:`, stationArray[0]);
+  };
+
+  // Fallback 미스매치 데이터 로드
+  const loadFallbackMismatchData = () => {
+    const fallbackMismatchData: DemandSupplyMismatchData[] = [
+      {
+        od_pair: {
+          from_station_id: "118000215",
+          from_station_name: "대방역",
+          from_station_num: "19306",
+          to_station_id: "100000023",
+          to_station_name: "광화문역2번출구.KT광화문지사",
+          to_station_num: "1118",
+          from_district: "영등포구",
+          to_district: "종로구",
+          distance_km: 8.5,
+          from_coordinates: { x: 126.9267, y: 37.5136 },
+          to_coordinates: { x: 126.9768, y: 37.5709 },
+        },
+        monthly_total_passengers: 4500,
+        daily_avg_passengers: 150,
+        distance_km: 8.5,
+        service_quality_score: 35,
+        avg_dispatch_interval_min: 25,
+        route_diversity_index: 2.1,
+        transfer_penalty: 1.5,
+        demand_service_ratio: 3.2,
+      },
+      {
+        od_pair: {
+          from_station_id: "121000001",
+          from_station_name: "강남역",
+          from_station_num: "21001",
+          to_station_id: "102000226",
+          to_station_name: "남산서울타워",
+          to_station_num: "3320",
+          from_district: "강남구",
+          to_district: "중구",
+          distance_km: 12.3,
+          from_coordinates: { x: 127.0276, y: 37.4979 },
+          to_coordinates: { x: 126.9882, y: 37.5512 },
+        },
+        monthly_total_passengers: 3200,
+        daily_avg_passengers: 107,
+        distance_km: 12.3,
+        service_quality_score: 42,
+        avg_dispatch_interval_min: 18,
+        route_diversity_index: 1.8,
+        transfer_penalty: 1.2,
+        demand_service_ratio: 2.8,
+      },
+      {
+        od_pair: {
+          from_station_id: "108000011",
+          from_station_name: "미아사거리역",
+          from_station_num: "9011",
+          to_station_id: "107000032",
+          to_station_name: "정릉길음시장.길음뉴타운9단지",
+          to_station_num: "8122",
+          from_district: "강북구",
+          to_district: "성북구",
+          distance_km: 1.55,
+          from_coordinates: { x: 127.0257, y: 37.6129 },
+          to_coordinates: { x: 127.0264, y: 37.6059 },
+        },
+        monthly_total_passengers: 2640,
+        daily_avg_passengers: 88,
+        distance_km: 1.55,
+        service_quality_score: 65,
+        avg_dispatch_interval_min: 12,
+        route_diversity_index: 2.5,
+        transfer_penalty: 1.3,
+        demand_service_ratio: 1.8,
+      },
+    ];
+
+    setMismatchAnalysis({
+      data: fallbackMismatchData,
+      loading: false,
+      error: null,
     });
 
-    return flows;
-  }, [selectedStation, odData, filters]);
+    // 정류장 데이터 업데이트 - fallback 데이터에서 직접 추출
+    const stationMap = new Map<string, Station>();
+    fallbackMismatchData.forEach((item) => {
+      // 출발지 정류장
+      if (!stationMap.has(item.od_pair.from_station_id)) {
+        stationMap.set(item.od_pair.from_station_id, {
+          station_id: item.od_pair.from_station_id,
+          station_name: item.od_pair.from_station_name,
+          station_num: item.od_pair.from_station_num,
+          district_name: item.od_pair.from_district,
+          coordinates: item.od_pair.from_coordinates,
+        });
+      }
+      // 도착지 정류장
+      if (!stationMap.has(item.od_pair.to_station_id)) {
+        stationMap.set(item.od_pair.to_station_id, {
+          station_id: item.od_pair.to_station_id,
+          station_name: item.od_pair.to_station_name,
+          station_num: item.od_pair.to_station_num,
+          district_name: item.od_pair.to_district,
+          coordinates: item.od_pair.to_coordinates,
+        });
+      }
+    });
+    setStationData(Array.from(stationMap.values()));
+  };
+
+  // 모드 변경시 데이터 로드
+  useEffect(() => {
+    if (!loading) {
+      loadAnalysisData();
+    }
+  }, [currentMode, selectedMonth]);
+
+
+  // 선택된 정류장의 관련 데이터 필터링
+  const selectedStationData = useMemo(() => {
+    if (!selectedStation) return [];
+
+    if (currentMode === "time_based" && timeAnalysis[selectedTimePeriod]) {
+      return (
+        timeAnalysis[selectedTimePeriod]?.origins.find(
+          (origin) => origin.from_station.station_id === selectedStation
+        )?.to_stations || []
+      );
+    } else if (currentMode === "mismatch") {
+      return mismatchAnalysis.data.filter(
+        (item) =>
+          item.od_pair.from_station_id === selectedStation ||
+          item.od_pair.to_station_id === selectedStation
+      );
+    }
+    return [];
+  }, [
+    selectedStation,
+    currentMode,
+    timeAnalysis,
+    selectedTimePeriod,
+    mismatchAnalysis.data,
+  ]);
 
   // 정류장 레이어
   const stationLayer = new ScatterplotLayer({
-    id: 'stations',
+    id: "stations",
     data: stationData,
-    getPosition: (d: Station) => [d.lng, d.lat],
+    getPosition: (d: Station) => {
+      const coords = ODAnalysisUtils.convertCoordinates(d.coordinates);
+      // 디버깅용 로그
+      if (stationData.length > 0 && stationData.indexOf(d) < 3) {
+        console.log(
+          `🗺️ Station ${d.station_name} position: [${coords.lng}, ${coords.lat}]`
+        );
+      }
+      return [coords.lng, coords.lat];
+    },
     getRadius: (d: Station) => {
-      if (selectedStation === d.id) return 300;
-      if (hoveredStation === d.id) return 200;
-      return Math.max(80, Math.log(d.totalVolume || 1000) * 15);
+      if (selectedStation === d.station_id) return 400;
+      if (hoveredStation === d.station_id) return 300;
+      // 더 큰 반지름으로 정류장이 잘 보이도록 함
+      return 150;
     },
     getFillColor: (d: Station) => {
-      if (selectedStation === d.id) return [255, 50, 50, 255];
-      if (hoveredStation === d.id) return [255, 165, 0, 220];
-      return [59, 130, 246, 200]; // 더 진한 파랑
+      if (selectedStation === d.station_id) return [255, 50, 50, 255];
+      if (hoveredStation === d.station_id) return [255, 165, 0, 220];
+      // 더 진한 색상으로 정류장이 잘 보이도록 함
+      return [59, 130, 246, 255];
     },
-    getLineColor: [255, 255, 255, 100],
-    lineWidthMinPixels: 2,
+    getLineColor: [255, 255, 255, 255],
+    lineWidthMinPixels: 3,
     pickable: true,
     onHover: ({ object }) => {
-      setHoveredStation(object?.id || null);
+      setHoveredStation(object?.station_id || null);
+      if (object) {
+        console.log(`🖱️ Hovering station: ${object.station_name}`);
+      }
     },
     onClick: ({ object }) => {
-      setSelectedStation(object?.id || null);
+      setSelectedStation(object?.station_id || null);
+      if (object) {
+        console.log(`🖱️ Selected station: ${object.station_name}`);
+      }
     },
     updateTriggers: {
       getRadius: [selectedStation, hoveredStation],
-      getFillColor: [selectedStation, hoveredStation]
-    }
+      getFillColor: [selectedStation, hoveredStation],
+    },
   });
 
-  // OD 플로우 레이어 - 선택 안 했을 때는 필터링된 OD 표시
-  const filteredFlowData = useMemo(() => {
-    if (selectedStation) return selectedStationFlows;
-    
-    // 우선순위별 필터링
-    return odData.filter(od => {
-      if (od.priority_category.includes('P1_고수요_환승구간') && filters.showP1High) return true;
-      if (od.priority_category.includes('P1_저수요_환승구간') && filters.showP1Low) return true;
-      if (od.priority_category.includes('P2') && filters.showP2) return true;
-      if (od.priority_category.includes('P3') && filters.showP3) return true;
-      return false;
-    });
-  }, [selectedStation, selectedStationFlows, odData, filters]);
+  // 플로우 레이어 데이터 생성
+  const flowLayerData = useMemo(() => {
+    let flows: any[] = [];
+
+    if (currentMode === "time_based" && timeAnalysis[selectedTimePeriod]) {
+      timeAnalysis[selectedTimePeriod]?.origins.forEach((origin) => {
+        if (
+          selectedStation &&
+          origin.from_station.station_id !== selectedStation
+        )
+          return;
+
+        origin.to_stations.forEach((destination) => {
+          if (destination.demand >= filters.minDemand) {
+            flows.push({
+              analysis_type: "time_based",
+              // ✅ ID를 함께 넣는다
+              from_station_id: origin.from_station.station_id,
+              to_station_id: destination.station_id,
+              from_coordinates: origin.from_station.coordinates,
+              to_coordinates: destination.coordinates,
+              demand: destination.demand,
+              distance_km: 0,
+            });
+          }
+        });
+      });
+    } else if (currentMode === "mismatch") {
+      flows = mismatchAnalysis.data
+        .filter(
+          (item) => item.service_quality_score >= filters.minServiceQuality
+        )
+        .filter(
+          (item) => !filters.showHighRiskOnly || item.demand_service_ratio > 2
+        )
+        .map((item) => ({
+          analysis_type: "mismatch",
+          // ✅ ID를 함께 넣는다
+          from_station_id: item.od_pair.from_station_id,
+          to_station_id: item.od_pair.to_station_id,
+          from_coordinates: item.od_pair.from_coordinates,
+          to_coordinates: item.od_pair.to_coordinates,
+          demand: item.daily_avg_passengers,
+          distance_km: item.distance_km,
+          service_quality: item.service_quality_score,
+        }));
+    }
+
+    // 디버깅용 로그
+    console.log(
+      `🔄 Flow layer data: ${flows.length} flows for mode ${currentMode}`
+    );
+    if (flows.length > 0) {
+      console.log(`🔄 First flow sample:`, flows[0]);
+    }
+
+    return flows;
+  }, [
+    currentMode,
+    timeAnalysis,
+    selectedTimePeriod,
+    mismatchAnalysis.data,
+    selectedStation,
+    filters,
+  ]);
 
   const flowLayer = new ArcLayer({
-    id: 'od-flows',
-    data: filteredFlowData,
-    getSourcePosition: (d: ODData) => [d.origin?.lng || 0, d.origin?.lat || 0],
-    getTargetPosition: (d: ODData) => [d.destination?.lng || 0, d.destination?.lat || 0],
-    getHeight: (d: ODData) => {
-      const demandHeight = Math.log(d.daily_demand + 1) * 0.12;
-      const distanceMultiplier = d.od_pair.distance_km > 5 ? 1.5 : 1.0;
-      const transferMultiplier = d.transfer_required ? 1.3 : 1.0;
-      return demandHeight * distanceMultiplier * transferMultiplier;
+    id: "od-flows",
+    data: flowLayerData,
+    getSourcePosition: (d: any) => {
+      const coords = ODAnalysisUtils.convertCoordinates(d.from_coordinates);
+      return [coords.lng, coords.lat];
     },
-    getSourceColor: (d: ODData) => getColorByPriority(d.priority_category),
-    getTargetColor: (d: ODData) => getColorByPriority(d.priority_category),
-    getWidth: (d: ODData) => Math.max(3, Math.log(d.daily_demand + 1) * 2),
+    getTargetPosition: (d: any) => {
+      const coords = ODAnalysisUtils.convertCoordinates(d.to_coordinates);
+      return [coords.lng, coords.lat];
+    },
+    getHeight: (d: any) => {
+      const baseHeight = Math.log(d.demand + 1) * 0.3;
+      return d.analysis_type === "mismatch" ? baseHeight * 2.0 : baseHeight;
+    },
+    getSourceColor: (d: any) => {
+      if (d.analysis_type === "time_based") {
+        return getDemandLevelColor(d.demand);
+      } else {
+        return getServiceQualityColor(d.service_quality || 50);
+      }
+    },
+    getTargetColor: (d: any) => {
+      if (d.analysis_type === "time_based") {
+        return getDemandLevelColor(d.demand);
+      } else {
+        return getServiceQualityColor(d.service_quality || 50);
+      }
+    },
+    getWidth: (d: any) => Math.max(4, Math.log(d.demand + 1) * 2.5),
     pickable: true,
     autoHighlight: true,
+    visible: true,
+    opacity: 0.8,
+    onClick: ({ object }: any) => {
+      // ✅ 방어코드: ID 없으면 중단
+      const fromId = object?.from_station_id;
+      const toId = object?.to_station_id;
+      if (!fromId || !toId) {
+        console.warn('🚨 Arc object has no station IDs:', object);
+        return;
+      }
+
+      console.log('🔄 Arc clicked - loading 24h analysis:', { fromId, toId, selectedMonth });
+
+      // Promise를 무시하여 비동기 호출
+      (async () => {
+        try {
+          setHourlyAnalysis({ data: null, loading: true, error: null });
+
+          const result = await odAPI.getODPairHourlyAnalysis(
+            fromId, 
+            toId, 
+            selectedMonth
+          );
+          
+          setHourlyAnalysis({ data: result, loading: false, error: null });
+          console.log('✅ 24h analysis loaded successfully');
+          
+        } catch (error) {
+          console.error('❌ Failed to load hourly analysis:', error);
+          setHourlyAnalysis({ 
+            data: null, 
+            loading: false, 
+            error: '데이터를 불러올 수 없습니다' 
+          });
+        }
+      })();
+    },
   });
 
   // 1단계: 시도 배경 레이어 (서울특별시 전체)
-  const ctprvnLayer = seoulCtprvnGeoJson && filters.showMapBackground ? new GeoJsonLayer({
-    id: 'seoul-ctprvn',
-    data: seoulCtprvnGeoJson,
-    pickable: false,
-    stroked: true,
-    filled: true,
-    getFillColor: [255, 255, 255, 30],  // 더 투명하게
-    getLineColor: [100, 100, 100, 150],  // 연한 회색 테두리
-    getLineWidth: 100,
-    lineWidthMinPixels: 2,
-  }) : null;
+  const ctprvnLayer =
+    seoulCtprvnGeoJson && filters.showMapBackground
+      ? new GeoJsonLayer({
+          id: "seoul-ctprvn",
+          data: seoulCtprvnGeoJson,
+          pickable: false,
+          stroked: true,
+          filled: true,
+          getFillColor: [255, 255, 255, 30],
+          getLineColor: [100, 100, 100, 150],
+          getLineWidth: 100,
+          lineWidthMinPixels: 2,
+        })
+      : null;
 
   // 2단계: 구 경계 레이어 (25개 구)
-  const sigLayer = seoulSigGeoJson && filters.showDistrictBoundaries ? new GeoJsonLayer({
-    id: 'seoul-sig',
-    data: seoulSigGeoJson,
-    pickable: true,
-    stroked: true,
-    filled: true,
-    getFillColor: (d: any) => {
-      // 호버 상태일 때 하이라이트
-      return hoveredStation === `district_${d.properties?.SIG_CD}` ? 
-        [100, 150, 255, 80] : [255, 255, 255, 20];  // 더 투명하게
-    },
-    getLineColor: [80, 80, 80, 180],  // 진한 회색 구 경계
-    getLineWidth: 30,
-    lineWidthMinPixels: 1.5,
-    onHover: ({ object }) => {
-      if (object) {
-        setHoveredStation(`district_${object.properties?.SIG_CD}`);
-      } else {
-        setHoveredStation(null);
-      }
-    },
-    updateTriggers: {
-      getFillColor: [hoveredStation]
-    }
-  }) : null;
+  const sigLayer =
+    seoulSigGeoJson && filters.showDistrictBoundaries
+      ? new GeoJsonLayer({
+          id: "seoul-sig",
+          data: seoulSigGeoJson,
+          pickable: true,
+          stroked: true,
+          filled: true,
+          getFillColor: (d: any) => {
+            return hoveredStation === `district_${d.properties?.SIG_CD}`
+              ? [100, 150, 255, 80]
+              : [255, 255, 255, 20];
+          },
+          getLineColor: [80, 80, 80, 180],
+          getLineWidth: 30,
+          lineWidthMinPixels: 1.5,
+          onHover: ({ object }) => {
+            if (object) {
+              setHoveredStation(`district_${object.properties?.SIG_CD}`);
+            } else {
+              setHoveredStation(null);
+            }
+          },
+          updateTriggers: {
+            getFillColor: [hoveredStation],
+          },
+        })
+      : null;
 
   // 3단계: 동 경계 레이어 (467개 동)
-  const emdLayer = seoulEmdGeoJson && filters.showDetailedBoundaries ? new GeoJsonLayer({
-    id: 'seoul-emd',
-    data: seoulEmdGeoJson,
-    pickable: true,
-    stroked: true,
-    filled: false,
-    getFillColor: [0, 0, 0, 0],
-    getLineColor: (d: any) => {
-      // 호버 상태일 때 하이라이트
-      return hoveredStation === `emd_${d.properties?.EMD_CD}` ? 
-        [255, 100, 100, 200] : [100, 100, 100, 100];  // 더 연한 회색
-    },
-    getLineWidth: (d: any) => {
-      return hoveredStation === `emd_${d.properties?.EMD_CD}` ? 30 : 15;
-    },
-    lineWidthMinPixels: 0.3,
-    onHover: ({ object }) => {
-      if (object) {
-        setHoveredStation(`emd_${object.properties?.EMD_CD}`);
-      } else if (!hoveredStation?.startsWith('district_')) {
-        // 구 호버 중이 아닐 때만 null로 설정
-        setHoveredStation(null);
-      }
-    },
-    updateTriggers: {
-      getLineColor: [hoveredStation],
-      getLineWidth: [hoveredStation]
-    }
-  }) : null;
+  const emdLayer =
+    seoulEmdGeoJson && filters.showDetailedBoundaries
+      ? new GeoJsonLayer({
+          id: "seoul-emd",
+          data: seoulEmdGeoJson,
+          pickable: true,
+          stroked: true,
+          filled: false,
+          getFillColor: [0, 0, 0, 0],
+          getLineColor: (d: any) => {
+            return hoveredStation === `emd_${d.properties?.EMD_CD}`
+              ? [255, 100, 100, 200]
+              : [100, 100, 100, 100];
+          },
+          getLineWidth: (d: any) => {
+            return hoveredStation === `emd_${d.properties?.EMD_CD}` ? 30 : 15;
+          },
+          lineWidthMinPixels: 0.3,
+          onHover: ({ object }) => {
+            if (object) {
+              setHoveredStation(`emd_${object.properties?.EMD_CD}`);
+            } else if (!hoveredStation?.startsWith("district_")) {
+              setHoveredStation(null);
+            }
+          },
+          updateTriggers: {
+            getLineColor: [hoveredStation],
+            getLineWidth: [hoveredStation],
+          },
+        })
+      : null;
 
-  // CartoDB 지도 타일 레이어 (Leaflet과 동일한 스타일)
+  // CartoDB 지도 타일 레이어
   const tileLayer = new TileLayer({
-    id: 'carto-tiles',
+    id: "carto-tiles",
     data: [
-      // CartoDB Positron 타일 (밝은 스타일)
-      'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-      'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-      'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-      'https://d.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'
+      "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+      "https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+      "https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+      "https://d.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
     ],
     minZoom: 0,
     maxZoom: 20,
@@ -534,19 +952,19 @@ export const ODAnalysisContent = ({ selectedMonth = "7", selectedRegion = "전�
       return new BitmapLayer(props, {
         data: undefined,
         image: props.data,
-        bounds: [bbox.west, bbox.south, bbox.east, bbox.north]
+        bounds: [bbox.west, bbox.south, bbox.east, bbox.north],
       });
-    }
+    },
   });
 
-  // 레이어 순서: 타일(맨 아래) → 시도배경 → 구경계 → 동경계 → 스테이션 → 플로우
+  // 레이어 순서: 타일 → 시도배경 → 구경계 → 동경계 → 스테이션 → 플로우
   const layers = [
-    tileLayer,  // CartoDB 타일을 가장 아래에
+    tileLayer,
     ...(ctprvnLayer ? [ctprvnLayer] : []),
     ...(sigLayer ? [sigLayer] : []),
     ...(emdLayer ? [emdLayer] : []),
     stationLayer,
-    flowLayer
+    flowLayer,
   ].filter(Boolean);
 
   // 로딩 중일 때
@@ -564,7 +982,10 @@ export const ODAnalysisContent = ({ selectedMonth = "7", selectedRegion = "전�
   return (
     <div className="h-full flex">
       {/* 메인 지도 영역 */}
-      <div className="flex-1 relative" onContextMenu={(e) => e.preventDefault()}>
+      <div
+        className="flex-1 relative"
+        onContextMenu={(e) => e.preventDefault()}
+      >
         <DeckGL
           viewState={viewState}
           onViewStateChange={({ viewState }: any) => setViewState(viewState)}
@@ -572,247 +993,290 @@ export const ODAnalysisContent = ({ selectedMonth = "7", selectedRegion = "전�
           layers={layers}
           getTooltip={({ object }: any) => {
             if (!object) return null;
-            
-            if (object.name) {
+
+            if (object.station_name) {
               // 정류장 툴팁
               return {
                 html: `
                   <div class="bg-white p-2 rounded shadow-lg">
-                    <div class="font-bold">${object.name}</div>
-                    <div class="text-sm">구역: ${object.district || 'N/A'}</div>
-                    <div class="text-sm">정류장 번호: ${object.station_num || 'N/A'}</div>
-                    <div class="text-xs text-gray-500 mt-1">클릭하여 OD 플로우 보기</div>
+                    <div class="font-bold">${object.station_name}</div>
+                    <div class="text-sm">구역: ${
+                      object.district_name || "N/A"
+                    }</div>
+                    <div class="text-sm">정류장 번호: ${
+                      object.station_num || "N/A"
+                    }</div>
+                    <div class="text-xs text-gray-500 mt-1">클릭하여 연결 정보 보기</div>
                   </div>
-                `
+                `,
               };
-            } else if (object.od_pair) {
-              // OD 플로우 툴팁
-              const priorityLabel = getPriorityLabel(object.priority_category);
-              return {
-                html: `
-                  <div class="bg-white p-3 rounded shadow-lg border-l-4 ${
-                    object.priority_category.includes('P1_고수요') ? 'border-red-500' :
-                    object.priority_category.includes('P1_저수요') ? 'border-orange-500' :
-                    object.priority_category.includes('P2') ? 'border-blue-500' :
-                    object.priority_category.includes('P3') ? 'border-purple-500' : 'border-gray-500'
-                  }">
-                    <div class="font-bold text-sm">${object.od_pair.from_station_name}</div>
-                    <div class="text-center text-xs text-gray-500 my-1">↓</div>
-                    <div class="font-bold text-sm">${object.od_pair.to_station_name}</div>
-                    <div class="mt-2 space-y-1">
-                      <div class="text-sm">📊 일일 수요: <span class="font-bold">${object.daily_demand.toLocaleString()}명</span></div>
-                      <div class="text-sm">📏 거리: <span class="font-bold">${object.od_pair.distance_km}km</span></div>
-                      <div class="text-sm">🔄 환승: <span class="font-bold">${object.transfer_required ? '필요' : '불필요'}</span></div>
-                      <div class="text-sm">🏢 구간: ${object.od_pair.from_district} → ${object.od_pair.to_district}</div>
-                      <div class="text-xs mt-2 px-2 py-1 rounded" style="background: ${
-                        object.priority_category.includes('P1_고수요') ? '#fee2e2' :
-                        object.priority_category.includes('P1_저수요') ? '#fed7aa' :
-                        object.priority_category.includes('P2') ? '#dbeafe' :
-                        object.priority_category.includes('P3') ? '#e9d5ff' : '#f3f4f6'
-                      }">${priorityLabel}</div>
+            } else if (object.analysis_type) {
+              // 플로우 툴팁
+              if (object.analysis_type === "time_based") {
+                return {
+                  html: `
+                    <div class="bg-white p-3 rounded shadow-lg border-l-4 border-blue-500">
+                      <div class="font-bold text-sm">시간대별 이동 패턴</div>
+                      <div class="mt-2 space-y-1">
+                        <div class="text-sm">📊 수요: <span class="font-bold">${
+                          object.demand?.toLocaleString() || 0
+                        }명</span></div>
+                        <div class="text-sm">⏰ 시간대: <span class="font-bold">${
+                          TIME_PERIODS.find((p) => p.key === selectedTimePeriod)
+                            ?.label || ""
+                        }</span></div>
+                        <div class="text-xs text-gray-500 mt-2">DRT 서비스 검토 대상</div>
+                      </div>
                     </div>
-                  </div>
-                `
-              };
-            } else if (object.properties && (object.properties.SIG_KOR_NM || object.properties.SIG_ENG_NM)) {
-              // 구 경계 툴팁
-              const korName = object.properties.SIG_KOR_NM || 'N/A';
-              const engName = object.properties.SIG_ENG_NM || '';
-              const sigCode = object.properties.SIG_CD || '';
-              
-              // 해당 구의 정류장 개수 계산
-              const stationsInDistrict = stationData.filter(station => {
-                // 간단한 좌표 범위 체크 (실제로는 point-in-polygon이 정확)
-                return station.name.includes(korName.replace('구', '')) || 
-                       korName.includes('강남') && (station.name.includes('강남') || station.name.includes('역삼') || station.name.includes('선릉')) ||
-                       korName.includes('서초') && station.name.includes('교대') ||
-                       korName.includes('송파') && station.name.includes('잠실');
-              });
-              
-              // 해당 구의 OD 플로우 개수 계산
-              const odFlowsInDistrict = odData.filter(od => 
-                stationsInDistrict.some(s => s.id === od.origin?.id || s.id === od.destination?.id)
-              );
-              
-              return {
-                html: `
-                  <div class="bg-white p-3 rounded shadow-lg border-l-4 border-blue-500">
-                    <div class="font-bold text-lg text-gray-800">${korName}</div>
-                    ${engName && `<div class="text-sm text-gray-500 mb-2">${engName}</div>`}
-                    <div class="space-y-1">
-                      <div class="text-sm">🏢 구 코드: <span class="font-mono">${sigCode}</span></div>
-                      <div class="text-sm">🚇 관할 정류장: <span class="font-bold text-blue-600">${stationsInDistrict.length}개</span></div>
-                      <div class="text-sm">🔄 OD 연결: <span class="font-bold text-orange-600">${odFlowsInDistrict.length}개</span></div>
-                      ${odFlowsInDistrict.filter(od => od.priority_category.includes('P1') || od.priority_category.includes('P2')).length > 0 ? 
-                        `<div class="text-xs text-orange-600 mt-1">🎯 DRT 우선구간 ${odFlowsInDistrict.filter(od => od.priority_category.includes('P1') || od.priority_category.includes('P2')).length}개</div>` : ''}
+                  `,
+                };
+              } else {
+                return {
+                  html: `
+                    <div class="bg-white p-3 rounded shadow-lg border-l-4 border-orange-500">
+                      <div class="font-bold text-sm">수요-공급 미스매치</div>
+                      <div class="mt-2 space-y-1">
+                        <div class="text-sm">📊 일평균 승객: <span class="font-bold">${
+                          object.demand?.toLocaleString() || 0
+                        }명</span></div>
+                        <div class="text-sm">📏 거리: <span class="font-bold">${
+                          object.distance_km?.toFixed(1) || 0
+                        }km</span></div>
+                        <div class="text-sm">⭐ 서비스 점수: <span class="font-bold">${Math.round(
+                          object.service_quality || 0
+                        )}점</span></div>
+                        <div class="text-xs text-gray-500 mt-2">DRT 도입 필요 구간</div>
+                      </div>
                     </div>
-                  </div>
-                `
-              };
-            } else if (object.properties && (object.properties.EMD_KOR_NM || object.properties.EMD_ENG_NM)) {
-              // 동 경계 툴팁
-              const korName = object.properties.EMD_KOR_NM || 'N/A';
-              const engName = object.properties.EMD_ENG_NM || '';
-              const emdCode = object.properties.EMD_CD || '';
-              
-              return {
-                html: `
-                  <div class="bg-white p-2 rounded shadow-lg border-l-2 border-gray-400">
-                    <div class="font-bold">${korName}</div>
-                    ${engName && `<div class="text-xs text-gray-500">${engName}</div>`}
-                    <div class="text-xs text-gray-600 mt-1">동코드: ${emdCode}</div>
-                  </div>
-                `
-              };
+                  `,
+                };
+              }
             }
             return null;
           }}
         />
-        
-        {/* 지도 백업 배경 (CartoDB 타일이 있으므로 필요없음) */}
-        
-        {/* 서울 지역 표시 */}
-        <div className="absolute top-4 left-4 z-10 text-xs text-gray-600 bg-white/90 p-2 rounded shadow-sm">
-          📍 서울특별시 강남권 (강남구, 서초구, 송파구)
-          <br />
-          <span className="text-gray-500">
-            🗺️ CartoDB 지도 표시
-            {ctprvnLayer && <span className="block">🏛️ 서울특별시 경계</span>}
-            {sigLayer && <span className="block">🏢 구 경계 (25개 구)</span>}
-            {emdLayer && <span className="block">📍 동 경계 (467개 동)</span>}
-          </span>
+
+        {/* 현재 분석 정보 */}
+        <div className="absolute top-4 left-4 z-10 text-xs text-gray-600 bg-white/95 p-3 rounded-lg shadow-lg">
+          <div className="font-medium mb-1">
+            {ANALYSIS_MODES.find((mode) => mode.type === currentMode)?.label}
+            {mismatchAnalysis.error && currentMode === "mismatch" && (
+              <span className="ml-2 text-orange-600 text-xs">
+                ⚠️ 샘플 데이터
+              </span>
+            )}
+          </div>
+          {currentMode === "time_based" && (
+            <div className="text-gray-500">
+              📅 {selectedMonth} •{" "}
+              {TIME_PERIODS.find((p) => p.key === selectedTimePeriod)?.label}
+              <br />
+              📊 총 {timeAnalysis[selectedTimePeriod]?.total_origins || 0}개
+              출발지
+              <br />
+              👥 총{" "}
+              {(
+                timeAnalysis[selectedTimePeriod]?.total_demand || 0
+              ).toLocaleString()}
+              명 수요
+            </div>
+          )}
+          {currentMode === "mismatch" && (
+            <div className="text-gray-500">
+              📅 {selectedMonth} 분석 결과
+              <br />
+              🔍 {mismatchAnalysis.data.length}개 구간 분석
+              <br />
+              ⚠️{" "}
+              {
+                mismatchAnalysis.data.filter(
+                  (item) => item.demand_service_ratio > 2
+                ).length
+              }
+              개 고위험 구간
+            </div>
+          )}
+          <div className="text-gray-400 mt-2 border-t pt-1">
+            🗺️ 3D 지도 표시 • 정류장 클릭으로 상세 정보
+            {mismatchAnalysis.error && currentMode === "mismatch" && (
+              <div className="text-orange-500 mt-1">
+                API 연결 실패 - 데모 데이터 사용 중
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* 필터 컨트롤 - 초컴팩트 */}
-        <Card className="absolute top-4 right-4 z-10 p-1.5 w-52 bg-white/95 backdrop-blur-sm">
+        {/* 필터 컨트롤 */}
+        <Card className="absolute top-4 right-4 z-10 p-3 w-64 bg-white/95 backdrop-blur-sm">
           <CardTitle className="text-xs mb-1 font-semibold">필터</CardTitle>
           <div className="space-y-0">
-            <div className="flex items-center gap-1 py-0.5">
-              <Switch
-                checked={filters.showP1High}
-                onCheckedChange={(checked) => 
-                  setFilters(prev => ({ ...prev, showP1High: checked }))
-                }
-                className="scale-75"
-              />
-              <div className="w-2 h-2 bg-red-600 rounded" />
-              <Label className="text-xs">P1 고수요</Label>
+            {/* 분석 모드 선택 */}
+            <div className="space-y-1 mb-3">
+              <Label className="text-xs font-medium">분석 모드</Label>
+              <div className="grid grid-cols-1 gap-1">
+                <Button
+                  variant={currentMode === "time_based" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentMode("time_based")}
+                  className="text-xs h-7 justify-start"
+                >
+                  <Clock className="h-3 w-3 mr-1" />
+                  시간대별 분석
+                </Button>
+                <Button
+                  variant={currentMode === "mismatch" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentMode("mismatch")}
+                  className="text-xs h-7 justify-start"
+                >
+                  <AlertTriangle className="h-3 w-3 mr-1" />
+                  미스매치 분석
+                </Button>
+              </div>
             </div>
-            <div className="flex items-center gap-1 py-0.5">
-              <Switch
-                checked={filters.showP1Low}
-                onCheckedChange={(checked) =>
-                  setFilters(prev => ({ ...prev, showP1Low: checked }))
-                }
-                className="scale-75"
-              />
-              <div className="w-2 h-2 bg-orange-500 rounded" />
-              <Label className="text-xs">P1 저수요</Label>
-            </div>
-            <div className="flex items-center gap-1 py-0.5">
-              <Switch
-                checked={filters.showP2}
-                onCheckedChange={(checked) =>
-                  setFilters(prev => ({ ...prev, showP2: checked }))
-                }
-                className="scale-75"
-              />
-              <div className="w-2 h-2 bg-blue-500 rounded" />
-              <Label className="text-xs">P2 직행부족</Label>
-            </div>
-            <div className="flex items-center gap-1 py-0.5">
-              <Switch
-                checked={filters.showP3}
-                onCheckedChange={(checked) =>
-                  setFilters(prev => ({ ...prev, showP3: checked }))
-                }
-                className="scale-75"
-              />
-              <div className="w-2 h-2 bg-purple-600 rounded" />
-              <Label className="text-xs">P3 장거리</Label>
-            </div>
-          </div>
 
-          <Separator className="my-3" />
+            {/* 시간대별 분석 필터 */}
+            {currentMode === "time_based" && (
+              <div className="space-y-2">
+                <Label className="text-xs font-medium">시간대 선택</Label>
+                <div className="grid grid-cols-2 gap-1">
+                  {TIME_PERIODS.map((period) => (
+                    <Button
+                      key={period.key}
+                      variant={
+                        selectedTimePeriod === period.key
+                          ? "default"
+                          : "outline"
+                      }
+                      size="sm"
+                      onClick={() => setSelectedTimePeriod(period.key)}
+                      className="text-xs h-7"
+                      style={{
+                        backgroundColor:
+                          selectedTimePeriod === period.key
+                            ? period.color
+                            : undefined,
+                        borderColor: period.color,
+                      }}
+                    >
+                      {period.label}
+                    </Button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 mt-2">
+                  <Label className="text-xs">
+                    최소수요: {filters.minDemand}
+                  </Label>
+                  <input
+                    type="range"
+                    min="10"
+                    max="500"
+                    step="10"
+                    value={filters.minDemand}
+                    onChange={(e) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        minDemand: parseInt(e.target.value),
+                      }))
+                    }
+                    className="flex-1 h-1"
+                  />
+                </div>
+              </div>
+            )}
 
-          <div>
-            <Label className="text-xs">플로우 방향</Label>
-            <div className="grid grid-cols-3 gap-1 mt-1">
-              <Button
-                variant={filters.flowDirection === 'outbound' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setFilters(prev => ({ ...prev, flowDirection: 'outbound' }))}
-                className="text-xs"
-              >
-                출발
-              </Button>
-              <Button
-                variant={filters.flowDirection === 'inbound' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setFilters(prev => ({ ...prev, flowDirection: 'inbound' }))}
-                className="text-xs"
-              >
-                도착
-              </Button>
-              <Button
-                variant={filters.flowDirection === 'both' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setFilters(prev => ({ ...prev, flowDirection: 'both' }))}
-                className="text-xs"
-              >
-                전체
-              </Button>
-            </div>
+            {/* 미스매치 분석 필터 */}
+            {currentMode === "mismatch" && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={filters.showHighRiskOnly}
+                    onCheckedChange={(checked) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        showHighRiskOnly: checked,
+                      }))
+                    }
+                    className="scale-75"
+                  />
+                  <Label className="text-xs">고위험 구간만</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs">
+                    서비스품질: {filters.minServiceQuality}점
+                  </Label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="10"
+                    value={filters.minServiceQuality}
+                    onChange={(e) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        minServiceQuality: parseInt(e.target.value),
+                      }))
+                    }
+                    className="flex-1 h-1"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <Separator className="my-3" />
 
           <div className="space-y-2">
             <div className="text-xs font-medium mb-2">지도 레이어</div>
-            
+
             <div className="flex items-center gap-2">
               <Switch
                 checked={filters.showMapBackground}
                 onCheckedChange={(checked) =>
-                  setFilters(prev => ({ ...prev, showMapBackground: checked }))
+                  setFilters((prev) => ({
+                    ...prev,
+                    showMapBackground: checked,
+                  }))
                 }
                 disabled={!seoulCtprvnGeoJson}
               />
               <div className="w-3 h-3 bg-gray-300 rounded border" />
               <Label className="text-xs">서울특별시 배경</Label>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <Switch
                 checked={filters.showDistrictBoundaries}
                 onCheckedChange={(checked) =>
-                  setFilters(prev => ({ ...prev, showDistrictBoundaries: checked }))
+                  setFilters((prev) => ({
+                    ...prev,
+                    showDistrictBoundaries: checked,
+                  }))
                 }
                 disabled={!seoulSigGeoJson}
               />
               <div className="w-3 h-3 bg-gray-200 border border-gray-400" />
               <Label className="text-xs">구 경계선</Label>
               {seoulSigGeoJson && (
-                <span className="text-xs text-gray-500">
-                  (25개 구)
-                </span>
+                <span className="text-xs text-gray-500">(25개 구)</span>
               )}
             </div>
-            
+
             <div className="flex items-center gap-2">
               <Switch
                 checked={filters.showDetailedBoundaries}
                 onCheckedChange={(checked) =>
-                  setFilters(prev => ({ ...prev, showDetailedBoundaries: checked }))
+                  setFilters((prev) => ({
+                    ...prev,
+                    showDetailedBoundaries: checked,
+                  }))
                 }
                 disabled={!seoulEmdGeoJson}
               />
               <div className="w-3 h-3 border border-gray-400 bg-transparent" />
               <Label className="text-xs">동 경계선</Label>
               {seoulEmdGeoJson && (
-                <span className="text-xs text-gray-500">
-                  (467개 동)
-                </span>
+                <span className="text-xs text-gray-500">(467개 동)</span>
               )}
             </div>
           </div>
@@ -822,187 +1286,528 @@ export const ODAnalysisContent = ({ selectedMonth = "7", selectedRegion = "전�
         <Card className="absolute bottom-4 left-4 z-10 p-2 w-48 bg-white/95 backdrop-blur-sm">
           <div className="space-y-2">
             <div className="text-xs font-semibold">범례</div>
-            
+
             {/* 정류장 */}
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 bg-blue-500 rounded-full border border-white" />
               <span className="text-xs">정류장</span>
             </div>
-            
-            {/* OD 플로우 */}
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-1.5 bg-red-600 rounded-sm" />
-                <span className="text-xs">P1 고수요</span>
+
+            {/* 분석별 범례 */}
+            {currentMode === "time_based" && (
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-1.5 bg-red-600 rounded-sm" />
+                  <span className="text-xs">고수요 (1000+)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-1.5 bg-orange-500 rounded-sm" />
+                  <span className="text-xs">중수요 (500+)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-1.5 bg-blue-500 rounded-sm" />
+                  <span className="text-xs">일반 (100+)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-1.5 bg-green-500 rounded-sm" />
+                  <span className="text-xs">저수요 (50+)</span>
+                </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-1.5 bg-orange-500 rounded-sm" />
-                <span className="text-xs">P1 저수요</span>
+            )}
+
+            {currentMode === "mismatch" && (
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-1.5 bg-green-500 rounded-sm" />
+                  <span className="text-xs">우수 (80+점)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-1.5 bg-blue-500 rounded-sm" />
+                  <span className="text-xs">양호 (60+점)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-1.5 bg-orange-500 rounded-sm" />
+                  <span className="text-xs">보통 (40+점)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-1.5 bg-red-600 rounded-sm" />
+                  <span className="text-xs">불량 (40점 미만)</span>
+                </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-1.5 bg-blue-500 rounded-sm" />
-                <span className="text-xs">P2 직행부족</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-1.5 bg-purple-600 rounded-sm" />
-                <span className="text-xs">P3 장거리</span>
-              </div>
-            </div>
+            )}
           </div>
         </Card>
       </div>
 
       {/* 우측 상세 패널 */}
       <div className="w-96 border-l bg-white p-4 overflow-y-auto">
+        {/* 24시간 상세분석 표시 */}
+        {hourlyAnalysis.data && (
+          <Card className="mb-4">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <Clock className="h-4 w-4" />
+                  24시간 상세분석
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setHourlyAnalysis({ data: null, loading: false, error: null })}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+              <CardDescription className="text-xs">
+                {hourlyAnalysis.data.od_pair.from_station_name} → {hourlyAnalysis.data.od_pair.to_station_name}
+                <br />
+                {hourlyAnalysis.data.od_pair.distance_km.toFixed(1)}km • 일평균 {Math.round(hourlyAnalysis.data.daily_avg_passengers)}명
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* 패턴 배지 */}
+              <div className="mb-4">
+                <Badge className={getPatternTypeConfig(hourlyAnalysis.data.time_summary.pattern_type).bgColor + ' ' + getPatternTypeConfig(hourlyAnalysis.data.time_summary.pattern_type).textColor}>
+                  {getPatternTypeConfig(hourlyAnalysis.data.time_summary.pattern_type).icon} {hourlyAnalysis.data.time_summary.pattern_type}
+                </Badge>
+              </div>
+              
+              {/* 24시간 시계열 그래프 */}
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart 
+                  data={formatHourlyChartData(hourlyAnalysis.data.hourly_passengers, hourlyAnalysis.data.daily_avg_passengers)}
+                  margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="hour" 
+                    tick={{ fontSize: 10 }}
+                    interval={2}
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 10 }}
+                    width={40}
+                  />
+                  <RechartsTooltip 
+                    formatter={(value: number, name: string) => [
+                      `${Math.round(value)}명`,
+                      name === 'passengers' ? '승객 수' : '평균선'
+                    ]}
+                    labelFormatter={(label) => `시간: ${label}`}
+                  />
+                  
+                  {/* 주요 데이터 라인 */}
+                  <Line 
+                    type="monotone" 
+                    dataKey="passengers" 
+                    stroke={getPatternTypeConfig(hourlyAnalysis.data.time_summary.pattern_type).color}
+                    strokeWidth={2}
+                    name="승객 수"
+                    dot={{ r: 2 }}
+                    activeDot={{ r: 4 }}
+                  />
+                  
+                  {/* 평균선 */}
+                  <Line 
+                    type="monotone" 
+                    dataKey="평균선" 
+                    stroke="#94a3b8" 
+                    strokeDasharray="5 5"
+                    strokeWidth={1}
+                    name="평균선"
+                    dot={false}
+                  />
+                  
+                  {/* 피크 시간 표시 */}
+                  <ReferenceLine 
+                    x={`${hourlyAnalysis.data.time_summary.peak_hour}시`} 
+                    stroke="#ef4444" 
+                    strokeWidth={1}
+                    strokeDasharray="3 3"
+                    label={{ value: '피크', position: 'top', fontSize: 10 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+              
+              {/* 주요 지표 */}
+              <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
+                <div className="text-center p-2 bg-orange-50 rounded">
+                  <div className="font-semibold">피크 시간</div>
+                  <div className="text-orange-600 font-bold">{hourlyAnalysis.data.time_summary.peak_hour}시</div>
+                  <div className="text-gray-500">{Math.round(hourlyAnalysis.data.time_summary.peak_passengers)}명</div>
+                </div>
+                <div className="text-center p-2 bg-blue-50 rounded">
+                  <div className="font-semibold">퇴근 집중도</div>
+                  <div className="text-blue-600 font-bold">{hourlyAnalysis.data.time_summary.evening_peak_pct.toFixed(1)}%</div>
+                  <div className="text-gray-500">17-19시</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        
         {selectedStation ? (
           <div className="space-y-4">
             {/* 선택된 정류장 정보 */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5" />
-                  {stationData.find(s => s.id === selectedStation)?.name}
-                </CardTitle>
-                <CardDescription>
-                  {selectedStationFlows.length}개 연결 경로
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <MapPin className="h-5 w-5" />
+                      {
+                        stationData.find((s) => s.station_id === selectedStation)
+                          ?.station_name
+                      }
+                    </CardTitle>
+                    <CardDescription>
+                      {currentMode === "time_based"
+                        ? `${selectedStationData.length}개 목적지`
+                        : `${selectedStationData.length}개 연결 경로`}
+                    </CardDescription>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedStation(null)}
+                    className="text-xs"
+                  >
+                    전체 보기
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
-                <Tabs defaultValue="outbound">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="outbound">출발</TabsTrigger>
-                    <TabsTrigger value="inbound">도착</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="outbound" className="space-y-2">
-                    {selectedStationFlows
-                      .filter(flow => flow.origin?.id === selectedStation)
-                      .sort((a, b) => b.daily_demand - a.daily_demand)
+                {currentMode === "time_based" && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-gray-700 mb-3">
+                      {
+                        TIME_PERIODS.find((p) => p.key === selectedTimePeriod)
+                          ?.label
+                      }{" "}
+                      목적지 TOP 5
+                    </div>
+                    {(selectedStationData as DestinationStation[])
+                      .sort((a, b) => b.demand - a.demand)
                       .slice(0, 5)
-                      .map((flow, idx) => (
-                        <div key={idx} className="p-2 bg-gray-50 rounded border-l-2" style={{
-                          borderLeftColor: flow.priority_category.includes('P1_고수요') ? '#dc2626' :
-                                          flow.priority_category.includes('P1_저수요') ? '#f97316' :
-                                          flow.priority_category.includes('P2') ? '#2563eb' :
-                                          flow.priority_category.includes('P3') ? '#9333ea' : '#6b7280'
-                        }}>
+                      .map((dest, idx) => (
+                        <div
+                          key={idx}
+                          className="p-2 bg-gray-50 rounded border-l-2 border-blue-500"
+                        >
                           <div className="flex justify-between items-center">
                             <div>
-                              <div className="font-medium text-sm">{flow.destination?.name}</div>
-                              <div className="text-xs text-gray-500">
-                                {getPriorityLabel(flow.priority_category)}
+                              <div className="font-medium text-sm">
+                                {dest.station_name}
                               </div>
                               <div className="text-xs text-gray-600 mt-1">
-                                {flow.od_pair.distance_km}km • {flow.transfer_required ? '환승필요' : '직행'}
+                                순위: {dest.rank}위 • {dest.district_name}
                               </div>
                             </div>
                             <div className="text-right">
-                              <div className="font-bold">{flow.daily_demand}명/일</div>
-                              <div className="text-xs text-gray-500">{flow.od_pair.to_district}</div>
+                              <div className="font-bold text-blue-600">
+                                {dest.demand}명
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                시간대 수요
+                              </div>
                             </div>
                           </div>
                         </div>
                       ))}
-                  </TabsContent>
+                  </div>
+                )}
 
-                  <TabsContent value="inbound" className="space-y-2">
-                    {selectedStationFlows
-                      .filter(flow => flow.destination?.id === selectedStation)
-                      .sort((a, b) => b.daily_demand - a.daily_demand)
+                {currentMode === "mismatch" && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-gray-700 mb-3">
+                      미스매치 구간 정보
+                    </div>
+                    {(selectedStationData as DemandSupplyMismatchData[])
+                      .sort(
+                        (a, b) =>
+                          b.demand_service_ratio - a.demand_service_ratio
+                      )
                       .slice(0, 5)
-                      .map((flow, idx) => (
-                        <div key={idx} className="p-2 bg-gray-50 rounded border-l-2" style={{
-                          borderLeftColor: flow.priority_category.includes('P1_고수요') ? '#dc2626' :
-                                          flow.priority_category.includes('P1_저수요') ? '#f97316' :
-                                          flow.priority_category.includes('P2') ? '#2563eb' :
-                                          flow.priority_category.includes('P3') ? '#9333ea' : '#6b7280'
-                        }}>
+                      .map((item, idx) => (
+                        <div
+                          key={idx}
+                          className="p-2 bg-gray-50 rounded border-l-2 border-orange-500"
+                        >
                           <div className="flex justify-between items-center">
-                            <div>
-                              <div className="font-medium text-sm">{flow.origin?.name}</div>
-                              <div className="text-xs text-gray-500">
-                                {getPriorityLabel(flow.priority_category)}
+                            <div className="flex-1">
+                              <div className="font-medium text-sm">
+                                {item.od_pair.from_station_id ===
+                                selectedStation
+                                  ? item.od_pair.to_station_name
+                                  : item.od_pair.from_station_name}
                               </div>
                               <div className="text-xs text-gray-600 mt-1">
-                                {flow.od_pair.distance_km}km • {flow.transfer_required ? '환승필요' : '직행'}
+                                거리: {item.distance_km.toFixed(1)}km
                               </div>
                             </div>
                             <div className="text-right">
-                              <div className="font-bold">{flow.daily_demand}명/일</div>
-                              <div className="text-xs text-gray-500">{flow.od_pair.from_district}</div>
+                              <div className="font-bold text-orange-600">
+                                {item.daily_avg_passengers}명/일
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                서비스점수:{" "}
+                                {Math.round(item.service_quality_score)}점
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={async () => {
+                                  console.log('🔘 Button clicked - loading 24h analysis:', {
+                                    fromId: item.od_pair.from_station_id,
+                                    toId: item.od_pair.to_station_id,
+                                    selectedMonth
+                                  });
+                                  
+                                  setHourlyAnalysis({ data: null, loading: true, error: null });
+                                  try {
+                                    // ✅ 올바른 인수 순서: fromId, toId, month
+                                    const analysis = await odAPI.getODPairHourlyAnalysis(
+                                      item.od_pair.from_station_id,
+                                      item.od_pair.to_station_id,
+                                      selectedMonth
+                                    );
+                                    setHourlyAnalysis({ data: analysis, loading: false, error: null });
+                                    setCurrentMode("mismatch"); // 보여주기 위해
+                                  } catch (error) {
+                                    console.error('Failed to load hourly analysis:', error);
+                                    setHourlyAnalysis({ 
+                                      data: null, 
+                                      loading: false, 
+                                      error: '데이터를 불러올 수 없습니다' 
+                                    });
+                                  }
+                                }}
+                                className="text-xs mt-1"
+                                disabled={hourlyAnalysis.loading}
+                              >
+                                {hourlyAnalysis.loading ? '로딩...' : '24시간 분석'}
+                              </Button>
                             </div>
                           </div>
                         </div>
                       ))}
-                  </TabsContent>
-                </Tabs>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
-            {/* DRT 우선순위 분석 */}
+            {/* 분석 결과 요약 */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm">DRT 우선순위 분석</CardTitle>
+                <CardTitle className="text-sm">
+                  {currentMode === "time_based" && "시간대별 분석 결과"}
+                  {currentMode === "mismatch" && "DRT 도입 필요성 분석"}
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="flex items-center gap-1">
-                      <div className="w-2 h-2 bg-red-600 rounded"></div>
-                      P1 고수요 환승
-                    </span>
-                    <span className="font-bold text-red-600">
-                      {selectedStationFlows.filter(f => f.priority_category.includes('P1_고수요')).length}개
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="flex items-center gap-1">
-                      <div className="w-2 h-2 bg-orange-500 rounded"></div>
-                      P1 저수요 환승
-                    </span>
-                    <span className="font-bold text-orange-600">
-                      {selectedStationFlows.filter(f => f.priority_category.includes('P1_저수요')).length}개
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="flex items-center gap-1">
-                      <div className="w-2 h-2 bg-blue-500 rounded"></div>
-                      P2 직행부족
-                    </span>
-                    <span className="font-bold text-blue-600">
-                      {selectedStationFlows.filter(f => f.priority_category.includes('P2')).length}개
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="flex items-center gap-1">
-                      <div className="w-2 h-2 bg-purple-600 rounded"></div>
-                      P3 장거리
-                    </span>
-                    <span className="font-bold text-purple-600">
-                      {selectedStationFlows.filter(f => f.priority_category.includes('P3')).length}개
-                    </span>
-                  </div>
-                  <div className="border-t pt-2 mt-3">
+                {currentMode === "time_based" &&
+                  timeAnalysis[selectedTimePeriod] && (
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>전체 출발지 수</span>
+                        <span className="font-bold">
+                          {timeAnalysis[selectedTimePeriod]?.total_origins}개소
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>총 수요량</span>
+                        <span className="font-bold text-blue-600">
+                          {timeAnalysis[
+                            selectedTimePeriod
+                          ]?.total_demand.toLocaleString()}
+                          명
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>평균 목적지 수</span>
+                        <span className="font-bold">
+                          {timeAnalysis[
+                            selectedTimePeriod
+                          ]?.avg_destinations_per_origin.toFixed(1)}
+                          개
+                        </span>
+                      </div>
+                      <div className="border-t pt-2 mt-3">
+                        <div className="text-xs text-gray-600">
+                          💡{" "}
+                          {
+                            TIME_PERIODS.find(
+                              (p) => p.key === selectedTimePeriod
+                            )?.label
+                          }{" "}
+                          특성에 맞는 DRT 운영 전략이 필요합니다.
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                {currentMode === "mismatch" && (
+                  <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="font-medium">총 예상 수혜자</span>
-                      <span className="font-bold text-green-600">
-                        {selectedStationFlows
-                          .reduce((sum, f) => sum + f.daily_demand, 0)
-                          .toLocaleString()}명/일
+                      <span>총 분석 구간</span>
+                      <span className="font-bold">
+                        {mismatchAnalysis.data.length}개
                       </span>
                     </div>
+                    <div className="flex justify-between text-sm">
+                      <span>고위험 구간</span>
+                      <span className="font-bold text-red-600">
+                        {
+                          mismatchAnalysis.data.filter(
+                            (item) => item.demand_service_ratio > 2
+                          ).length
+                        }
+                        개
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>평균 서비스 점수</span>
+                      <span className="font-bold">
+                        {Math.round(
+                          mismatchAnalysis.data.reduce(
+                            (sum, item) => sum + item.service_quality_score,
+                            0
+                          ) / mismatchAnalysis.data.length || 0
+                        )}
+                        점
+                      </span>
+                    </div>
+                    <div className="border-t pt-2 mt-3">
+                      <div className="text-xs text-gray-600">
+                        🚨 서비스 품질 개선이 시급한 구간들이 식별되었습니다.
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400">
-            <MapPin className="h-12 w-12 mb-4" />
-            <p className="text-center">정류장을 클릭하여<br />OD 플로우를 확인하세요</p>
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  {currentMode === "time_based" && (
+                    <Clock className="h-4 w-4" />
+                  )}
+                  {currentMode === "mismatch" && (
+                    <AlertTriangle className="h-4 w-4" />
+                  )}
+
+                  {
+                    ANALYSIS_MODES.find((mode) => mode.type === currentMode)
+                      ?.label
+                  }
+                </CardTitle>
+                <CardDescription>
+                  {
+                    ANALYSIS_MODES.find((mode) => mode.type === currentMode)
+                      ?.description
+                  }
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="text-center text-sm text-gray-500">
+                    데이터 로드 중...
+                  </div>
+                ) : currentMode === "time_based" && timeAnalysis[selectedTimePeriod]?.origins ? (
+                  <div className="text-center text-sm text-gray-500">
+                    출발 정류장을 선택하여 연결 정보를 확인하세요
+                  </div>
+                ) : (
+                  <div className="text-center text-sm text-gray-500">
+                    정류장을 클릭하여 상세 정보를 확인하세요
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* 시간대별 분석 - From Station 랭킹 리스트 */}
+            {currentMode === "time_based" && timeAnalysis[selectedTimePeriod]?.origins && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    출발 정류장 랭킹
+                  </CardTitle>
+                  <CardDescription>
+                    {TIME_PERIODS.find(p => p.key === selectedTimePeriod)?.label} 기준 • 클릭하여 필터링
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 max-h-80 overflow-y-auto">
+                    {timeAnalysis[selectedTimePeriod]?.origins
+                      .sort((a, b) => b.time_period_demand - a.time_period_demand)
+                      .map((origin, idx) => (
+                        <div
+                          key={origin.from_station.station_id}
+                          className="p-3 bg-gray-50 hover:bg-blue-50 rounded-lg border cursor-pointer transition-colors"
+                          onClick={() => setSelectedStation(origin.from_station.station_id)}
+                        >
+                          <div className="flex justify-between items-center">
+                            <div className="flex-1">
+                              <div className="font-medium text-sm flex items-center gap-2">
+                                <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-bold">
+                                  #{idx + 1}
+                                </span>
+                                {origin.from_station.station_name}
+                              </div>
+                              <div className="text-xs text-gray-600 mt-1">
+                                {origin.from_station.district_name} • {origin.destination_count}개 목적지
+                              </div>
+                              {origin.drt_potential && (
+                                <div className="text-xs mt-1">
+                                  <span className={`px-1.5 py-0.5 rounded text-xs ${
+                                    origin.drt_potential === '높음' 
+                                      ? 'bg-red-100 text-red-700'
+                                      : origin.drt_potential === '보통'
+                                      ? 'bg-yellow-100 text-yellow-700'
+                                      : 'bg-green-100 text-green-700'
+                                  }`}>
+                                    DRT {origin.drt_potential}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="text-right ml-3">
+                              <div className="font-bold text-blue-600">
+                                {origin.time_period_demand.toLocaleString()}명
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                시간대 총 수요
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    }
+                  </div>
+                  <div className="mt-3 pt-2 border-t text-xs text-gray-500">
+                    💡 정류장을 클릭하면 해당 출발지에서 퍼져나가는 연결만 지도에 표시됩니다
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {mismatchAnalysis.error && (
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="text-sm text-red-600">
+                    ⚠️ {mismatchAnalysis.error}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         )}
       </div>
+
     </div>
   );
 };
