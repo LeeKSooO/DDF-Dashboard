@@ -21,7 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { MapPin, Clock, AlertTriangle, X } from "lucide-react";
+import { MapPin, Clock, AlertTriangle, X, HelpCircle } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -33,6 +33,7 @@ import {
   ReferenceLine
 } from "recharts";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ensureFeatureCollection } from "@/lib/geojson-utils";
 import {
   odAPI,
@@ -496,14 +497,14 @@ export const ODAnalysisContent = ({
     const allStations = new Map<string, Station>();
     Object.values(fallbackTimeAnalysis).forEach((timeData) => {
       if (timeData?.origins) {
-        timeData.origins.forEach((origin) => {
+        timeData.origins.forEach((origin: TimeBasedOriginAnalysis) => {
           if (origin.from_station) {
             allStations.set(
               origin.from_station.station_id,
               origin.from_station
             );
           }
-          origin.to_stations.forEach((dest) => {
+          origin.to_stations.forEach((dest: DestinationStation) => {
             allStations.set(dest.station_id, {
               station_id: dest.station_id,
               station_name: dest.station_name,
@@ -685,10 +686,10 @@ export const ODAnalysisContent = ({
       return [coords.lng, coords.lat];
     },
     getRadius: (d: Station) => {
-      if (selectedStation === d.station_id) return 400;
-      if (hoveredStation === d.station_id) return 300;
-      // 더 큰 반지름으로 정류장이 잘 보이도록 함
-      return 150;
+      if (selectedStation === d.station_id) return 250;
+      if (hoveredStation === d.station_id) return 200;
+      // 적당한 크기로 정류장이 잘 보이도록 함
+      return 100;
     },
     getFillColor: (d: Station) => {
       if (selectedStation === d.station_id) return [255, 50, 50, 255];
@@ -980,8 +981,9 @@ export const ODAnalysisContent = ({
   }
 
   return (
-    <div className="h-full flex">
-      {/* 메인 지도 영역 */}
+    <TooltipProvider>
+      <div className="h-full flex">
+        {/* 메인 지도 영역 */}
       <div
         className="flex-1 relative"
         onContextMenu={(e) => e.preventDefault()}
@@ -1108,11 +1110,31 @@ export const ODAnalysisContent = ({
 
         {/* 필터 컨트롤 */}
         <Card className="absolute top-4 right-4 z-10 p-3 w-64 bg-white/95 backdrop-blur-sm">
-          <CardTitle className="text-xs mb-1 font-semibold">필터</CardTitle>
+          <CardTitle className="text-xs mb-1 font-semibold flex items-center gap-1">
+            필터
+            <Tooltip>
+              <TooltipTrigger>
+                <HelpCircle className="h-3 w-3 text-gray-400 hover:text-gray-600" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">분석 모드와 시간대를 선택하여 원하는 OD 패턴을 확인할 수 있습니다.</p>
+              </TooltipContent>
+            </Tooltip>
+          </CardTitle>
           <div className="space-y-0">
             {/* 분석 모드 선택 */}
             <div className="space-y-1 mb-3">
-              <Label className="text-xs font-medium">분석 모드</Label>
+              <div className="flex items-center gap-1">
+                <Label className="text-xs font-medium">분석 모드</Label>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <HelpCircle className="h-2 w-2 text-gray-400 hover:text-gray-600" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-xs">시간대별: 특정 시간대의 승객 이동 패턴 분석<br/>미스매치: 수요와 공급의 불균형 분석</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <div className="grid grid-cols-1 gap-1">
                 <Button
                   variant={currentMode === "time_based" ? "default" : "outline"}
@@ -1609,13 +1631,33 @@ export const ODAnalysisContent = ({
                   timeAnalysis[selectedTimePeriod] && (
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span>전체 출발지 수</span>
+                        <div className="flex items-center gap-1">
+                          <span>전체 출발지 수</span>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <HelpCircle className="h-3 w-3 text-gray-400 hover:text-gray-600" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs">해당 시간대에 승객이 출발하는 버스정류장의 총 개수입니다.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
                         <span className="font-bold">
                           {timeAnalysis[selectedTimePeriod]?.total_origins}개소
                         </span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span>총 수요량</span>
+                        <div className="flex items-center gap-1">
+                          <span>총 수요량</span>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <HelpCircle className="h-3 w-3 text-gray-400 hover:text-gray-600" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs">해당 시간대에 이동한 승객의 총 인원수입니다.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
                         <span className="font-bold text-blue-600">
                           {timeAnalysis[
                             selectedTimePeriod
@@ -1624,7 +1666,17 @@ export const ODAnalysisContent = ({
                         </span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span>평균 목적지 수</span>
+                        <div className="flex items-center gap-1">
+                          <span>평균 목적지 수</span>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <HelpCircle className="h-3 w-3 text-gray-400 hover:text-gray-600" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs">각 출발지에서 연결되는 목적지의 평균 개수입니다. 높을수록 다양한 목적지로 분산됩니다.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
                         <span className="font-bold">
                           {timeAnalysis[
                             selectedTimePeriod
@@ -1649,13 +1701,33 @@ export const ODAnalysisContent = ({
                 {currentMode === "mismatch" && (
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span>총 분석 구간</span>
+                      <div className="flex items-center gap-1">
+                        <span>총 분석 구간</span>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <HelpCircle className="h-3 w-3 text-gray-400 hover:text-gray-600" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs">수요와 공급을 비교 분석한 OD 구간의 총 개수입니다.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
                       <span className="font-bold">
                         {mismatchAnalysis.data.length}개
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span>고위험 구간</span>
+                      <div className="flex items-center gap-1">
+                        <span>고위험 구간</span>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <HelpCircle className="h-3 w-3 text-gray-400 hover:text-gray-600" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs">수요 대비 서비스 공급 비율이 2배 이상인 구간입니다. DRT 도입이 시급합니다.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
                       <span className="font-bold text-red-600">
                         {
                           mismatchAnalysis.data.filter(
@@ -1666,7 +1738,17 @@ export const ODAnalysisContent = ({
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span>평균 서비스 점수</span>
+                      <div className="flex items-center gap-1">
+                        <span>평균 서비스 점수</span>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <HelpCircle className="h-3 w-3 text-gray-400 hover:text-gray-600" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs">전체 구간의 서비스 품질을 평가한 평균 점수입니다. 낮을수록 개선이 필요합니다.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
                       <span className="font-bold">
                         {Math.round(
                           mismatchAnalysis.data.reduce(
@@ -1735,6 +1817,14 @@ export const ODAnalysisContent = ({
                   <CardTitle className="text-sm flex items-center gap-2">
                     <MapPin className="h-4 w-4" />
                     출발 정류장 랭킹
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <HelpCircle className="h-3 w-3 text-gray-400 hover:text-gray-600" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">해당 시간대에 승객 수요가 많은 출발 정류장을 순위별로 보여줍니다. 정류장을 클릭하면 해당 출발지의 목적지 분포를 확인할 수 있습니다.</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </CardTitle>
                   <CardDescription>
                     {TIME_PERIODS.find(p => p.key === selectedTimePeriod)?.label} 기준 • 클릭하여 필터링
@@ -1808,6 +1898,7 @@ export const ODAnalysisContent = ({
         )}
       </div>
 
-    </div>
+      </div>
+    </TooltipProvider>
   );
 };
