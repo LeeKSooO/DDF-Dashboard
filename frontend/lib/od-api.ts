@@ -3,7 +3,7 @@
  * 모든 OD 분석 API 엔드포인트를 처리하는 클라이언트
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+import { API_BASE_URL } from './constants';
 
 // ===== 공통 유틸: analysis_month 정규화 (강화된 버전) =====
 function normalizeAnalysisMonth(input?: string | number | Date): string {
@@ -217,7 +217,7 @@ export class ODAnalysisAPI {
     });
 
     const response = await fetch(
-      `${this.baseUrl}/api/v1/od/priority/${priorityLevel}?${params}`
+      `${this.baseUrl}/od/priority/${priorityLevel}?${params}`
     );
 
     if (!response.ok) {
@@ -300,7 +300,7 @@ export class ODAnalysisAPI {
 
     try {
       const response = await fetch(
-        `${this.baseUrl}/api/v1/od/time-based-origin/${timePeriod}?${params}`
+        `${this.baseUrl}/od/time-based-origin/${timePeriod}?${params}`
       );
 
       if (!response.ok) {
@@ -354,7 +354,7 @@ export class ODAnalysisAPI {
     });
 
     const response = await fetch(
-      `${this.baseUrl}/api/v1/od/mismatch-analysis?${params}`
+      `${this.baseUrl}/od/mismatch-analysis?${params}`
     );
 
     if (!response.ok) {
@@ -431,7 +431,7 @@ export class ODAnalysisAPI {
     params.set('from_station_id', String(fromStationId).trim());
     params.set('to_station_id', String(toStationId).trim());
 
-    const url = `${this.baseUrl}/api/v1/od/hourly-analysis?${params.toString()}`;
+    const url = `${this.baseUrl}/od/hourly-analysis?${params.toString()}`;
 
     // ✅ 최종 URL/파라미터 디버그
     console.log('➡️ GET hourly-analysis', {
@@ -522,7 +522,7 @@ export class ODAnalysisAPI {
         analysis_month: normalizeAnalysisMonth('2025-07-01'),
         top_n: '1'
       });
-      const response = await fetch(`${this.baseUrl}/api/v1/od/priority/p1?${params}`);
+      const response = await fetch(`${this.baseUrl}/od/priority/p1?${params}`);
 
       if (response.ok) return { status: 'healthy', message: 'OD API is working properly' };
       return { status: 'unhealthy', message: `API returned ${response.status}` };

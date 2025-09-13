@@ -373,7 +373,6 @@ export function DDFDashboard() {
           <Suspense fallback={<LoadingSpinner />}>
             <ODAnalysisContent
               selectedMonth={selectedMonth}
-              selectedRegion={selectedRegion}
             />
           </Suspense>
         );

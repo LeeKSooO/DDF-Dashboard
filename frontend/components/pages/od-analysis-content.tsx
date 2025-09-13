@@ -81,7 +81,7 @@ const ANALYSIS_MODES: AnalysisMode[] = [
   },
   {
     type: "mismatch",
-    label: "수요-공급 미스매치",
+    label: "수요-공급 불균형",
     description: "DRT 도입 필요성 분석 (24시간 상세분석 포함)",
   },
 ];
@@ -214,7 +214,7 @@ export const ODAnalysisContent = ({
     minDemand: 50,
 
     // 미스매치 분석용
-    minServiceQuality: 40,
+    minDemandRatio: 2.0,
     showHighRiskOnly: false,
 
     // 일반 설정
@@ -745,7 +745,7 @@ export const ODAnalysisContent = ({
     } else if (currentMode === "mismatch") {
       flows = mismatchAnalysis.data
         .filter(
-          (item) => item.service_quality_score >= filters.minServiceQuality
+          (item) => item.demand_service_ratio >= filters.minDemandRatio
         )
         .filter(
           (item) => !filters.showHighRiskOnly || item.demand_service_ratio > 2
@@ -760,6 +760,7 @@ export const ODAnalysisContent = ({
           demand: item.daily_avg_passengers,
           distance_km: item.distance_km,
           service_quality: item.service_quality_score,
+          demand_service_ratio: item.demand_service_ratio,
         }));
     }
 
@@ -1033,17 +1034,22 @@ export const ODAnalysisContent = ({
                 return {
                   html: `
                     <div class="bg-white p-3 rounded shadow-lg border-l-4 border-orange-500">
-                      <div class="font-bold text-sm">수요-공급 미스매치</div>
+                      <div class="font-bold text-sm">수요-공급 불균형</div>
                       <div class="mt-2 space-y-1">
-                        <div class="text-sm">📊 일평균 승객: <span class="font-bold">${
+                        <div class="text-sm">수요집중도: <span class="font-bold ${
+                          (object.demand_service_ratio || 0) > 2 ? 'text-red-600' : ''
+                        }">${
+                          (object.demand_service_ratio || 0).toFixed(1)
+                        }배</span></div>
+                        <div class="text-sm">일평균 승객: <span class="font-bold">${
                           object.demand?.toLocaleString() || 0
                         }명</span></div>
-                        <div class="text-sm">📏 거리: <span class="font-bold">${
-                          object.distance_km?.toFixed(1) || 0
-                        }km</span></div>
-                        <div class="text-sm">⭐ 서비스 점수: <span class="font-bold">${Math.round(
+                        <div class="text-sm">서비스 품질: <span class="font-bold">${Math.round(
                           object.service_quality || 0
                         )}점</span></div>
+                        <div class="text-sm">거리: <span class="font-bold">${
+                          object.distance_km?.toFixed(1) || 0
+                        }km</span></div>
                         <div class="text-xs text-gray-500 mt-2">DRT 도입 필요 구간</div>
                       </div>
                     </div>
@@ -1140,7 +1146,7 @@ export const ODAnalysisContent = ({
                   className="text-xs h-7 justify-start"
                 >
                   <Clock className="h-3 w-3 mr-1" />
-                  시간대별 분석
+                  수요패턴 분석
                 </Button>
                 <Button
                   variant={currentMode === "mismatch" ? "default" : "outline"}
@@ -1149,7 +1155,7 @@ export const ODAnalysisContent = ({
                   className="text-xs h-7 justify-start"
                 >
                   <AlertTriangle className="h-3 w-3 mr-1" />
-                  미스매치 분석
+                  서비스부족구간 분석
                 </Button>
               </div>
             </div>
@@ -1222,18 +1228,18 @@ export const ODAnalysisContent = ({
                 </div>
                 <div className="flex items-center gap-2">
                   <Label className="text-xs">
-                    서비스품질: {filters.minServiceQuality}점
+                    수요집중도: {filters.minDemandRatio}배
                   </Label>
                   <input
                     type="range"
-                    min="0"
-                    max="100"
-                    step="10"
-                    value={filters.minServiceQuality}
+                    min="1"
+                    max="30"
+                    step="1"
+                    value={filters.minDemandRatio}
                     onChange={(e) =>
                       setFilters((prev) => ({
                         ...prev,
-                        minServiceQuality: parseInt(e.target.value),
+                        minDemandRatio: parseFloat(e.target.value),
                       }))
                     }
                     className="flex-1 h-1"
@@ -1721,7 +1727,7 @@ export const ODAnalysisContent = ({
                             <HelpCircle className="h-3 w-3 text-gray-400 hover:text-gray-600" />
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p className="text-xs">수요 대비 서비스 공급 비율이 2배 이상인 구간입니다. DRT 도입이 시급합니다.</p>
+                            <p className="text-xs">교통 서비스가 부족해 불편을 겪는 구간입니다. DRT로 개선이 가능합니다.</p>
                           </TooltipContent>
                         </Tooltip>
                       </div>
