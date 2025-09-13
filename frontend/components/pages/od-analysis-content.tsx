@@ -1431,25 +1431,27 @@ export const ODAnalysisContent = ({
                   />
                   
                   {/* 주요 데이터 라인 */}
-                  <Line 
-                    type="monotone" 
-                    dataKey="passengers" 
+                  <Line
+                    type="monotone"
+                    dataKey="passengers"
                     stroke={getPatternTypeConfig(hourlyAnalysis.data.time_summary.pattern_type).color}
                     strokeWidth={2}
                     name="승객 수"
                     dot={{ r: 2 }}
                     activeDot={{ r: 4 }}
+                    isAnimationActive={false}
                   />
                   
                   {/* 평균선 */}
-                  <Line 
-                    type="monotone" 
-                    dataKey="평균선" 
-                    stroke="#94a3b8" 
+                  <Line
+                    type="monotone"
+                    dataKey="평균선"
+                    stroke="#94a3b8"
                     strokeDasharray="5 5"
                     strokeWidth={1}
                     name="평균선"
                     dot={false}
+                    isAnimationActive={false}
                   />
                   
                   {/* 피크 시간 표시 */}
