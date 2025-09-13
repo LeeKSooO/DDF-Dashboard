@@ -433,10 +433,6 @@ export function TrafficAnalysisContent({
         setAnimatedNumbers({}); // 애니메이션 숫자 상태 초기화
         setProgressBarsAnimated(false); // 막대그래프 애니메이션 리셋
 
-        console.log("🚌 Loading integrated traffic analysis data for:", {
-          selectedMonth,
-          selectedRegion,
-        });
 
         const analysisMonth = utils.formatSelectedMonth(selectedMonth);
 
@@ -526,7 +522,6 @@ export function TrafficAnalysisContent({
             data: validateAndNormalize(data.underutilized_stations, '저활용 정류장', []),
           });
 
-          console.log("✅ 모든 패턴 데이터 처리 완료");
         }
       } catch (err) {
         console.error("🚨 Integrated Traffic Analysis API error:", err);
@@ -594,7 +589,7 @@ export function TrafficAnalysisContent({
         {/* 지역 특성별 정류장 분석 - 상단으로 이동 */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-2xl font-bold">
               <MapPin className="h-5 w-5 text-purple-500" />
               지역 특성별 정류장 분석
               <TooltipProvider>
@@ -642,39 +637,13 @@ export function TrafficAnalysisContent({
                         <HelpCircle className="h-4 w-4 text-blue-500 cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-lg">
-                        <div className="space-y-3 text-sm">
-                          <div>
-                            <p className="font-semibold text-blue-600 mb-2">🏠 주거지역 특성 점수 (0~100점)</p>
-                          </div>
-                          
-                          <div>
-                            <p className="font-medium mb-1">**필터링 조건:**</p>
-                            <ul className="space-y-1 text-xs ml-2">
-                              <li>• 출근시간(6-8시) 승차 &gt; 하차 (집에서 나감)</li>
-                              <li>• 퇴근시간(17-19시) 하차 &gt; 승차 (집으로 돌아옴)</li>
-                              <li>• 총 교통량 ≥ 2,000명 (평일 러시아워 기준)</li>
-                              <li>• 각 시간대별 비중 ≥ 50%</li>
-                            </ul>
-                          </div>
-                          
-                          <div>
-                            <p className="font-medium mb-1">**점수 계산 공식:**</p>
-                            <div className="bg-blue-100 border border-blue-200 p-2 rounded text-xs font-mono text-blue-800">
-                              <p>출근_주거비중 = 출근승차 / (출근승차 + 출근하차)</p>
-                              <p>퇴근_주거비중 = 퇴근하차 / (퇴근승차 + 퇴근하차)</p>
-                              <p className="mt-1">기본점수 = (출근_주거비중 + 퇴근_주거비중) / 2</p>
-                              <p className="mt-1">최종점수 = 기본점수 × 신뢰도가중치 × 100</p>
-                            </div>
-                          </div>
-                          
-                          <div>
-                            <p className="font-medium mb-1">📊 점수 해석:</p>
-                            <ul className="space-y-1 text-xs">
-                              <li>• **80점 이상**: 매우 전형적인 주거지역 특성</li>
-                              <li>• **70~79점**: 뚜렷한 주거지역 특성</li>
-                              <li>• **60~69점**: 보통 주거지역 특성</li>
-                              <li>• **50~59점**: 약한 주거지역 특성</li>
-                            </ul>
+                        <div className="space-y-2 text-sm">
+                          <p className="font-semibold text-blue-600 mb-2">🏠 주거지역 특성점수</p>
+                          <p className="text-gray-700">아침에는 승차가 많고, 저녁에는 하차가 많은 주거지역 정류장을 점수로 나타냅니다.</p>
+                          <div className="bg-blue-50 p-2 rounded text-xs text-gray-800">
+                            <p><strong>80점 이상:</strong> 전형적인 주거지역</p>
+                            <p><strong>60~79점:</strong> 주거지역 특성 뚜렷</p>
+                            <p><strong>60점 미만:</strong> 주거지역 특성 약함</p>
                           </div>
                         </div>
                       </TooltipContent>
@@ -763,39 +732,13 @@ export function TrafficAnalysisContent({
                         <HelpCircle className="h-4 w-4 text-green-500 cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-lg">
-                        <div className="space-y-3 text-sm">
-                          <div>
-                            <p className="font-semibold text-green-600 mb-2">🏢 업무지역 특성 점수 (0~100점)</p>
-                          </div>
-                          
-                          <div>
-                            <p className="font-medium mb-1">**필터링 조건:**</p>
-                            <ul className="space-y-1 text-xs ml-2">
-                              <li>• 출근시간(6-8시) 하차 &gt; 승차 (직장으로 출근)</li>
-                              <li>• 퇴근시간(17-19시) 승차 &gt; 하차 (직장에서 퇴근)</li>
-                              <li>• 총 교통량 ≥ 2,000명 (평일 러시아워 기준)</li>
-                              <li>• 각 시간대별 비중 ≥ 50%</li>
-                            </ul>
-                          </div>
-                          
-                          <div>
-                            <p className="font-medium mb-1">**점수 계산 공식:**</p>
-                            <div className="bg-green-100 border border-green-200 p-2 rounded text-xs font-mono text-green-800">
-                              <p>출근_업무비중 = 출근하차 / (출근승차 + 출근하차)</p>
-                              <p>퇴근_업무비중 = 퇴근승차 / (퇴근승차 + 퇴근하차)</p>
-                              <p className="mt-1">기본점수 = (출근_업무비중 + 퇴근_업무비중) / 2</p>
-                              <p className="mt-1">최종점수 = 기본점수 × 신뢰도가중치 × 100</p>
-                            </div>
-                          </div>
-                          
-                          <div>
-                            <p className="font-medium mb-1">📊 점수 해석:</p>
-                            <ul className="space-y-1 text-xs">
-                              <li>• **80점 이상**: 매우 전형적인 업무지역 특성</li>
-                              <li>• **70~79점**: 뚜렷한 업무지역 특성</li>
-                              <li>• **60~69점**: 보통 업무지역 특성</li>
-                              <li>• **50~59점**: 약한 업무지역 특성</li>
-                            </ul>
+                        <div className="space-y-2 text-sm">
+                          <p className="font-semibold text-green-600 mb-2">🏢 업무지역 특성점수</p>
+                          <p className="text-gray-700">아침에는 하차가 많고, 저녁에는 승차가 많은 업무지역 정류장을 점수로 나타냅니다.</p>
+                          <div className="bg-green-50 p-2 rounded text-xs text-gray-800">
+                            <p><strong>80점 이상:</strong> 전형적인 업무지역</p>
+                            <p><strong>60~79점:</strong> 업무지역 특성 뚜렷</p>
+                            <p><strong>60점 미만:</strong> 업무지역 특성 약함</p>
                           </div>
                         </div>
                       </TooltipContent>
@@ -882,7 +825,7 @@ export function TrafficAnalysisContent({
           {/* 러시아워 고수요 정류장 */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-2xl font-bold">
                 <Zap className="h-5 w-5 text-orange-500" />
                 러시아워 고수요 정류장
                 <TooltipProvider>
@@ -1043,7 +986,7 @@ export function TrafficAnalysisContent({
           {/* 저활용 정류장 분석 */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-2xl font-bold">
                 <TrendingDown className="h-5 w-5 text-red-500" />
                 저활용 정류장 분석
                 <TooltipProvider>
@@ -1184,7 +1127,7 @@ export function TrafficAnalysisContent({
           {/* 주말 우세 정류장 */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-2xl font-bold">
                 <Activity className="h-5 w-5 text-blue-500" />
                 주말 우세 정류장
                 <TooltipProvider>
@@ -1266,7 +1209,7 @@ export function TrafficAnalysisContent({
           {/* 심야 고수요 정류장 */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-2xl font-bold">
                 <Clock className="h-5 w-5 text-purple-500" />
                 심야 고수요 정류장
                 <TooltipProvider>
@@ -1345,7 +1288,7 @@ export function TrafficAnalysisContent({
           {/* 점심시간 특화 정류장 */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-2xl font-bold">
                 <Users className="h-5 w-5 text-green-500" />
                 점심시간 특화 정류장
                 <TooltipProvider>

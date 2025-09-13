@@ -13,8 +13,27 @@ const nextConfig: NextConfig = {
   
   // 이미지 도메인 허용 (필요시)
   images: {
-    domains: ['localhost'],
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+      },
+    ],
   },
+  
+  // 청크 로딩 문제 해결을 위한 webpack 설정
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+      };
+    }
+    return config;
+  },
+  
   
   // CORS는 Nginx에서 처리하므로 Next.js에서는 불필요
 };

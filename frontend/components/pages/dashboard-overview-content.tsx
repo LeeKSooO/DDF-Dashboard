@@ -726,18 +726,18 @@ export function DashboardOverviewContent({
         ),
       },
       {
-        key: "traffic-analysis",
-        title: "이상 패턴 분석",
-        value: "6가지",
-        subtitle: "특수 패턴 랭킹",
-        income: "야간/주말/지역별 등",
-        color: "#DC2626",
-        tabId: "traffic-analysis",
-        description: "교통 패턴 & 최적화",
+        key: "od-analysis",
+        title: "OD 분석",
+        value: "이동패턴",
+        subtitle: "출발지-목적지",
+        income: "지역간 흐름 분석",
+        color: "#0EA5E9",
+        tabId: "od-analysis",
+        description: "Origin-Destination 이동 분석",
         icon: (
           <Image
-            src="/navigation_icon/이상패턴분석.png"
-            alt="이상 패턴 분석"
+            src="/sidebar_icon/OD분석_사이드바.png"
+            alt="OD 분석"
             width={20}
             height={20}
           />
@@ -756,6 +756,24 @@ export function DashboardOverviewContent({
           <Image
             src="/navigation_icon/DRT분석.png"
             alt="DRT 분석"
+            width={20}
+            height={20}
+          />
+        ),
+      },
+      {
+        key: "traffic-analysis",
+        title: "이상 패턴 분석",
+        value: "6가지",
+        subtitle: "특수 패턴 랭킹",
+        income: "야간/주말/지역별 등",
+        color: "#DC2626",
+        tabId: "traffic-analysis",
+        description: "교통 패턴 & 최적화",
+        icon: (
+          <Image
+            src="/navigation_icon/이상패턴분석.png"
+            alt="이상 패턴 분석"
             width={20}
             height={20}
           />
@@ -821,7 +839,7 @@ export function DashboardOverviewContent({
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         {kpi.icon || <span className="text-lg">📊</span>}
-                        <span className="text-base font-bold text-gray-700">
+                        <span className="text-2xl font-bold text-gray-700">
                           {kpi.title}
                         </span>
                         <UITooltip>
@@ -844,12 +862,12 @@ export function DashboardOverviewContent({
                       >
                         {kpi.value}
                       </div>
-                      <div className="text-base text-gray-600">
+                      <div className="text-lg text-gray-600">
                         {kpi.subtitle}
                       </div>
 
                       <div className="mt-3">
-                        <div className="text-base font-medium text-gray-800">
+                        <div className="text-lg font-medium text-gray-800">
                           {kpi.income}
                         </div>
                       </div>
@@ -877,7 +895,7 @@ export function DashboardOverviewContent({
               상세 분석 바로가기
             </h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             {navigationCards.map((card) => (
               <Card
                 key={card.key}
@@ -890,7 +908,7 @@ export function DashboardOverviewContent({
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         {card.icon || <span className="text-lg">🎯</span>}
-                        <span className="text-base font-bold text-gray-700">
+                        <span className="text-2xl font-bold text-gray-700">
                           {card.title}
                         </span>
                       </div>
@@ -900,15 +918,15 @@ export function DashboardOverviewContent({
                       >
                         {card.value}
                       </div>
-                      <div className="text-base text-gray-600">
+                      <div className="text-lg text-gray-600">
                         {card.subtitle}
                       </div>
 
                       <div className="mt-3">
-                        <div className="text-base font-medium text-gray-800">
+                        <div className="text-lg font-medium text-gray-800">
                           {card.income}
                         </div>
-                        <div className="text-xs text-gray-500 mt-1">
+                        <div className="text-sm text-gray-500 mt-1">
                           {card.description}
                         </div>
                       </div>
@@ -934,8 +952,8 @@ export function DashboardOverviewContent({
       {/* 하단 분석 섹션 */}
       <Card>
         <CardHeader>
-          <CardTitle>🚌 교통량 현황</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-2xl font-bold">🚌 교통량 현황</CardTitle>
+          <CardDescription className="text-lg">
             {monthNames[Number.parseInt(selectedMonth) - 1]}{" "}
             {currentData.regionName} 버스 이용량 분석
           </CardDescription>
@@ -946,7 +964,7 @@ export function DashboardOverviewContent({
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 relative">
               {/* 왼쪽: 교통량 지도 */}
               <div className="relative z-10">
-                <h3 className="text-lg font-medium mb-4">
+                <h3 className="text-xl font-medium mb-4">
                   🗺️{" "}
                   {selectedRegion === "전체"
                     ? "서울시 전체 교통량 현황"
@@ -972,7 +990,7 @@ export function DashboardOverviewContent({
                     width={28}
                     height={28}
                   />
-                  <h3 className="text-2xl font-bold">
+                  <h3 className="text-3xl font-bold">
                     {selectedRegion === "전체" ? "전국" : selectedRegion} 인기
                     정류장 TOP 5
                   </h3>

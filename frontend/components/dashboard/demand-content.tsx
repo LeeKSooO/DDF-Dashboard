@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Search, HelpCircle } from "lucide-react";
+import { Search, HelpCircle, Filter, X, ChevronDown } from "lucide-react";
 import Image from "next/image";
 import {
   Tooltip,
@@ -27,7 +27,7 @@ import {
   Line,
   Legend,
 } from "recharts";
-import { memo, useState, useEffect, useRef } from "react";
+import { memo, useState, useEffect, useRef, useMemo } from "react";
 import { apiService, DRTScoreResponse, DRTModelType, DRTStationData, DRTStationDetailResponse, VulnerableFeatureScores, CommuterFeatureScores, TourismFeatureScores, utils } from "@/lib/api";
 import { ModelSuitabilityMap } from "@/components/map/model-suitability-map";
 
@@ -96,14 +96,53 @@ export const DemandContent = memo(function DemandContent({
   const [selectedStation, setSelectedStation] = useState<DRTStationData | null>(null);
   const [stationDetail, setStationDetail] = useState<DRTStationDetailResponse | null>(null);
   const [loadingStationDetail, setLoadingStationDetail] = useState(false);
-  const [loadingDrtData, setLoadingDrtData] = useState(false); // DRT 데이터 로딩 상태 추가
+  const [loadingDrtData, setLoadingDrtData] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [searchResults, setSearchResults] = useState<DRTStationData[]>([]);
   const [focusStation, setFocusStation] = useState<{ lat: number; lng: number; stationName: string } | null>(null);
   
+  // 필터링 상태 추가
+  const [showFilters, setShowFilters] = useState<boolean>(false);
+  const [filterSettings, setFilterSettings] = useState({
+    scoreRank: 'all',
+    scoreRange: 'all'
+  });
+  
+  
   // 현재 선택된 모델의 색상 테마
   const currentTheme = modelColorThemes[selectedModel as keyof typeof modelColorThemes] || modelColorThemes["출퇴근"];
+  
+  // 필터링된 정류장 데이터 계산
+  const filteredStations = useMemo(() => {
+    if (!drtData?.stations) return [];
+    
+    let filtered = [...drtData.stations];
+    
+    // 점수 구간 필터링
+    if (filterSettings.scoreRange !== 'all') {
+      filtered = filtered.filter(station => {
+        const score = station.drt_score;
+        switch (filterSettings.scoreRange) {
+          case '90+': return score >= 90;
+          case '80-89': return score >= 80 && score < 90;
+          case '70-79': return score >= 70 && score < 80;
+          case '60-69': return score >= 60 && score < 70;
+          case 'below60': return score < 60;
+          default: return true;
+        }
+      });
+    }
+    
+    // 점수 순위 필터링
+    if (filterSettings.scoreRank !== 'all') {
+      filtered.sort((a, b) => b.drt_score - a.drt_score);
+      const rankLimit = parseInt(filterSettings.scoreRank.replace('top', ''));
+      filtered = filtered.slice(0, rankLimit);
+    }
+    
+    return filtered;
+  }, [drtData?.stations, filterSettings]);
   
   // AbortController를 useRef로 관리하여 이전 요청 취소
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -111,45 +150,29 @@ export const DemandContent = memo(function DemandContent({
   // 구별 DRT 데이터 로드
   useEffect(() => {
     const loadDRTData = async () => {
-      // 이전 요청 취소
       if (abortControllerRef.current) {
-        console.log("🛑 Cancelling previous API request");
         abortControllerRef.current.abort();
       }
       
-      // 새로운 AbortController 생성
       abortControllerRef.current = new AbortController();
       const currentAbortController = abortControllerRef.current;
       
       try {
-        setLoadingDrtData(true); // 로딩 시작
+        setLoadingDrtData(true);
         
         const apiModelType = modelTypeMapping[selectedModel as keyof typeof modelTypeMapping] || "vulnerable";
-        let targetRegion = selectedDistrictName || selectedRegion; // selectedDistrictName 우선 사용
+        let targetRegion = selectedDistrictName || selectedRegion;
         let response;
-        let didFallback = false; // fallback 발생 여부 추적
-        
-        console.log("🔄 Loading DRT data:", { 
-          selectedModel, 
-          apiModelType, 
-          selectedRegion, 
-          targetRegion, 
-          selectedDistrictName,
-          currentDataStations: drtData?.stations?.length || 0 
-        });
+        let didFallback = false;
         
         if (selectedRegion === "전체") {
-          // "전체" 선택 시 - API가 "전체"를 지원하는지 먼저 시도
           try {
             response = await apiService.getDRTScores(
               "전체",
               apiModelType,
               utils.formatSelectedMonth(selectedMonth)
             );
-            console.log("✅ API supports '전체' region");
           } catch {
-            // "전체"를 지원하지 않으면 강남구를 기본값으로 사용
-            console.log("⚠️ API doesn't support '전체', falling back to 강남구");
             targetRegion = "강남구";
             didFallback = true;
             response = await apiService.getDRTScores(
@@ -159,24 +182,17 @@ export const DemandContent = memo(function DemandContent({
             );
           }
         } else {
-          // 지도에서 선택된 구가 있으면 그것을 우선 사용
           if (selectedDistrictName) {
             targetRegion = selectedDistrictName;
           }
           
-          console.log("🌍 Requesting DRT data for specific region:", targetRegion);
           try {
             response = await apiService.getDRTScores(
               targetRegion,
               apiModelType,
               utils.formatSelectedMonth(selectedMonth)
             );
-            console.log("✅ Successfully got DRT data for", targetRegion, "- stations count:", response?.stations?.length || 0);
           } catch (regionError) {
-            console.error("🚨 Failed to get DRT data for", targetRegion, "Error:", regionError);
-            console.log("🔄 Falling back to 강남구 for DRT data");
-            
-            // 해당 구의 데이터가 없으면 강남구로 fallback
             targetRegion = "강남구";
             didFallback = true;
             response = await apiService.getDRTScores(
@@ -184,77 +200,50 @@ export const DemandContent = memo(function DemandContent({
               apiModelType,
               utils.formatSelectedMonth(selectedMonth)
             );
-            console.log("✅ Fallback successful - using 강남구 data");
           }
         }
         
-        // 요청이 취소되지 않았는지 확인 후 상태 업데이트
         if (currentAbortController.signal.aborted) {
-          console.log("🛑 Request was cancelled, ignoring response");
           return;
         }
         
-        console.log("📊 Final DRT API response:", {
-          selectedRegion,
-          targetRegion, 
-          stationCount: response?.stations?.length || 0,
-          firstStation: response?.stations?.[0]?.station_name || "None",
-          firstStationScore: response?.stations?.[0]?.drt_score || "None",
-          top5Scores: response?.stations?.slice(0, 5).map(s => ({ name: s.station_name, score: s.drt_score })),
-          model_type: response?.model_type
-        });
         setDrtData(response);
         
-        // 구 이름 업데이트 로직 개선 - 무한 루프 방지
         if (didFallback && selectedDistrictName !== targetRegion) {
-          // Fallback이 발생하고 실제로 다른 구인 경우에만 구 이름 변경
-          console.log("🏢 Fallback occurred, updating district name to:", targetRegion);
           setSelectedDistrictName(targetRegion);
         } else if ((!selectedDistrictName || selectedDistrictName === "") && selectedDistrictName !== targetRegion) {
-          // 초기 로드이고 실제로 다른 구인 경우에만 구 이름 설정
-          console.log("🏢 Initial load, setting district name to:", targetRegion);
           setSelectedDistrictName(targetRegion);
-        } else {
-          // 사용자가 이미 구를 선택한 상태에서 모델만 변경하는 경우 구 이름 유지
-          console.log("🔒 Preserving current district selection:", selectedDistrictName, "for model:", selectedModel);
         }
         
-        // 정류장 선택 처리 - fallback 발생 여부에 따라 다르게 처리
         if (response.stations && response.stations.length > 0) {
           const sortedStations = [...response.stations].sort((a, b) => b.drt_score - a.drt_score);
           
           if (didFallback) {
-            // Fallback이 발생한 경우 - 사용자가 선택한 구가 아니므로 무조건 기본값으로 설정
             const defaultStation = sortedStations[0];
-            console.log("🔄 District fallback occurred - setting default station:", defaultStation.station_name, "Score:", defaultStation.drt_score);
             setSelectedStation(defaultStation);
+            console.log("Setting fallback default station:", defaultStation.station_name);
           } else {
-            // 정상적으로 요청한 구 데이터인 경우 - 기존 로직 유지
             const currentSelectedInNewData = selectedStation && response.stations.find(
               s => s.station_id === selectedStation.station_id
             );
             
             if (currentSelectedInNewData && (!selectedStation || selectedStation.drt_score !== currentSelectedInNewData.drt_score)) {
-              // 현재 선택된 정류장이 새 데이터에 있고 점수가 다른 경우에만 업데이트
-              console.log("🔄 Keeping current station:", currentSelectedInNewData.station_name, "New Score:", currentSelectedInNewData.drt_score);
               setSelectedStation(currentSelectedInNewData);
+              console.log("Updating existing selected station:", currentSelectedInNewData.station_name);
             } else if (isInitialLoad || !selectedStation) {
-              // 초기 로드이거나 선택된 정류장이 없으면 기본값 설정
               const defaultStation = sortedStations[0];
-              console.log("🚏 Setting default station:", defaultStation.station_name, "Score:", defaultStation.drt_score, "Model:", selectedModel);
               setSelectedStation(defaultStation);
+              console.log("Setting initial default station:", defaultStation.station_name);
             } else {
-              // 현재 선택된 정류장이 새 데이터에 없는 경우
-              // 1. 같은 이름의 정류장을 찾아서 업데이트
               const sameNameStation = response.stations.find(s => s.station_name === selectedStation.station_name);
               if (sameNameStation) {
-                console.log("🔄 Found same name station with new model data:", sameNameStation.station_name, "New Score:", sameNameStation.drt_score);
                 setSelectedStation(sameNameStation);
+                console.log("Setting same name station:", sameNameStation.station_name);
               } else {
-                // 2. 같은 이름도 없으면 사용자 선택을 유지 (모델 변경으로 인한 자동 변경 방지)
-                console.log("🔒 Preserving user-selected station despite model change:", selectedStation.station_name, "Model:", selectedModel);
-                // 기존 선택된 정류장 객체는 유지하고, 상세 데이터만 새로 로드하도록 함
-                // 이렇게 하면 사용자가 선택한 정류장이 모델 변경으로 인해 바뀌지 않음
+                // 기존 선택된 정류장이 없을 경우 첫 번째 정류장 선택
+                const defaultStation = sortedStations[0];
+                setSelectedStation(defaultStation);
+                console.log("Fallback to first station:", defaultStation.station_name);
               }
             }
           }
@@ -263,38 +252,30 @@ export const DemandContent = memo(function DemandContent({
             setIsInitialLoad(false);
           }
         } else {
-          // 정류장이 없으면 선택 초기화
           setSelectedStation(null);
           setStationDetail(null);
         }
       } catch (err) {
-        // 요청이 취소된 경우는 에러가 아님
         if ((err as Error).name !== 'AbortError') {
-          console.error("🚨 DRT API error:", err);
-        } else {
-          console.log("✅ API request cancelled successfully");
+          console.error("DRT API error:", err);
         }
       } finally {
-        setLoadingDrtData(false); // 로딩 상태 해제
+        setLoadingDrtData(false);
       }
     };
 
     loadDRTData();
     
-    // Cleanup: 컴포넌트 언마운트나 의존성 변경 시 진행 중인 요청 취소
     return () => {
       if (abortControllerRef.current) {
-        console.log("🧹 Cleanup: Cancelling ongoing API request");
         abortControllerRef.current.abort();
       }
     };
   }, [selectedModel, selectedRegion, selectedMonth, selectedDistrictName, isInitialLoad]);
 
-
-  // 상단 헤더에 현재 선택된 구 알리기 (DRT 분석 탭 전용)
+  // 상단 헤더에 현재 선택된 구 알리기
   useEffect(() => {
     if (onDistrictChange && selectedDistrictName && selectedDistrictName !== "") {
-      console.log("📤 Notifying header about district change:", selectedDistrictName);
       onDistrictChange(selectedDistrictName);
     }
   }, [selectedDistrictName, onDistrictChange]);
@@ -302,21 +283,20 @@ export const DemandContent = memo(function DemandContent({
   // 정류장 상세 정보 로드
   useEffect(() => {
     if (!selectedStation) {
-      console.log("🔍 No selected station, clearing detail");
+      console.log("No selected station, clearing station detail");
       setStationDetail(null);
       return;
     }
     
-    console.log("🔄 Loading station detail for:", selectedStation.station_name, "ID:", selectedStation.station_id);
+    console.log("Loading station detail for:", selectedStation.station_name, selectedStation.station_id);
     
     const loadStationDetail = async () => {
       const apiModelType = modelTypeMapping[selectedModel as keyof typeof modelTypeMapping] || "vulnerable";
       try {
         setLoadingStationDetail(true);
-        
-        console.log("📡 Calling API with:", {
+        console.log("Loading station detail with params:", {
           station_id: selectedStation.station_id,
-          model: apiModelType,
+          model_type: apiModelType,
           month: utils.formatSelectedMonth(selectedMonth)
         });
         
@@ -326,47 +306,30 @@ export const DemandContent = memo(function DemandContent({
           utils.formatSelectedMonth(selectedMonth)
         );
         
-        console.log("✅ Station detail loaded:", {
-          station_name: detail?.station?.station_name,
-          model_type: detail?.model_type,
-          current_score: detail?.current_score,
-          peak_hour: detail?.peak_hour,
-          hourly_scores_count: detail?.hourly_scores?.length,
-          feature_scores: detail?.feature_scores
-        });
-        
-        // 응답 데이터 유효성 검사
         if (!detail || !detail.feature_scores) {
-          console.error("❌ Invalid station detail response:", detail);
           throw new Error("Invalid station detail response - missing feature_scores");
         }
         
-        // 필수 필드 검사
-        const requiredFields = ['current_score', 'peak_hour', 'monthly_average'];
-        const missingFields = requiredFields.filter(field => {
-          const value = detail[field as keyof typeof detail];
-          return value === undefined || value === null;
+        const requiredFields = ['current_score', 'peak_hour', 'monthly_average'] as const;
+        type RequiredField = typeof requiredFields[number];
+        
+        const missingFields = requiredFields.filter((field: RequiredField) => {
+          const value = (detail as any)[field];
+          return value == null;
         });
         
         if (missingFields.length > 0) {
-          console.error("❌ Missing required fields:", missingFields);
           throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
         }
         
         setStationDetail(detail);
-      } catch (err) {
-        console.error("🚨 Failed to load station detail:", err);
-        console.error("🚨 Station info:", {
+        console.log("Successfully loaded station detail:", {
           station_name: selectedStation.station_name,
-          station_id: selectedStation.station_id,
-          coordinate: selectedStation.coordinate,
-          drt_score: selectedStation.drt_score
+          hourly_scores_count: detail.hourly_scores?.length || 0,
+          monthly_average: detail.monthly_average
         });
-        console.error("🚨 API parameters:", {
-          model: apiModelType,
-          month: utils.formatSelectedMonth(selectedMonth),
-          original_selectedModel: selectedModel
-        });
+      } catch (err) {
+        console.error("Failed to load station detail:", err);
         setStationDetail(null);
       } finally {
         setLoadingStationDetail(false);
@@ -376,14 +339,13 @@ export const DemandContent = memo(function DemandContent({
     loadStationDetail();
   }, [selectedStation, selectedModel, selectedMonth]);
 
-  // 검색 기능 (선택된 구의 정류장만 검색)
+  // 검색 기능
   useEffect(() => {
     if (!searchQuery.trim()) {
       setSearchResults([]);
       return;
     }
 
-    // 현재 선택된 구의 정류장 데이터에서만 검색
     const searchData = drtData?.stations || [];
     
     if (searchData.length === 0) {
@@ -397,11 +359,10 @@ export const DemandContent = memo(function DemandContent({
       station.station_id.toLowerCase().includes(query)
     );
     
-    console.log("🔍 Search results for:", searchQuery, "Found:", filtered.length, "Search scope:", selectedDistrictName || "현재 구");
-    setSearchResults(filtered.slice(0, 5)); // 구 내 검색이므로 최대 5개까지 표시
+    setSearchResults(filtered.slice(0, 5));
   }, [searchQuery, drtData?.stations, selectedDistrictName]);
 
-  // 구 변경 시 검색 상태 초기화를 위한 별도 effect
+  // 구 변경 시 검색 상태 초기화
   useEffect(() => {
     setSearchQuery("");
     setSearchResults([]);
@@ -409,34 +370,26 @@ export const DemandContent = memo(function DemandContent({
 
   // 검색 결과에서 정류장 선택
   const handleSearchResultSelect = (station: DRTStationData) => {
-    console.log("🚏 Selected station from search:", station.station_name, "at coordinates:", station.coordinate);
-    
-    // 정류장 선택
     setSelectedStation(station);
-    setStationDetail(null); // 상세 정보 새로 로드
+    setStationDetail(null);
     
-    // 지도 이동 트리거
     setFocusStation({
       lat: station.coordinate.lat,
       lng: station.coordinate.lng,
       stationName: station.station_name
     });
     
-    // 검색 UI 초기화
-    setSearchQuery(""); // 검색창 초기화
-    setSearchResults([]); // 검색 결과 닫기
-    
-    console.log("🎯 Triggering map focus to:", station.station_name);
+    setSearchQuery("");
+    setSearchResults([]);
   };
 
-  // 정류장별 특성 점수 계산 (실제 API feature_scores 기반)
+  // 정류장별 특성 점수 계산
   const getStationCharacteristics = () => {
     if (!stationDetail) return null;
     
     const feature_scores = stationDetail.feature_scores;
     
     if (selectedModel === "교통취약지") {
-      // 교통취약지 모델 타입 가드
       const isVulnerableScores = (scores: unknown): scores is VulnerableFeatureScores => {
         return scores !== null && typeof scores === 'object' && 'var_t_score' in scores && 'sed_t_score' in scores && 'mdi_t_score' in scores;
       };
@@ -469,7 +422,6 @@ export const DemandContent = memo(function DemandContent({
         ]
       };
     } else if (selectedModel === "출퇴근") {
-      // 출퇴근 모델 타입 가드
       const isCommuterScores = (scores: unknown): scores is CommuterFeatureScores => {
         return scores !== null && typeof scores === 'object' && 'tc_score' in scores && 'pdr_score' in scores && 'ru_score' in scores;
       };
@@ -502,7 +454,6 @@ export const DemandContent = memo(function DemandContent({
         ]
       };
     } else {
-      // 관광 모델 타입 가드
       const isTourismScores = (scores: unknown): scores is TourismFeatureScores => {
         return scores !== null && typeof scores === 'object' && 'tc_t_score' in scores && 'tdr_t_score' in scores && 'ru_t_score' in scores;
       };
@@ -537,118 +488,120 @@ export const DemandContent = memo(function DemandContent({
     }
   };
 
-  // 시간대별 데이터 포맷팅 (데이터 검증 추가)
+  // 시간대별 데이터 포맷팅
   const getHourlyChartData = () => {
     if (!stationDetail?.hourly_scores || !Array.isArray(stationDetail.hourly_scores)) {
-      console.warn("⚠️ Invalid hourly_scores data:", stationDetail?.hourly_scores);
+      console.log("No hourly scores data available:", {
+        stationDetail_exists: !!stationDetail,
+        hourly_scores_exists: !!stationDetail?.hourly_scores,
+        hourly_scores_is_array: Array.isArray(stationDetail?.hourly_scores)
+      });
       return [];
     }
     
-    // 데이터 검증 및 포맷팅
-    return stationDetail.hourly_scores.map(item => ({
+    const chartData = stationDetail.hourly_scores.map(item => ({
       hour: `${item.hour}시`,
       score: typeof item.score === 'number' ? item.score : 0,
       평균: typeof stationDetail.monthly_average === 'number' ? stationDetail.monthly_average : 0,
     }));
+    
+    console.log("Formatted hourly chart data:", {
+      data_length: chartData.length,
+      sample_data: chartData.slice(0, 3),
+      monthly_average: stationDetail.monthly_average
+    });
+    
+    return chartData;
   };
 
   const stationCharacteristics = getStationCharacteristics();
 
   return (
     <div className="space-y-6">
-      {/* 상단: 모델 선택 + 지도 */}
-      <div className="grid grid-cols-12 gap-4">
-        {/* 모델 선택 (1/12) */}
-        <div className="col-span-1">
-          <Card className="h-fit shadow-lg border-0 bg-gradient-to-br from-gray-50 to-slate-100">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base font-bold text-gray-800">
-                <Image 
-                  src="/sidebar_icon/DRT분석_사이드바.png" 
-                  alt="DRT 분석" 
-                  width={20}
-                  height={20}
-                  className="h-5 w-5"
-                />
-                DRT 모델
-              </CardTitle>
-              <CardDescription className="text-sm text-gray-600">
-                수요응답형 교통 모델
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="space-y-3">
-                <TooltipProvider>
-                  {mstGcnModels.map((model) => {
-                    const isSelected = selectedModel === model.model;
-                    const modelColors: Record<string, { bg: string; hover: string; border: string }> = {
-                      "교통취약지": { bg: "bg-red-600", hover: "hover:bg-red-50", border: "border-red-200" },
-                      "출퇴근": { bg: "bg-blue-600", hover: "hover:bg-blue-50", border: "border-blue-200" },
-                      "관광형": { bg: "bg-green-600", hover: "hover:bg-green-50", border: "border-green-200" }
-                    };
-                    const colors = modelColors[model.model] || { bg: "bg-gray-600", hover: "hover:bg-gray-50", border: "border-gray-200" };
-                    
-                    return (
-                      <Tooltip key={model.model}>
-                        <TooltipTrigger asChild>
-                          <button
-                            onClick={() => setSelectedModel(model.model)}
-                            className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
-                              isSelected
-                                ? `${colors.bg} text-white`
-                                : `bg-white text-gray-700 ${colors.hover} border ${colors.border}`
-                            }`}
-                          >
-                            <div className="flex flex-col items-center gap-1">
-                              <span className="text-lg">{model.icon}</span>
-                              <span className="text-sm">{model.model}</span>
-                            </div>
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="right">
-                          <div className="text-xs">
-                            <p className="font-semibold">{model.model} DRT 모델</p>
-                            <p className="text-gray-400">AI 예측 정확도: {model.accuracy}%</p>
-                            <p className="mt-1">
-                              {model.model === "교통취약지" && "교통 사각지대 해소용"}
-                              {model.model === "출퇴근" && "출퇴근 시간 최적화용"}
-                              {model.model === "관광형" && "관광지 접근성 향상용"}
-                            </p>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    );
-                  })}
-                </TooltipProvider>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* 지도 (11/12) */}
-        <div className="col-span-11">
-          <Card className="h-[800px]">
+      {/* 2x2 그리드 레이아웃 */}
+      <div className="grid grid-cols-12 auto-rows-max gap-4 min-h-[1250px]">
+        {/* 좌상: 지도 (9/12) - 2행 확장 */}
+        <div className="col-span-9 row-span-2">
+          <Card className="h-[1250px]">
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mb-4">
                 <div>
-                  <CardTitle>정류장별 DRT 적합성 지도</CardTitle>
+                  <CardTitle className="text-2xl font-bold">정류장별 DRT 적합성 지도</CardTitle>
                   <CardDescription>
                     구를 클릭하여 정류장을 표시하고, 정류장을 클릭하여 상세 분석을 확인하세요
                   </CardDescription>
                 </div>
                 
-                {/* 검색 기능 */}
-                <div className="relative">
-                  <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 min-w-[280px]">
-                    <Search className="h-4 w-4 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="정류장 이름 또는 ID 검색..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="flex-1 bg-transparent border-none outline-none text-sm"
+                {/* 지도 헤더에 배치된 모델 선택 버튼들 */}
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 mr-3">
+                    <Image 
+                      src="/sidebar_icon/DRT분석_사이드바.png" 
+                      alt="DRT 분석" 
+                      width={16}
+                      height={16}
+                      className="h-4 w-4"
                     />
+                    <span className="text-sm font-semibold text-gray-700">DRT 모델</span>
                   </div>
+                  <TooltipProvider>
+                    {mstGcnModels.map((model) => {
+                      const isSelected = selectedModel === model.model;
+                      const modelColors: Record<string, { bg: string; hover: string; border: string }> = {
+                        "교통취약지": { bg: "bg-red-600", hover: "hover:bg-red-50", border: "border-red-200" },
+                        "출퇴근": { bg: "bg-blue-600", hover: "hover:bg-blue-50", border: "border-blue-200" },
+                        "관광형": { bg: "bg-green-600", hover: "hover:bg-green-50", border: "border-green-200" }
+                      };
+                      const colors = modelColors[model.model] || { bg: "bg-gray-600", hover: "hover:bg-gray-50", border: "border-gray-200" };
+                      
+                      return (
+                        <Tooltip key={model.model}>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => setSelectedModel(model.model)}
+                              className={`px-3 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${
+                                isSelected
+                                  ? `${colors.bg} text-white shadow-lg`
+                                  : `bg-white text-gray-700 ${colors.hover} border ${colors.border}`
+                              }`}
+                            >
+                              <span className="text-base">{model.icon}</span>
+                              <span>{model.model}</span>
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">
+                            <div className="text-xs">
+                              <p className="font-semibold">{model.model} DRT 모델</p>
+                              <p className="text-gray-400">AI 예측 정확도: {model.accuracy}%</p>
+                              <p className="mt-1">
+                                {model.model === "교통취약지" && "교통 사각지대 해소용"}
+                                {model.model === "출퇴근" && "출퇴근 시간 최적화용"}
+                                {model.model === "관광형" && "관광지 접근성 향상용"}
+                              </p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    })}
+                  </TooltipProvider>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-end">
+                {/* 검색 및 필터 기능 */}
+                <div className="flex items-center gap-2">
+                  {/* 검색 기능 */}
+                  <div className="relative">
+                    <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 min-w-[280px]">
+                      <Search className="h-4 w-4 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="정류장 이름 또는 ID 검색..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="flex-1 bg-transparent border-none outline-none text-sm"
+                      />
+                    </div>
                   
                   {/* 검색 결과 드롭다운 */}
                   {searchResults.length > 0 && (
@@ -675,474 +628,436 @@ export const DemandContent = memo(function DemandContent({
                       ))}
                     </div>
                   )}
+                  </div>
+                  
+                  {/* 필터 버튼 */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowFilters(!showFilters)}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
+                        showFilters 
+                          ? 'bg-blue-50 border-blue-300 text-blue-700' 
+                          : 'bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <Filter className="h-4 w-4" />
+                      <span className="text-sm">필터</span>
+                      <ChevronDown className={`h-3 w-3 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+                    </button>
+                    
+                    {/* 필터 드롭다운 */}
+                    {showFilters && (
+                      <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 w-80">
+                        <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="font-semibold text-sm">정류장 필터</h3>
+                              <div className="text-xs text-gray-600 mt-1">
+                                {drtData?.stations ? (
+                                  <>
+                                    <span className="text-blue-600 font-medium">{filteredStations.length}개</span>
+                                    <span> / </span>
+                                    <span>{drtData.stations.length}개 정류장</span>
+                                  </>
+                                ) : (
+                                  <span>데이터를 불러오는 중...</span>
+                                )}
+                              </div>
+                            </div>
+                            <button 
+                              onClick={() => setShowFilters(false)}
+                              className="text-gray-400 hover:text-gray-600"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div className="p-4 space-y-4">
+                          {/* 점수 순위 필터 */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">점수 순위</label>
+                            <select
+                              value={filterSettings.scoreRank}
+                              onChange={(e) => setFilterSettings(prev => ({ ...prev, scoreRank: e.target.value }))}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="all">전체 보기</option>
+                              <option value="top10">상위 10개</option>
+                              <option value="top20">상위 20개</option>
+                              <option value="top50">상위 50개</option>
+                            </select>
+                          </div>
+                          
+                          {/* 점수 구간 필터 */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">점수 구간</label>
+                            <select
+                              value={filterSettings.scoreRange}
+                              onChange={(e) => setFilterSettings(prev => ({ ...prev, scoreRange: e.target.value }))}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="all">전체 점수</option>
+                              <option value="90+">90점 이상 (최우수)</option>
+                              <option value="80-89">80-89점 (우수)</option>
+                              <option value="70-79">70-79점 (양호)</option>
+                              <option value="60-69">60-69점 (보통)</option>
+                              <option value="below60">60점 미만 (개선필요)</option>
+                            </select>
+                          </div>
+                          
+                          {/* 필터 적용/초기화 버튼 */}
+                          <div className="flex gap-2 pt-2 border-t border-gray-200">
+                            <button
+                              onClick={() => {
+                                setFilterSettings({
+                                  scoreRank: 'all',
+                                  scoreRange: 'all'
+                                });
+                              }}
+                              className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
+                            >
+                              초기화
+                            </button>
+                            <button
+                              onClick={() => setShowFilters(false)}
+                              className="flex-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                            >
+                              적용
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="h-[700px] p-2">
-              <div className="w-full h-full">
-                <ModelSuitabilityMap
-                  selectedModel={selectedModel}
-                  selectedMonth={selectedMonth}
-                  initialDistrictName={selectedDistrictName}
-                  height="680px"
+            <CardContent className="h-[1050px] min-h-[1050px] max-h-[1050px] p-6">
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="w-full" style={{ height: '880px' }}>
+                  <ModelSuitabilityMap
+                    selectedModel={selectedModel}
+                    selectedMonth={selectedMonth}
+                    initialDistrictName={selectedDistrictName}
+                    height="880px"
                   focusStation={focusStation}
-                onDistrictAnalysis={async (districtName, analysis) => {
-                  console.log("🗺️ Map click - District change request:", { 
-                    requestedDistrict: districtName,
-                    currentDistrict: selectedDistrictName,
-                    currentModel: selectedModel,
-                    isDistrictChange: selectedDistrictName !== districtName
-                  });
-                  
-                  // 구가 변경된 경우에만 처리
-                  if (selectedDistrictName !== districtName) {
-                    console.log(`🔄 DISTRICT CHANGE: ${selectedDistrictName} → ${districtName} (${selectedModel} 모델)`);
-                    
-                    // 상태 초기화 (이전 데이터 즉시 클리어하여 UI 혼동 방지)
-                    setDrtData(null);
-                    setSelectedStation(null);
-                    setStationDetail(null);
-                    setSearchQuery("");
-                    setSearchResults([]);
-                    setFocusStation(null);
-                    setLoadingDrtData(true); // 로딩 상태 즉시 시작
-                    
-                    // 구 이름 업데이트 (이것이 useEffect를 트리거하여 새 데이터 로드)
-                    setSelectedDistrictName(districtName);
-                  } else {
-                    console.log("✅ Same district clicked, no change needed");
-                  }
-                  
-                  // 정류장 선택 처리
-                  if (analysis.stationName && analysis.stationData) {
-                    // 지도에서 직접 전달받은 정류장 데이터 사용
-                    console.log("🚏 Using station data from map:", analysis.stationData);
-                    const newStation = analysis.stationData;
-                    
-                    // 이전 선택과 다른 정류장인지 확인
-                    if (!selectedStation || selectedStation.station_id !== newStation.station_id) {
-                      console.log("📍 Selecting new station:", newStation.station_name, "ID:", newStation.station_id);
-                      setSelectedStation(newStation);
-                      // 상세 정보 즉시 초기화 (새로운 데이터 로딩 표시를 위해)
+                  filteredStations={filteredStations}
+                  onDistrictAnalysis={async (districtName, analysis) => {
+                    if (selectedDistrictName !== districtName) {
+                      setDrtData(null);
+                      setSelectedStation(null);
                       setStationDetail(null);
+                      setSearchQuery("");
+                      setSearchResults([]);
+                      setFocusStation(null);
+                      setLoadingDrtData(true);
+                      setSelectedDistrictName(districtName);
+                    }
+                    
+                    if (analysis.stationName && analysis.stationData) {
+                      const newStation = analysis.stationData;
+                      
+                      if (!selectedStation || selectedStation.station_id !== newStation.station_id) {
+                        setSelectedStation(newStation);
+                        setStationDetail(null);
+                        
+                        if (drtData && drtData.top_stations) {
+                          console.log("Keeping TOP5 data for district:", selectedDistrictName);
+                        }
+                      }
+                    } else if (analysis.stationName) {
+                      const station = drtData?.stations.find(
+                        s => s.station_name === analysis.stationName
+                      );
+                      if (station && (!selectedStation || selectedStation.station_id !== station.station_id)) {
+                        setSelectedStation(station);
+                        setStationDetail(null);
+                        
+                        if (drtData && drtData.top_stations) {
+                          console.log("Keeping TOP5 data for district:", selectedDistrictName);
+                        }
+                      }
                     } else {
-                      console.log("🔄 Same station selected, no update needed");
-                    }
-                  } else if (analysis.stationName) {
-                    // 기존 로직: drtData에서 찾기
-                    const station = drtData?.stations.find(
-                      s => s.station_name === analysis.stationName
-                    );
-                    console.log("🚏 Found station in drtData:", station);
-                    if (station && (!selectedStation || selectedStation.station_id !== station.station_id)) {
-                      setSelectedStation(station);
+                      setSelectedStation(null);
                       setStationDetail(null);
-                      console.log("✅ Station set:", station.station_name);
-                    } else if (!station) {
-                      console.log("❌ Station not found in current drtData");
                     }
-                  } else {
-                    // 정류장 선택 해제
-                    console.log("🔄 No station selected, clearing selection");
-                    setSelectedStation(null);
-                    setStationDetail(null);
-                  }
-                }}
-              />
+                  }}
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
-      </div>
 
-      {/* 하단: 모델별 특성 분석 + 시계열 그래프 + TOP 5 정류장 */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* 모델별 특성 분석 (정류장 기준) */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              정류장 피크 특성 분석
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="max-w-sm p-4">
-                    <div className="space-y-2">
-                      <div className="font-semibold text-sm">정류장 피크 특성 분석</div>
-                      <div className="text-xs text-gray-600 space-y-1">
-                        <div><strong>출퇴근형:</strong> TC(시간 집중도), PDR(피크 수요 비율), RU(노선 활용도)</div>
-                        <div><strong>관광특화형:</strong> TC(관광 집중도), TDR(관광 수요 비율), RU(구간 이용률)</div>
-                        <div><strong>교통취약지형:</strong> VAR(취약 접근성), SED(사회 형평성), MDI(이동성 불리), AVS(지역 취약성)</div>
+        {/* 우상: 시간대별 DRT 점수 카드 (3/12) */}
+        <div className="col-span-3 row-span-1">
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-2xl font-bold">
+                시간대별 DRT 점수
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-md p-4">
+                      <div className="space-y-2">
+                        <div className="font-semibold text-sm">시간대별 DRT 점수</div>
+                        <div className="text-xs text-gray-600 space-y-1">
+                          <div>📈 <strong>24시간 DRT 점수:</strong> 0시부터 23시까지 시간대별 점수 변화</div>
+                          <div>🎯 <strong>현재 점수:</strong> 선택된 시간대의 DRT 적합도 점수</div>
+                          <div>⏰ <strong>피크 시간:</strong> 가장 높은 점수를 기록한 시간대</div>
+                          <div>📊 <strong>일평균:</strong> 해당 정류장의 월별 평균 점수</div>
+                        </div>
+                        <div className="text-xs text-blue-600 mt-2">
+                          💡 정류장별 수요 패턴과 최적 운행 시간대를 분석합니다
+                        </div>
                       </div>
-                      <div className="text-xs text-blue-600 mt-2">
-                        💡 선택된 정류장의 모델별 세부 지표를 분석합니다
-                      </div>
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {selectedStation ? (
-              <div className="space-y-4">
-                {/* 선택된 정류장 이름 강조 표시 */}
-                <div className={`text-center py-3 px-4 bg-gradient-to-r ${currentTheme.background} rounded-lg border ${currentTheme.border}`}>
-                  <div className={`text-2xl font-bold ${currentTheme.primary} mb-1`}>
-                    🚏 {selectedStation.station_name}
-                  </div>
-                  <div className={`text-sm ${currentTheme.secondary} font-medium`}>
-                    {selectedModel} 모델 피크 특성 분석
-                  </div>
-                </div>
-                {loadingStationDetail ? (
-                  <div className="flex items-center justify-center h-64">
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </CardTitle>
+              <CardDescription>
+TOP 5 DRT 적합 정류장 순위
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {selectedStation ? (
+                loadingStationDetail ? (
+                  <div className="flex items-center justify-center h-32">
                     <div className="text-center">
                       <div className={`animate-spin rounded-full h-12 w-12 border-b-2 ${currentTheme.spinner} mx-auto mb-4`}></div>
                       <div className="text-gray-500">
                         <div className="font-semibold text-lg">{selectedStation.station_name}</div>
-                        <div className="text-base">정류장 데이터 로딩 중...</div>
+                        <div className="text-base">시간대별 데이터 로딩 중...</div>
                       </div>
                     </div>
                   </div>
-                ) : stationDetail && stationCharacteristics ? (
-                  <>
-                    <div className={`p-4 bg-gradient-to-r ${currentTheme.background} rounded-lg`}>
-                      <h4 className={`font-semibold text-lg mb-3 flex items-center gap-2 ${currentTheme.primary}`}>
-                        🎯 {stationCharacteristics.title}
-                      </h4>
-                      <div className="space-y-3">
-                        {stationCharacteristics.items.map((item, idx) => (
-                          <div key={idx} className="bg-white p-3 rounded-lg">
-                            <div className="flex items-start gap-3 mb-2">
-                              <div className="flex-1 min-w-0">
-                                <div className="font-semibold text-base">{item.label}</div>
-                                <div className="text-xs text-gray-600">{item.description}</div>
-                              </div>
-                              <div className="flex-shrink-0 text-right">
-                                <div className={`text-lg font-bold ${currentTheme.score}`}>
-                                  {item.score}점
-                                </div>
-                                <Badge variant={
-                                  item.level.includes("매우 높음") || item.level.includes("최우수") || item.level.includes("최대치") ? "default" : 
-                                  item.level.includes("높음") || item.level.includes("우수") ? "secondary" : 
-                                  item.level.includes("보통") ? "outline" : 
-                                  "secondary"
-                                } className="text-xs px-1.5 py-0.5">
-                                  {item.level}
-                                </Badge>
-                              </div>
-                            </div>
-                            <Progress 
-                              value={parseFloat(item.score)} 
-                              className={`h-2 ${
-                                selectedModel === "교통취약지" ? "progress-purple" : 
-                                selectedModel === "출퇴근" ? "progress-blue" : 
-                                "progress-green"
-                              }`}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                ) : stationDetail ? (
+                  <div className="space-y-2">
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={getHourlyChartData()}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="hour" 
+                          tick={{ fontSize: 12 }}
+                          interval={1}
+                        />
+                        <YAxis 
+                          tick={{ fontSize: 12 }}
+                          domain={[0, 100]}
+                        />
+                        <RechartsTooltip />
+                        <Legend />
+                        <Line 
+                          type="monotone" 
+                          dataKey="score" 
+                          stroke="#3b82f6" 
+                          strokeWidth={3}
+                          name="DRT 점수"
+                          dot={{ r: 4 }}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="평균" 
+                          stroke="#ef4444" 
+                          strokeDasharray="5 5"
+                          strokeWidth={2}
+                          name="일평균"
+                          dot={false}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
 
-                    <div className={`p-3 rounded-lg ${currentTheme.background.replace('from-', 'bg-').replace(' to-pink-50', '').replace(' to-indigo-50', '').replace(' to-emerald-50', '')}`}>
-                      <div className={`text-base font-medium ${currentTheme.primary} mb-1`}>
-                        종합 DRT 적합도
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className={`text-2xl font-bold ${currentTheme.secondary}`}>
-                          {stationDetail.current_score.toFixed(1)}점
-                        </div>
-                        <div className={`text-base ${currentTheme.primary}`}>
-                          피크: {stationDetail.peak_hour}시 ({stationDetail.peak_score.toFixed(1)}점)
-                        </div>
+                    <div className="grid grid-cols-1 gap-2">
+                      <div className={`text-center p-2 rounded ${currentTheme.background.replace('from-', 'bg-').replace(' to-pink-50', '').replace(' to-indigo-50', '').replace(' to-emerald-50', '')}`}>
+                        <div className={`text-sm ${currentTheme.secondary}`}>현재: {stationDetail.current_score.toFixed(1)}점</div>
+                        <div className={`text-sm ${currentTheme.secondary}`}>피크: {stationDetail.peak_hour}시 | 평균: {stationDetail.monthly_average.toFixed(1)}점</div>
                       </div>
                     </div>
-                  </>
+                  </div>
                 ) : (
-                  <div className="flex items-center justify-center h-64 text-gray-400">
+                  <div className="flex items-center justify-center h-32 text-gray-400">
                     <div className="text-center">
-                      <div className="text-4xl mb-3">⚠️</div>
-                      <div className="font-semibold text-lg">{selectedStation.station_name}</div>
-                      <div className="text-base mt-2">정류장 데이터를 불러올 수 없습니다</div>
-                      <div className="text-sm mt-2 text-gray-500">
-                        ID: {selectedStation.station_id} | 모델: {selectedModel}
-                      </div>
-                      <div className="text-sm mt-1">다른 정류장을 선택해주세요</div>
+                      <div className="text-2xl mb-2">⚠️</div>
+                      <div className="font-semibold text-sm">{selectedStation.station_name}</div>
+                      <div className="text-xs mt-1">데이터를 불러올 수 없습니다</div>
                       <button 
                         onClick={() => {
-                          console.log("🔄 Retry button clicked for station:", selectedStation.station_name);
                           setStationDetail(null);
-                          // useEffect will automatically trigger reload
                         }}
-                        className={`mt-3 px-4 py-2 ${currentTheme.button} rounded-lg transition-colors text-sm`}
+                        className={`mt-2 px-2 py-1 ${currentTheme.button} rounded text-xs`}
                       >
                         🔄 다시 시도
                       </button>
                     </div>
                   </div>
-                )}
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-64 text-gray-400">
-                <div className="text-center">
-                  <Image 
-                    src="/drt_icon/정류장피크특성분석_drt분석.png" 
-                    alt="정류장 피크 특성 분석" 
-                    width={64}
-                    height={64}
-                    className="h-16 w-16 mx-auto mb-3 opacity-60"
-                  />
-                  <div className="text-lg">지도에서 정류장을 클릭하면</div>
-                  <div className="text-lg">해당 정류장의 피크 특성을 분석합니다</div>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* 시계열 그래프 */}
-        <Card className="lg:col-span-3">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              시간대별 DRT 점수
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-md p-4">
-                    <div className="space-y-2">
-                      <div className="font-semibold text-sm">시간대별 DRT 점수</div>
-                      <div className="text-xs text-gray-600 space-y-1">
-                        <div>📈 <strong>24시간 DRT 점수:</strong> 0시부터 23시까지 시간대별 점수 변화</div>
-                        <div>🎯 <strong>현재 점수:</strong> 선택된 시간대의 DRT 적합도 점수</div>
-                        <div>⏰ <strong>피크 시간:</strong> 가장 높은 점수를 기록한 시간대</div>
-                        <div>📊 <strong>일평균:</strong> 해당 정류장의 월별 평균 점수</div>
-                      </div>
-                      <div className="text-xs text-blue-600 mt-2">
-                        💡 정류장별 수요 패턴과 최적 운행 시간대를 분석합니다
-                      </div>
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </CardTitle>
-            <CardDescription>
-              {selectedStation && stationDetail
-                ? `${selectedStation.station_name} 정류장의 24시간 DRT 점수 변화`
-                : "정류장을 선택하여 시간대별 패턴을 확인하세요"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {selectedStation ? (
-              loadingStationDetail ? (
-                <div className="flex items-center justify-center h-64">
+                )
+              ) : (
+                <div className="flex items-center justify-center h-32 text-gray-400">
                   <div className="text-center">
-                    <div className={`animate-spin rounded-full h-12 w-12 border-b-2 ${currentTheme.spinner} mx-auto mb-4`}></div>
-                    <div className="text-gray-500">
-                      <div className="font-semibold text-lg">{selectedStation.station_name}</div>
-                      <div className="text-base">시간대별 데이터 로딩 중...</div>
-                    </div>
+                    <Image 
+                      src="/drt_icon/시간대별DRT점수_drt분석.png" 
+                      alt="시간대별 DRT 점수" 
+                      width={32}
+                      height={32}
+                      className="h-8 w-8 mx-auto mb-2 opacity-60"
+                    />
+                    <div className="text-sm">정류장을 클릭하면</div>
+                    <div className="text-sm">시간대별 점수를 확인할 수 있습니다</div>
                   </div>
                 </div>
-              ) : stationDetail ? (
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+
+        {/* 우하: 정류장 피크 특성 분석 카드 (3/12) */}
+        <div className="col-span-3 row-span-1">
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-2xl font-bold">
+                정류장 피크 특성 분석
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-sm p-4">
+                      <div className="space-y-2">
+                        <div className="font-semibold text-sm">정류장 피크 특성 분석</div>
+                        <div className="text-xs text-gray-600 space-y-1">
+                          <div><strong>출퇴근형:</strong> TC(시간 집중도), PDR(피크 수요 비율), RU(노선 활용도)</div>
+                          <div><strong>관광특화형:</strong> TC(관광 집중도), TDR(관광 수요 비율), RU(구간 이용률)</div>
+                          <div><strong>교통취약지형:</strong> VAR(취약 접근성), SED(사회 형평성), MDI(이동성 불리), AVS(지역 취약성)</div>
+                        </div>
+                        <div className="text-xs text-blue-600 mt-2">
+                          💡 선택된 정류장의 모델별 세부 지표를 분석합니다
+                        </div>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {selectedStation ? (
                 <div className="space-y-4">
-                  <ResponsiveContainer width="100%" height={600}>
-                  <LineChart data={getHourlyChartData()}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="hour" 
-                      tick={{ fontSize: 12 }}
-                      interval={1}
-                    />
-                    <YAxis 
-                      tick={{ fontSize: 12 }}
-                      domain={[0, 100]}
-                    />
-                    <RechartsTooltip />
-                    <Legend />
-                    <Line 
-                      type="monotone" 
-                      dataKey="score" 
-                      stroke="#3b82f6" 
-                      strokeWidth={3}
-                      name="DRT 점수"
-                      dot={{ r: 4 }}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="평균" 
-                      stroke="#ef4444" 
-                      strokeDasharray="5 5"
-                      strokeWidth={2}
-                      name="일평균"
-                      dot={false}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-
-                <div className="grid grid-cols-3 gap-3">
-                  <div className={`text-center p-3 rounded ${currentTheme.background.replace('from-', 'bg-').replace(' to-pink-50', '').replace(' to-indigo-50', '').replace(' to-emerald-50', '')}`}>
-                    <div className={`text-lg ${currentTheme.secondary}`}>현재 점수</div>
-                    <div className={`font-bold text-xl ${currentTheme.primary}`}>
-                      {stationDetail.current_score.toFixed(1)}점
+                  <div className={`text-center py-3 px-4 bg-gradient-to-r ${currentTheme.background} rounded-lg border ${currentTheme.border}`}>
+                    <div className={`text-2xl font-bold ${currentTheme.primary} mb-1`}>
+                      🚏 {selectedStation.station_name}
+                    </div>
+                    <div className={`text-sm ${currentTheme.secondary} font-medium`}>
+                      {selectedModel} 모델 피크 특성 분석
                     </div>
                   </div>
-                  <div className="text-center p-3 bg-green-50 rounded">
-                    <div className="text-lg text-green-600">피크 시간</div>
-                    <div className="font-bold text-xl text-green-700">
-                      {stationDetail.peak_hour}시
-                    </div>
-                  </div>
-                  <div className="text-center p-3 bg-purple-50 rounded">
-                    <div className="text-lg text-purple-600">일평균</div>
-                    <div className="font-bold text-xl text-purple-700">
-                      {stationDetail.monthly_average.toFixed(1)}점
-                    </div>
-                  </div>
-                </div>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-64 text-gray-400">
-                  <div className="text-center">
-                    <div className="text-4xl mb-3">⚠️</div>
-                    <div className="font-semibold text-lg">{selectedStation.station_name}</div>
-                    <div className="text-base mt-2">시간대별 데이터를 불러올 수 없습니다</div>
-                    <div className="text-sm mt-2 text-gray-500">
-                      ID: {selectedStation.station_id} | 모델: {selectedModel}
-                    </div>
-                    <button 
-                      onClick={() => {
-                        console.log("🔄 Retry button clicked for station time data:", selectedStation.station_name);
-                        setStationDetail(null);
-                      }}
-                      className={`mt-3 px-4 py-2 ${currentTheme.button} rounded-lg transition-colors text-sm`}
-                    >
-                      🔄 다시 시도
-                    </button>
-                  </div>
-                </div>
-              )
-            ) : (
-              <div className="flex items-center justify-center h-64 text-gray-400">
-                <div className="text-center">
-                  <Image 
-                    src="/drt_icon/시간대별DRT점수_drt분석.png" 
-                    alt="시간대별 DRT 점수" 
-                    width={64}
-                    height={64}
-                    className="h-16 w-16 mx-auto mb-3 opacity-60"
-                  />
-                  <div className="text-lg">지도에서 정류장을 클릭하면</div>
-                  <div className="text-lg">24시간 DRT 점수 변화를 확인할 수 있습니다</div>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* 모델별 TOP 5 정류장 */}
-        <Card className="lg:col-span-1">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-3xl">
-              <div className="flex items-center justify-center gap-2">
-                <Image 
-                  src="/icon/인기정류장.png" 
-                  alt="인기정류장" 
-                  width={28}
-                  height={28}
-                  className="h-7 w-7"
-                />
-                <span>TOP 5</span>
-              </div>
-              <div className="text-xl text-center mt-1">
-                {selectedDistrictName ? `${selectedDistrictName} ` : ""}{selectedModel} DRT
-              </div>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent side="left" className="max-w-sm p-4">
-                    <div className="space-y-2">
-                      <div className="font-semibold text-sm">TOP 5 DRT 적합 정류장</div>
-                      <div className="text-xs text-gray-600 space-y-1">
-                        <div>🥇 <strong>최고점수 기준:</strong> 각 정류장의 24시간 중 최고 DRT 점수</div>
-                        <div>📍 <strong>지역별 순위:</strong> 선택된 구/지역 내 상위 5개 정류장</div>
-                        <div>📊 <strong>진행률 바:</strong> 100점 만점 기준 상대적 점수 표시</div>
-                        <div>🏅 <strong>순위 배지:</strong> 1위(금), 2-3위(은), 4-5위(동)</div>
-                      </div>
-                      <div className="text-xs text-blue-600 mt-2">
-                        💡 DRT 서비스 도입 시 우선 검토 대상 정류장입니다
-                      </div>
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </CardTitle>
-            <CardDescription className="text-sm text-center">
-              <div className="flex items-center justify-center gap-1 flex-wrap">
-                <span>{selectedDistrictName ? `${selectedDistrictName} ` : ""}{selectedModel} 최상위 정류장</span>
-                {selectedDistrictName && (
-                  <span className={`${currentTheme.secondary} text-xs font-medium`}>
-                    (전체 {drtData?.stations?.length || 0}개 중)
-                  </span>
-                )}
-              </div>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="space-y-3">
-              {drtData?.top_stations && drtData.top_stations.length > 0 ? (
-                // API에서 이미 정렬된 top_stations 사용
-                drtData.top_stations
-                  .slice(0, 5)  // 최대 5개만 표시
-                  .map((station, index) => {
-                    console.log(`🎯 Rendering Top${index + 1} station (from top_stations):`, station.station_name, "Score:", station.drt_score);
-                    return (
-                    <div key={station.station_id} className="p-3 border rounded-lg hover:bg-gray-50 transition-colors">
-                      <div className="flex items-start gap-2 mb-2">
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-sm">{station.station_name}</h4>
-                          <p className="text-xs text-muted-foreground">{selectedDistrictName}</p>
-                        </div>
-                        <div className="flex-shrink-0 text-right">
-                          <div className={`text-lg font-bold ${currentTheme.secondary}`}>{station.drt_score?.toFixed(1)}점</div>
-                          <Badge variant={index === 0 ? "default" : index < 3 ? "secondary" : "outline"} className="text-xs px-2 py-1 font-medium">
-                            #{index + 1}
-                          </Badge>
+                  {loadingStationDetail ? (
+                    <div className="flex items-center justify-center h-32">
+                      <div className="text-center">
+                        <div className={`animate-spin rounded-full h-12 w-12 border-b-2 ${currentTheme.spinner} mx-auto mb-4`}></div>
+                        <div className="text-gray-500">
+                          <div className="font-semibold text-lg">{selectedStation.station_name}</div>
+                          <div className="text-base">정류장 데이터 로딩 중...</div>
                         </div>
                       </div>
-                      <Progress value={station.drt_score || 0} max={100} className="h-1.5" />
                     </div>
-                    );
-                  })
-              ) : (
-                <div className="text-center text-gray-500 py-6">
-                  {loadingDrtData ? (
-                    <div>
-                      <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${currentTheme.spinner} mx-auto mb-4`}></div>
-                      <div className="text-base">
-                        {selectedDistrictName ? `${selectedDistrictName} ` : ""}{selectedModel} 데이터 로딩 중...
+                  ) : stationDetail && stationCharacteristics ? (
+                    <>
+                      <div className={`p-4 bg-gradient-to-r ${currentTheme.background} rounded-lg`}>
+                        <h4 className={`font-semibold text-lg mb-3 flex items-center gap-2 ${currentTheme.primary}`}>
+                          🎯 {stationCharacteristics.title}
+                        </h4>
+                        <div className="space-y-3">
+                          {stationCharacteristics.items.map((item, idx) => (
+                            <div key={idx} className="bg-white p-3 rounded-lg">
+                              <div className="flex items-start gap-3 mb-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-semibold text-base">{item.label}</div>
+                                  <div className="text-xs text-gray-600">{item.description}</div>
+                                </div>
+                                <div className="flex-shrink-0 text-right">
+                                  <div className={`text-lg font-bold ${currentTheme.score}`}>
+                                    {item.score}점
+                                  </div>
+                                  <Badge variant={
+                                    item.level.includes("매우 높음") || item.level.includes("최우수") || item.level.includes("최대치") ? "default" : 
+                                    item.level.includes("높음") || item.level.includes("우수") ? "secondary" : 
+                                    item.level.includes("보통") ? "outline" : 
+                                    "secondary"
+                                  } className="text-xs px-1.5 py-0.5">
+                                    {item.level}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <Progress 
+                                value={parseFloat(item.score)} 
+                                className={`h-2 ${
+                                  selectedModel === "교통취약지" ? "progress-purple" : 
+                                  selectedModel === "출퇴근" ? "progress-blue" : 
+                                  "progress-green"
+                                }`}
+                              />
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
+
+                      <div className={`p-3 rounded-lg ${currentTheme.background.replace('from-', 'bg-').replace(' to-pink-50', '').replace(' to-indigo-50', '').replace(' to-emerald-50', '')}`}>
+                        <div className={`text-base font-medium ${currentTheme.primary} mb-1`}>
+                          종합 DRT 적합도
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className={`text-2xl font-bold ${currentTheme.secondary}`}>
+                            {stationDetail.current_score.toFixed(1)}점
+                          </div>
+                          <div className={`text-base ${currentTheme.primary}`}>
+                            피크: {stationDetail.peak_hour}시 ({stationDetail.peak_score.toFixed(1)}점)
+                          </div>
+                        </div>
+                      </div>
+                    </>
                   ) : (
-                    <div>
-                      <div className="text-2xl mb-2">
-                        {selectedModel === '교통취약지' ? '💜' : selectedModel === '출퇴근' ? '🏢' : '📸'}
+                    <div className="flex items-center justify-center h-32 text-gray-400">
+                      <div className="text-center">
+                        <div className="text-4xl mb-3">⚠️</div>
+                        <div className="font-semibold text-lg">{selectedStation.station_name}</div>
+                        <div className="text-base mt-2">정류장 데이터를 불러올 수 없습니다</div>
+                        <div className="text-sm mt-2 text-gray-500">
+                          ID: {selectedStation.station_id} | 모델: {selectedModel}
+                        </div>
+                        <div className="text-sm mt-1">다른 정류장을 선택해주세요</div>
+                        <button 
+                          onClick={() => {
+                            setStationDetail(null);
+                          }}
+                          className={`mt-3 px-4 py-2 ${currentTheme.button} rounded-lg transition-colors text-sm`}
+                        >
+                          🔄 다시 시도
+                        </button>
                       </div>
-                      <div className="text-base">데이터를 불러올 수 없습니다</div>
                     </div>
                   )}
                 </div>
+              ) : (
+                <div className="flex items-center justify-center h-32 text-gray-400">
+                  <div className="text-center">
+                    <Image 
+                      src="/drt_icon/정류장피크특성분석_drt분석.png" 
+                      alt="정류장 피크 특성 분석" 
+                      width={64}
+                      height={64}
+                      className="h-16 w-16 mx-auto mb-3 opacity-60"
+                    />
+                    <div className="text-lg">지도에서 정류장을 클릭하면</div>
+                    <div className="text-lg">해당 정류장의 피크 특성을 분석합니다</div>
+                  </div>
+                </div>
               )}
-            </div>
-          </CardContent>
-        </Card>
-
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

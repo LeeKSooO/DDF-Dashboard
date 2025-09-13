@@ -31,6 +31,7 @@ import {
   ChevronDown,
   MapPin,
   Link2,
+  Network,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -63,6 +64,11 @@ const DRTAnalysisContent = lazy(() =>
     default: m.DRTAnalysisContent,
   }))
 );
+const ODAnalysisContent = lazy(() =>
+  import("./pages/od-analysis-content").then((m) => ({
+    default: m.ODAnalysisContent,
+  }))
+);
 
 type ActivePage =
   | "dashboard"
@@ -70,6 +76,7 @@ type ActivePage =
   | "heatmap"
   | "traffic-analysis"
   | "drt-analysis"
+  | "od-analysis"
   | "chatbot";
 
 // 채팅 메시지 타입 정의
@@ -295,13 +302,14 @@ export function DDFDashboard() {
     // 챗봇은 다른 탭으로 이동해도 유지됨
   };
 
-  // Navigation items with custom icons
+  // Navigation items with custom icons - 정책담당자 의사결정 스토리보드 순서
   const navigationItems = [
     { id: "dashboard", label: "대시보드 개요", iconPath: "/sidebar_icon/대시보드개요_사이드바.png" },
+    { id: "od-analysis", label: "OD 분석", iconPath: "/sidebar_icon/OD분석_사이드바.png" },
+    { id: "drt-analysis", label: "DRT 분석", iconPath: "/sidebar_icon/DRT분석_사이드바.png" },
+    { id: "traffic-analysis", label: "이상 패턴 분석", iconPath: "/sidebar_icon/이상패턴분석_사이드바.png" },
     { id: "traffic", label: "교통 패턴 분석", iconPath: "/sidebar_icon/교통패턴분석_사이드바.png" },
     { id: "heatmap", label: "교통량 분석", iconPath: "/sidebar_icon/교통량분석_사이드바.png" },
-    { id: "traffic-analysis", label: "이상 패턴 분석", iconPath: "/sidebar_icon/이상패턴분석_사이드바.png" },
-    { id: "drt-analysis", label: "DRT 분석", iconPath: "/sidebar_icon/DRT분석_사이드바.png" },
     { id: "chatbot", label: "AI 교통 상담", iconPath: "/sidebar_icon/RAG채팅_사이드바.png" },
   ];
 
@@ -357,6 +365,15 @@ export function DDFDashboard() {
                 console.log("📥 Received district change from DRT analysis:", district);
                 setDrtSelectedDistrict(district);
               }}
+            />
+          </Suspense>
+        );
+      case "od-analysis":
+        return (
+          <Suspense fallback={<LoadingSpinner />}>
+            <ODAnalysisContent
+              selectedMonth={selectedMonth}
+              selectedRegion={selectedRegion}
             />
           </Suspense>
         );

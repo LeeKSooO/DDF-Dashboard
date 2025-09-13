@@ -627,303 +627,13 @@ export function HeatmapContent({
         </div>
       </div>
 
-      {/* 개선된 3열 레이아웃: 좌측 패턴 + 중앙 지도 + 우측 상세정보 */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-[800px]">
-        {/* 좌측 - 패턴 분석 제어판 */}
-        <div className="lg:col-span-1 order-2 lg:order-1">
-          <Card className="h-fit shadow-lg border-0 bg-gradient-to-br from-gray-50 to-slate-100">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base font-bold text-gray-800">
-                <Activity className="h-5 w-5 text-purple-600" />
-                패턴 분석
-              </CardTitle>
-              <CardDescription className="text-sm text-gray-600">
-                {selectedRegion === "전체" && !selectedDistrict
-                  ? "구 선택 필요"
-                  : `${selectedDistrict || selectedRegion}`}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              {selectedRegion === "전체" && !selectedDistrict ? (
-                <div className="text-center text-gray-400 py-8">
-                  <Activity className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm">지도에서 구 클릭</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <TooltipProvider>
-                    {/* 주말 우세 정류장 */}
-                    <HelpTooltip>
-                      <HelpTooltipTrigger asChild>
-                        <button
-                          onClick={() => {
-                            setSelectedPattern(
-                              selectedPattern === "weekend" ? null : "weekend"
-                            );
-                            setViewMode("station");
-                          }}
-                          className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
-                            selectedPattern === "weekend"
-                              ? `${getPatternBgClass("weekend")} text-white shadow-lg`
-                              : "bg-white text-gray-700 hover:bg-emerald-50 border border-gray-200"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <Image
-                              src="/heatmap_icon/주말패턴_히트맵.png"
-                              alt="주말 패턴"
-                              className="h-4 w-4"
-                              width={16}
-                              height={16}
-                            />
-                            <span>주말</span>
-                          </div>
-                        </button>
-                      </HelpTooltipTrigger>
-                      <HelpTooltipContent side="right">
-                        <div className="text-xs">
-                          <p className="font-semibold">주말 우세 정류장</p>
-                          <p className="text-gray-400">
-                            주말 고수요 관광지/레저 정류장
-                          </p>
-                          <p className="mt-1">
-                            {weekendData?.data?.length || 0}개 정류장 발견
-                          </p>
-                        </div>
-                      </HelpTooltipContent>
-                    </HelpTooltip>
-
-                    {/* 심야 고수요 */}
-                    <HelpTooltip>
-                      <HelpTooltipTrigger asChild>
-                        <button
-                          onClick={() => {
-                            setSelectedPattern(
-                              selectedPattern === "night" ? null : "night"
-                            );
-                            setViewMode("station");
-                          }}
-                          className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
-                            selectedPattern === "night"
-                              ? `${getPatternBgClass("night")} text-white shadow-lg`
-                              : "bg-white text-gray-700 hover:bg-purple-50 border border-gray-200"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <Image
-                              src="/heatmap_icon/심야패턴_히트맵.png"
-                              alt="심야 패턴"
-                              className="h-4 w-4"
-                              width={16}
-                              height={16}
-                            />
-                            <span>심야</span>
-                          </div>
-                        </button>
-                      </HelpTooltipTrigger>
-                      <HelpTooltipContent side="right">
-                        <div className="text-xs">
-                          <p className="font-semibold">심야시간 고수요</p>
-                          <p className="text-gray-400">
-                            24시간 활성화된 상업지역 정류장
-                          </p>
-                          <p className="mt-1">
-                            {nightData?.data?.length || 0}개 정류장 발견
-                          </p>
-                        </div>
-                      </HelpTooltipContent>
-                    </HelpTooltip>
-
-                    {/* 저활용 정류장 */}
-                    <HelpTooltip>
-                      <HelpTooltipTrigger asChild>
-                        <button
-                          disabled={!underutilizedAvailable}
-                          onClick={() => {
-                            if (!underutilizedAvailable) return;
-                            setSelectedPattern(
-                              selectedPattern === "underutilized"
-                                ? null
-                                : "underutilized"
-                            );
-                            setViewMode("station");
-                          }}
-                          className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
-                            selectedPattern === "underutilized"
-                              ? `${getPatternBgClass("underutilized")} text-white shadow-lg`
-                              : "bg-white text-gray-700 hover:bg-red-50 border border-gray-200"
-                          } ${!underutilizedAvailable ? "opacity-60 cursor-not-allowed" : ""}`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <Image
-                              src="/heatmap_icon/저활용_히트맵.png"
-                              alt="저활용 패턴"
-                              className="h-4 w-4"
-                              width={16}
-                              height={16}
-                            />
-                            <span>저활용</span>
-                          </div>
-                        </button>
-                      </HelpTooltipTrigger>
-                      <HelpTooltipContent side="right">
-                        <div className="text-xs">
-                          <p className="font-semibold">저활용 정류장</p>
-                          <p className="text-gray-400">
-                            운영 최적화 대상 정류장
-                          </p>
-                          <p className="mt-1">
-                            {underutilizedAvailable 
-                              ? `${underutilizedData?.data?.length || 0}개 정류장 발견`
-                              : "데이터 준비 중"
-                            }
-                          </p>
-                        </div>
-                      </HelpTooltipContent>
-                    </HelpTooltip>
-
-                    {/* 점심시간 특화 */}
-                    <HelpTooltip>
-                      <HelpTooltipTrigger asChild>
-                        <button
-                          onClick={() => {
-                            setSelectedPattern(
-                              selectedPattern === "lunchtime"
-                                ? null
-                                : "lunchtime"
-                            );
-                            setViewMode("station");
-                          }}
-                          className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
-                            selectedPattern === "lunchtime"
-                              ? `${getPatternBgClass("lunchtime")} text-white shadow-lg`
-                              : "bg-white text-gray-700 hover:bg-green-50 border border-gray-200"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <Image
-                              src="/heatmap_icon/점심패턴_히트맵.png"
-                              alt="점심 패턴"
-                              className="h-4 w-4"
-                              width={16}
-                              height={16}
-                            />
-                            <span>점심</span>
-                          </div>
-                        </button>
-                      </HelpTooltipTrigger>
-                      <HelpTooltipContent side="right">
-                        <div className="text-xs">
-                          <p className="font-semibold">점심시간 특화</p>
-                          <p className="text-gray-400">
-                            음식점가/상업지구 점심 정류장
-                          </p>
-                          <p className="mt-1">
-                            {lunchTimeData?.data?.length || 0}개 정류장 발견
-                          </p>
-                        </div>
-                      </HelpTooltipContent>
-                    </HelpTooltip>
-
-                    {/* 러시아워 핫스팟 */}
-                    <HelpTooltip>
-                      <HelpTooltipTrigger asChild>
-                        <button
-                          onClick={() => {
-                            setSelectedPattern(
-                              selectedPattern === "rushhour" ? null : "rushhour"
-                            );
-                            setViewMode("station");
-                          }}
-                          className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
-                            selectedPattern === "rushhour"
-                              ? `${getPatternBgClass("rushhour")} text-white shadow-lg`
-                              : "bg-white text-gray-700 hover:bg-orange-50 border border-gray-200"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <Image
-                              src="/heatmap_icon/러시아워_히트맵.png"
-                              alt="러시아워 패턴"
-                              className="h-4 w-4"
-                              width={16}
-                              height={16}
-                            />
-                            <span>러시</span>
-                          </div>
-                        </button>
-                      </HelpTooltipTrigger>
-                      <HelpTooltipContent side="right">
-                        <div className="text-xs">
-                          <p className="font-semibold">러시아워 고수요</p>
-                          <p className="text-gray-400">
-                            출퇴근 시간대 집중 정류장
-                          </p>
-                          <p className="mt-1">
-                            {(rushHourData?.data?.morning_rush?.length || 0) +
-                              (rushHourData?.data?.evening_rush?.length || 0)}
-                            개 정류장 발견
-                          </p>
-                        </div>
-                      </HelpTooltipContent>
-                    </HelpTooltip>
-
-                    {/* 지역 특성 분석 */}
-                    <HelpTooltip>
-                      <HelpTooltipTrigger asChild>
-                        <button
-                          onClick={() => {
-                            setSelectedPattern(
-                              selectedPattern === "areatype" ? null : "areatype"
-                            );
-                            setViewMode("station");
-                          }}
-                          className={`w-full py-3 px-4 text-base font-bold rounded transition-all ${
-                            selectedPattern === "areatype"
-                              ? `${getPatternBgClass("areatype")} text-white shadow-lg`
-                              : "bg-white text-gray-700 hover:bg-sky-50 border border-gray-200"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <Image
-                              src="/heatmap_icon/지역특성_히트맵.png"
-                              alt="지역 특성 패턴"
-                              className="h-4 w-4"
-                              width={16}
-                              height={16}
-                            />
-                            <span>지역</span>
-                          </div>
-                        </button>
-                      </HelpTooltipTrigger>
-                      <HelpTooltipContent side="right">
-                        <div className="text-xs">
-                          <p className="font-semibold">지역 특성별</p>
-                          <p className="text-gray-400">
-                            주거지역 vs 업무지역 정류장 구분
-                          </p>
-                          <p className="mt-1">
-                            {(areaTypeData?.data?.residential_stations
-                              ?.length || 0) +
-                              (areaTypeData?.data?.business_stations?.length ||
-                                0)}
-                            개 정류장 발견
-                          </p>
-                        </div>
-                      </HelpTooltipContent>
-                    </HelpTooltip>
-                  </TooltipProvider>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* 중앙 - 메인 히트맵 시각화 */}
-        <div className="lg:col-span-7 order-1 lg:order-2">
+{/* 2열 레이아웃: 지도 + 우측 상세정보 */}
+<div className="grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-[800px]">
+        {/* 메인 히트맵 시각화 */}
+        <div className="lg:col-span-8 order-1">
           <Card className="shadow-xl border-0 bg-gradient-to-br from-gray-50 to-slate-100 overflow-hidden relative">
             <CardHeader className="bg-gray-50/90 backdrop-blur-sm">
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between mb-4">
                 <div>
                   <CardTitle className="flex items-center gap-3 text-3xl font-bold text-gray-800">
                     <Image
@@ -1053,6 +763,151 @@ export function HeatmapContent({
                   </div>
                 </TooltipProvider>
               </div>
+              
+              {/* 패턴 분석 버튼들 - 지도 위에 배치 */}
+              {(selectedDistrict || selectedRegion !== "전체") && (
+                <div className="border-t border-gray-200 pt-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Activity className="h-4 w-4 text-purple-600" />
+                    <span className="text-sm font-semibold text-gray-700">패턴 분석</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {/* 주말 패턴 버튼 */}
+                    <button
+                      onClick={() => {
+                        setSelectedPattern(selectedPattern === "weekend" ? null : "weekend");
+                        setViewMode("station");
+                      }}
+                      className={`px-3 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${
+                        selectedPattern === "weekend"
+                          ? "bg-emerald-500 text-white"
+                          : "bg-white text-gray-700 hover:bg-emerald-50 border border-gray-200"
+                      }`}
+                    >
+                      <Image
+                        src="/heatmap_icon/주말패턴_히트맵.png"
+                        alt="주말 패턴"
+                        className="h-4 w-4"
+                        width={16}
+                        height={16}
+                      />
+                      <span>주말</span>
+                    </button>
+                    
+                    {/* 심야 패턴 버튼 */}
+                    <button
+                      onClick={() => {
+                        setSelectedPattern(selectedPattern === "night" ? null : "night");
+                        setViewMode("station");
+                      }}
+                      className={`px-3 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${
+                        selectedPattern === "night"
+                          ? "bg-purple-500 text-white"
+                          : "bg-white text-gray-700 hover:bg-purple-50 border border-gray-200"
+                      }`}
+                    >
+                      <Image
+                        src="/heatmap_icon/심야패턴_히트맵.png"
+                        alt="심야 패턴"
+                        className="h-4 w-4"
+                        width={16}
+                        height={16}
+                      />
+                      <span>심야</span>
+                    </button>
+                    
+                    {/* 저활용 패턴 버튼 */}
+                    <button
+                      disabled={!underutilizedAvailable}
+                      onClick={() => {
+                        if (!underutilizedAvailable) return;
+                        setSelectedPattern(selectedPattern === "underutilized" ? null : "underutilized");
+                        setViewMode("station");
+                      }}
+                      className={`px-3 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${
+                        selectedPattern === "underutilized"
+                          ? "bg-yellow-500 text-white"
+                          : "bg-white text-gray-700 hover:bg-yellow-50 border border-gray-200"
+                      } ${!underutilizedAvailable ? "opacity-60 cursor-not-allowed" : ""}`}
+                    >
+                      <Image
+                        src="/heatmap_icon/저활용_히트맵.png"
+                        alt="저활용 패턴"
+                        className="h-4 w-4"
+                        width={16}
+                        height={16}
+                      />
+                      <span>저활용</span>
+                    </button>
+                    
+                    {/* 점심시간 패턴 버튼 */}
+                    <button
+                      onClick={() => {
+                        setSelectedPattern(selectedPattern === "lunchtime" ? null : "lunchtime");
+                        setViewMode("station");
+                      }}
+                      className={`px-3 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${
+                        selectedPattern === "lunchtime"
+                          ? "bg-green-500 text-white"
+                          : "bg-white text-gray-700 hover:bg-green-50 border border-gray-200"
+                      }`}
+                    >
+                      <Image
+                        src="/heatmap_icon/점심패턴_히트맵.png"
+                        alt="점심 패턴"
+                        className="h-4 w-4"
+                        width={16}
+                        height={16}
+                      />
+                      <span>점심</span>
+                    </button>
+                    
+                    {/* 러시아워 패턴 버튼 */}
+                    <button
+                      onClick={() => {
+                        setSelectedPattern(selectedPattern === "rushhour" ? null : "rushhour");
+                        setViewMode("station");
+                      }}
+                      className={`px-3 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${
+                        selectedPattern === "rushhour"
+                          ? "bg-pink-500 text-white"
+                          : "bg-white text-gray-700 hover:bg-pink-50 border border-gray-200"
+                      }`}
+                    >
+                      <Image
+                        src="/heatmap_icon/러시아워_히트맵.png"
+                        alt="러시아워 패턴"
+                        className="h-4 w-4"
+                        width={16}
+                        height={16}
+                      />
+                      <span>러시</span>
+                    </button>
+                    
+                    {/* 지역특성 패턴 버튼 */}
+                    <button
+                      onClick={() => {
+                        setSelectedPattern(selectedPattern === "areatype" ? null : "areatype");
+                        setViewMode("station");
+                      }}
+                      className={`px-3 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${
+                        selectedPattern === "areatype"
+                          ? "bg-sky-500 text-white"
+                          : "bg-white text-gray-700 hover:bg-sky-50 border border-gray-200"
+                      }`}
+                    >
+                      <Image
+                        src="/heatmap_icon/지역특성_히트맵.png"
+                        alt="지역 특성 패턴"
+                        className="h-4 w-4"
+                        width={16}
+                        height={16}
+                      />
+                      <span>지역</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </CardHeader>
             <CardContent>
               <HeatmapSeoulMap
@@ -1336,7 +1191,7 @@ export function HeatmapContent({
                                       key={stableKey(station, index)}
                                       className="flex items-center justify-between p-2 bg-orange-50 rounded"
                                     >
-                                      <div className="flex items-center gap-2">
+                                      <div className="flex items-center justify-center gap-2">
                                         <div className="text-base font-bold text-orange-600">
                                           #{index + 1}
                                         </div>
@@ -1395,7 +1250,7 @@ export function HeatmapContent({
                                       key={stableKey(station, index)}
                                       className="flex items-center justify-between p-2 bg-red-50 rounded"
                                     >
-                                      <div className="flex items-center gap-2">
+                                      <div className="flex items-center justify-center gap-2">
                                         <div className="text-base font-bold text-red-600">
                                           #{index + 1}
                                         </div>
