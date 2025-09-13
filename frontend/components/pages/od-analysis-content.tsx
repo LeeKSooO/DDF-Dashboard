@@ -157,6 +157,16 @@ const getServiceQualityColor = (
   return [220, 38, 38, 220]; // 불량 - 빨간색
 };
 
+// 수요집중도별 색상 (DRT 도입 필요성 기준)
+const getDemandRatioColor = (
+  ratio: number
+): [number, number, number, number] => {
+  if (ratio >= 25) return [220, 38, 38, 220]; // 긴급검토 (25배+) - 빨간색
+  if (ratio >= 20) return [249, 115, 22, 200]; // 검토필요 (20배+) - 주황색
+  if (ratio >= 10) return [59, 130, 246, 180]; // 관찰대상 (10배+) - 파란색
+  return [34, 197, 94, 180]; // 양호 (5배미만) - 초록색
+};
+
 export const ODAnalysisContent = ({
   selectedMonth = "2025-07-01",
 }: ODAnalysisContentProps) => {
@@ -748,7 +758,7 @@ export const ODAnalysisContent = ({
           (item) => item.demand_service_ratio >= filters.minDemandRatio
         )
         .filter(
-          (item) => !filters.showHighRiskOnly || item.demand_service_ratio > 2
+          (item) => !filters.showHighRiskOnly || item.demand_service_ratio > 10
         )
         .map((item) => ({
           analysis_type: "mismatch",
@@ -801,14 +811,14 @@ export const ODAnalysisContent = ({
       if (d.analysis_type === "time_based") {
         return getDemandLevelColor(d.demand);
       } else {
-        return getServiceQualityColor(d.service_quality || 50);
+        return getDemandRatioColor(d.demand_service_ratio || 1);
       }
     },
     getTargetColor: (d: any) => {
       if (d.analysis_type === "time_based") {
         return getDemandLevelColor(d.demand);
       } else {
-        return getServiceQualityColor(d.service_quality || 50);
+        return getDemandRatioColor(d.demand_service_ratio || 1);
       }
     },
     getWidth: (d: any) => Math.max(4, Math.log(d.demand + 1) * 2.5),
@@ -1037,8 +1047,8 @@ export const ODAnalysisContent = ({
                       <div class="font-bold text-sm">수요-공급 불균형</div>
                       <div class="mt-2 space-y-1">
                         <div class="text-sm">수요집중도: <span class="font-bold ${
-                          (object.demand_service_ratio || 0) > 2 ? 'text-red-600' : ''
-                        }">${
+                          (object.demand_service_ratio || 0) > 10 ? 'text-red-600' : ''
+                        }">'${
                           (object.demand_service_ratio || 0).toFixed(1)
                         }배</span></div>
                         <div class="text-sm">일평균 승객: <span class="font-bold">${
@@ -1073,13 +1083,13 @@ export const ODAnalysisContent = ({
           </div>
           {currentMode === "time_based" && (
             <div className="text-gray-500">
-              📅 {selectedMonth} •{" "}
+              {selectedMonth} •{" "}
               {TIME_PERIODS.find((p) => p.key === selectedTimePeriod)?.label}
               <br />
-              📊 총 {timeAnalysis[selectedTimePeriod]?.total_origins || 0}개
+              총 {timeAnalysis[selectedTimePeriod]?.total_origins || 0}개
               출발지
               <br />
-              👥 총{" "}
+              총{" "}
               {(
                 timeAnalysis[selectedTimePeriod]?.total_demand || 0
               ).toLocaleString()}
@@ -1088,21 +1098,20 @@ export const ODAnalysisContent = ({
           )}
           {currentMode === "mismatch" && (
             <div className="text-gray-500">
-              📅 {selectedMonth} 분석 결과
+              {selectedMonth} 분석 결과
               <br />
-              🔍 {mismatchAnalysis.data.length}개 구간 분석
+              {mismatchAnalysis.data.length}개 구간 분석
               <br />
-              ⚠️{" "}
               {
                 mismatchAnalysis.data.filter(
-                  (item) => item.demand_service_ratio > 2
+                  (item) => item.demand_service_ratio > 10
                 ).length
               }
               개 고위험 구간
             </div>
           )}
           <div className="text-gray-400 mt-2 border-t pt-1">
-            🗺️ 3D 지도 표시 • 정류장 클릭으로 상세 정보
+            3D 지도 표시 • 정류장 클릭으로 상세 정보
             {mismatchAnalysis.error && currentMode === "mismatch" && (
               <div className="text-orange-500 mt-1">
                 API 연결 실패 - 데모 데이터 사용 중
@@ -1343,20 +1352,20 @@ export const ODAnalysisContent = ({
             {currentMode === "mismatch" && (
               <div className="space-y-0.5">
                 <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-1.5 bg-green-500 rounded-sm" />
-                  <span className="text-xs">우수 (80+점)</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-1.5 bg-blue-500 rounded-sm" />
-                  <span className="text-xs">양호 (60+점)</span>
+                  <div className="w-3 h-1.5 bg-red-600 rounded-sm" />
+                  <span className="text-xs">긴급검토 (25배+)</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <div className="w-3 h-1.5 bg-orange-500 rounded-sm" />
-                  <span className="text-xs">보통 (40+점)</span>
+                  <span className="text-xs">검토필요 (20배+)</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-1.5 bg-red-600 rounded-sm" />
-                  <span className="text-xs">불량 (40점 미만)</span>
+                  <div className="w-3 h-1.5 bg-blue-500 rounded-sm" />
+                  <span className="text-xs">관찰대상 (10배+)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-1.5 bg-green-500 rounded-sm" />
+                  <span className="text-xs">양호 (5배미만)</span>
                 </div>
               </div>
             )}
@@ -1734,7 +1743,7 @@ export const ODAnalysisContent = ({
                       <span className="font-bold text-red-600">
                         {
                           mismatchAnalysis.data.filter(
-                            (item) => item.demand_service_ratio > 2
+                            (item) => item.demand_service_ratio > 10
                           ).length
                         }
                         개
