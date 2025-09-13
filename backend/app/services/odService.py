@@ -116,7 +116,7 @@ class ODService:
             END as priority_category,
             (p1_score + p2_score) as priority_score
         FROM mv_monthly_od_summary 
-        WHERE analysis_month = :analysis_month 
+        WHERE DATE(analysis_month) = :analysis_month 
         AND (p1_score > 0 OR p2_score > 0)
         ORDER BY (p1_score + p2_score) DESC, daily_avg_passengers DESC
         LIMIT :top_n
@@ -166,7 +166,7 @@ class ODService:
                 daily_avg_passengers, ever_transfer_required,
                 'P1_최우선' as priority_category, p1_score as priority_score
             FROM mv_monthly_od_summary 
-            WHERE analysis_month = :analysis_month AND p1_score > 0
+            WHERE DATE(analysis_month) = :analysis_month AND p1_score > 0
             ORDER BY p1_score DESC LIMIT :top_n
             """
         else:  # p2
@@ -178,7 +178,7 @@ class ODService:
                 daily_avg_passengers, ever_transfer_required,
                 'P2_우선' as priority_category, p2_score as priority_score
             FROM mv_monthly_od_summary 
-            WHERE analysis_month = :analysis_month AND p2_score > 0
+            WHERE DATE(analysis_month) = :analysis_month AND p2_score > 0
             ORDER BY p2_score DESC LIMIT :top_n
             """
         
@@ -232,7 +232,7 @@ class ODService:
             daily_avg_passengers, ever_transfer_required,
             avg_dispatch_interval, 'P2_직행노선부족' as priority_category
         FROM mv_monthly_od_summary 
-        WHERE analysis_month = :analysis_month AND p3_score > 0
+        WHERE DATE(analysis_month) = :analysis_month AND p3_score > 0
         AND from_district_name IS NOT NULL AND to_district_name IS NOT NULL
         ORDER BY p3_score DESC LIMIT :top_n
         """
@@ -284,7 +284,7 @@ class ODService:
                 ELSE 0 
             END as demand_per_km
         FROM mv_monthly_od_summary 
-        WHERE analysis_month = :analysis_month AND p4_score > 0
+        WHERE DATE(analysis_month) = :analysis_month AND p4_score > 0
         AND from_district_name IS NOT NULL AND to_district_name IS NOT NULL
         ORDER BY p4_score DESC LIMIT :top_n
         """
@@ -355,7 +355,7 @@ class ODService:
             COUNT(DISTINCT to_station_id) as destination_count,
             AVG(avg_distance_km) as avg_distance_km
         FROM mv_monthly_od_summary 
-        WHERE analysis_month = :analysis_month 
+        WHERE DATE(analysis_month) = :analysis_month 
         AND from_station_id != to_station_id  -- 동일 정류장 제외
         AND from_coordinates_x IS NOT NULL 
         AND from_coordinates_y IS NOT NULL
@@ -385,7 +385,7 @@ class ODService:
                 {time_column} as demand,
                 ROW_NUMBER() OVER (ORDER BY {time_column} DESC) as rank
             FROM mv_monthly_od_summary
-            WHERE analysis_month = :analysis_month
+            WHERE DATE(analysis_month) = :analysis_month
             AND from_station_id = :from_station_id
             AND from_station_id != to_station_id  -- 동일 정류장 제외
             AND {time_column} > 0
@@ -500,7 +500,7 @@ class ODService:
                     min_direct_connections, 
                     common_routes, from_routes, to_routes
                 FROM mv_monthly_od_summary
-                WHERE analysis_month = :analysis_month
+                WHERE DATE(analysis_month) = :analysis_month
                     AND daily_avg_passengers >= :min_passengers
                     AND from_coordinates_x IS NOT NULL 
                     AND from_coordinates_y IS NOT NULL
@@ -658,7 +658,7 @@ class ODService:
             COUNT(CASE WHEN drt_priority_score > 0 THEN 1 END) as drt_applicable_pairs,
             SUM(CASE WHEN ever_transfer_required = true THEN monthly_total_passengers ELSE 0 END) as monthly_transfer_demand
         FROM mv_monthly_od_summary 
-        WHERE analysis_month = :analysis_month
+        WHERE DATE(analysis_month) = :analysis_month
         """
         
         result = await db.execute(text(query), {"analysis_month": analysis_month})
@@ -679,7 +679,7 @@ class ODService:
             COUNT(CASE WHEN p3_score > 0 THEN 1 END) as p3_count,
             COUNT(CASE WHEN p4_score > 0 THEN 1 END) as p4_count
         FROM mv_monthly_od_summary 
-        WHERE analysis_month = :analysis_month
+        WHERE DATE(analysis_month) = :analysis_month
         """
         
         result = await db.execute(text(query), {"analysis_month": analysis_month})
@@ -714,7 +714,7 @@ class ODService:
                 monthly_h18, monthly_h19, monthly_h20, monthly_h21, monthly_h22, monthly_h23,
                 monthly_morning_peak, monthly_evening_peak, monthly_night, monthly_daytime
             FROM mv_monthly_od_summary 
-            WHERE analysis_month = :analysis_month
+            WHERE DATE(analysis_month) = :analysis_month
             AND from_station_id = :from_station_id
             AND to_station_id = :to_station_id
             """
