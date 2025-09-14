@@ -29,10 +29,15 @@ import {
   CartesianGrid,
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
-  ReferenceLine
+  ReferenceLine,
 } from "recharts";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { ensureFeatureCollection } from "@/lib/geojson-utils";
 import {
   odAPI,
@@ -66,7 +71,6 @@ interface MismatchAnalysisData {
   loading: boolean;
   error: string | null;
 }
-
 
 interface ODAnalysisContentProps {
   selectedMonth?: string;
@@ -106,7 +110,10 @@ const getDemandLevelColor = (
 };
 
 // 24시간 차트 데이터 포맷팅
-const formatHourlyChartData = (hourlyPassengers: Record<string, number>, dailyAvg: number) => {
+const formatHourlyChartData = (
+  hourlyPassengers: Record<string, number>,
+  dailyAvg: number
+) => {
   return Array.from({ length: 24 }, (_, hour) => ({
     hour: `${hour}시`,
     passengers: hourlyPassengers[hour.toString()] || 0,
@@ -118,34 +125,33 @@ const formatHourlyChartData = (hourlyPassengers: Record<string, number>, dailyAv
 // 패턴 타입별 색상 및 설정
 const getPatternTypeConfig = (patternType: string) => {
   const configs = {
-    '출근시간 집중형': {
-      color: '#ef4444',
-      bgColor: 'bg-red-100',
-      textColor: 'text-red-800',
-      icon: '🌅',
+    "출근시간 집중형": {
+      color: "#ef4444",
+      bgColor: "bg-red-100",
+      textColor: "text-red-800",
+      icon: "🌅",
     },
-    '퇴근시간 집중형': {
-      color: '#f97316',
-      bgColor: 'bg-orange-100',
-      textColor: 'text-orange-800',
-      icon: '🌆',
+    "퇴근시간 집중형": {
+      color: "#f97316",
+      bgColor: "bg-orange-100",
+      textColor: "text-orange-800",
+      icon: "🌆",
     },
-    '주간 분산형': {
-      color: '#3b82f6',
-      bgColor: 'bg-blue-100',
-      textColor: 'text-blue-800',
-      icon: '☀️',
+    "주간 분산형": {
+      color: "#3b82f6",
+      bgColor: "bg-blue-100",
+      textColor: "text-blue-800",
+      icon: "☀️",
     },
-    '균등 분산형': {
-      color: '#059669',
-      bgColor: 'bg-emerald-100',
-      textColor: 'text-emerald-800',
-      icon: '⚖️',
-    }
+    "균등 분산형": {
+      color: "#059669",
+      bgColor: "bg-emerald-100",
+      textColor: "text-emerald-800",
+      icon: "⚖️",
+    },
   };
-  return configs[patternType as keyof typeof configs] || configs['균등 분산형'];
+  return configs[patternType as keyof typeof configs] || configs["균등 분산형"];
 };
-
 
 // 서비스 품질 점수별 색상
 const getServiceQualityColor = (
@@ -211,10 +217,8 @@ export const ODAnalysisContent = ({
   }>({
     data: null,
     loading: false,
-    error: null
+    error: null,
   });
-
-
 
   // 필터 상태
   const [filters, setFilters] = useState({
@@ -651,7 +655,6 @@ export const ODAnalysisContent = ({
     }
   }, [currentMode, selectedMonth]);
 
-
   // 선택된 정류장의 관련 데이터 필터링
   const selectedStationData = useMemo(() => {
     if (!selectedStation) return [];
@@ -754,9 +757,7 @@ export const ODAnalysisContent = ({
       });
     } else if (currentMode === "mismatch") {
       flows = mismatchAnalysis.data
-        .filter(
-          (item) => item.demand_service_ratio >= filters.minDemandRatio
-        )
+        .filter((item) => item.demand_service_ratio >= filters.minDemandRatio)
         .filter(
           (item) => !filters.showHighRiskOnly || item.demand_service_ratio > 10
         )
@@ -831,11 +832,15 @@ export const ODAnalysisContent = ({
       const fromId = object?.from_station_id;
       const toId = object?.to_station_id;
       if (!fromId || !toId) {
-        console.warn('🚨 Arc object has no station IDs:', object);
+        console.warn("🚨 Arc object has no station IDs:", object);
         return;
       }
 
-      console.log('🔄 Arc clicked - loading 24h analysis:', { fromId, toId, selectedMonth });
+      console.log("🔄 Arc clicked - loading 24h analysis:", {
+        fromId,
+        toId,
+        selectedMonth,
+      });
 
       // Promise를 무시하여 비동기 호출
       (async () => {
@@ -843,20 +848,19 @@ export const ODAnalysisContent = ({
           setHourlyAnalysis({ data: null, loading: true, error: null });
 
           const result = await odAPI.getODPairHourlyAnalysis(
-            fromId, 
-            toId, 
+            fromId,
+            toId,
             selectedMonth
           );
-          
+
           setHourlyAnalysis({ data: result, loading: false, error: null });
-          console.log('✅ 24h analysis loaded successfully');
-          
+          console.log("✅ 24h analysis loaded successfully");
         } catch (error) {
-          console.error('❌ Failed to load hourly analysis:', error);
-          setHourlyAnalysis({ 
-            data: null, 
-            loading: false, 
-            error: '데이터를 불러올 수 없습니다' 
+          console.error("❌ Failed to load hourly analysis:", error);
+          setHourlyAnalysis({
+            data: null,
+            loading: false,
+            error: "데이터를 불러올 수 없습니다",
           });
         }
       })();
@@ -992,22 +996,22 @@ export const ODAnalysisContent = ({
     <TooltipProvider>
       <div className="h-full flex">
         {/* 메인 지도 영역 */}
-      <div
-        className="flex-1 relative"
-        onContextMenu={(e) => e.preventDefault()}
-      >
-        <DeckGL
-          viewState={viewState}
-          onViewStateChange={({ viewState }: any) => setViewState(viewState)}
-          controller={true}
-          layers={layers}
-          getTooltip={({ object }: any) => {
-            if (!object) return null;
+        <div
+          className="flex-1 relative"
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          <DeckGL
+            viewState={viewState}
+            onViewStateChange={({ viewState }: any) => setViewState(viewState)}
+            controller={true}
+            layers={layers}
+            getTooltip={({ object }: any) => {
+              if (!object) return null;
 
-            if (object.station_name) {
-              // 정류장 툴팁
-              return {
-                html: `
+              if (object.station_name) {
+                // 정류장 툴팁
+                return {
+                  html: `
                   <div class="bg-white p-2 rounded shadow-lg">
                     <div class="font-bold">${object.station_name}</div>
                     <div class="text-sm">구역: ${
@@ -1019,12 +1023,12 @@ export const ODAnalysisContent = ({
                     <div class="text-xs text-gray-500 mt-1">클릭하여 연결 정보 보기</div>
                   </div>
                 `,
-              };
-            } else if (object.analysis_type) {
-              // 플로우 툴팁
-              if (object.analysis_type === "time_based") {
-                return {
-                  html: `
+                };
+              } else if (object.analysis_type) {
+                // 플로우 툴팁
+                if (object.analysis_type === "time_based") {
+                  return {
+                    html: `
                     <div class="bg-white p-3 rounded shadow-lg border-l-4 border-blue-500">
                       <div class="font-bold text-sm">시간대별 이동 패턴</div>
                       <div class="mt-2 space-y-1">
@@ -1039,18 +1043,20 @@ export const ODAnalysisContent = ({
                       </div>
                     </div>
                   `,
-                };
-              } else {
-                return {
-                  html: `
+                  };
+                } else {
+                  return {
+                    html: `
                     <div class="bg-white p-3 rounded shadow-lg border-l-4 border-orange-500">
                       <div class="font-bold text-sm">수요-공급 불균형</div>
                       <div class="mt-2 space-y-1">
                         <div class="text-sm">수요집중도: <span class="font-bold ${
-                          (object.demand_service_ratio || 0) > 10 ? 'text-red-600' : ''
-                        }">'${
-                          (object.demand_service_ratio || 0).toFixed(1)
-                        }배</span></div>
+                          (object.demand_service_ratio || 0) > 10
+                            ? "text-red-600"
+                            : ""
+                        }">'${(object.demand_service_ratio || 0).toFixed(
+                      1
+                    )}배</span></div>
                         <div class="text-sm">일평균 승객: <span class="font-bold">${
                           object.demand?.toLocaleString() || 0
                         }명</span></div>
@@ -1064,854 +1070,958 @@ export const ODAnalysisContent = ({
                       </div>
                     </div>
                   `,
-                };
-              }
-            }
-            return null;
-          }}
-        />
-
-        {/* 현재 분석 정보 */}
-        <div className="absolute top-4 left-4 z-10 text-xs text-gray-600 bg-white/95 p-3 rounded-lg shadow-lg">
-          <div className="font-medium mb-1">
-            {ANALYSIS_MODES.find((mode) => mode.type === currentMode)?.label}
-            {mismatchAnalysis.error && currentMode === "mismatch" && (
-              <span className="ml-2 text-orange-600 text-xs">
-                ⚠️ 샘플 데이터
-              </span>
-            )}
-          </div>
-          {currentMode === "time_based" && (
-            <div className="text-gray-500">
-              {selectedMonth} •{" "}
-              {TIME_PERIODS.find((p) => p.key === selectedTimePeriod)?.label}
-              <br />
-              총 {timeAnalysis[selectedTimePeriod]?.total_origins || 0}개
-              출발지
-              <br />
-              총{" "}
-              {(
-                timeAnalysis[selectedTimePeriod]?.total_demand || 0
-              ).toLocaleString()}
-              명 수요
-            </div>
-          )}
-          {currentMode === "mismatch" && (
-            <div className="text-gray-500">
-              {selectedMonth} 분석 결과
-              <br />
-              {mismatchAnalysis.data.length}개 구간 분석
-              <br />
-              {
-                mismatchAnalysis.data.filter(
-                  (item) => item.demand_service_ratio > 10
-                ).length
-              }
-              개 고위험 구간
-            </div>
-          )}
-          <div className="text-gray-400 mt-2 border-t pt-1">
-            3D 지도 표시 • 정류장 클릭으로 상세 정보
-            {mismatchAnalysis.error && currentMode === "mismatch" && (
-              <div className="text-orange-500 mt-1">
-                API 연결 실패 - 데모 데이터 사용 중
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* 필터 컨트롤 */}
-        <Card className="absolute top-4 right-4 z-10 p-3 w-64 bg-white/95 backdrop-blur-sm">
-          <CardTitle className="text-xs mb-1 font-semibold flex items-center gap-1">
-            필터
-            <Tooltip>
-              <TooltipTrigger>
-                <HelpCircle className="h-3 w-3 text-gray-400 hover:text-gray-600" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="text-xs">분석 모드와 시간대를 선택하여 원하는 OD 패턴을 확인할 수 있습니다.</p>
-              </TooltipContent>
-            </Tooltip>
-          </CardTitle>
-          <div className="space-y-0">
-            {/* 분석 모드 선택 */}
-            <div className="space-y-1 mb-3">
-              <div className="flex items-center gap-1">
-                <Label className="text-xs font-medium">분석 모드</Label>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <HelpCircle className="h-2 w-2 text-gray-400 hover:text-gray-600" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="text-xs">시간대별: 특정 시간대의 승객 이동 패턴 분석<br/>미스매치: 수요와 공급의 불균형 분석</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <div className="grid grid-cols-1 gap-1">
-                <Button
-                  variant={currentMode === "time_based" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setCurrentMode("time_based")}
-                  className="text-xs h-7 justify-start"
-                >
-                  <Clock className="h-3 w-3 mr-1" />
-                  수요패턴 분석
-                </Button>
-                <Button
-                  variant={currentMode === "mismatch" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setCurrentMode("mismatch")}
-                  className="text-xs h-7 justify-start"
-                >
-                  <AlertTriangle className="h-3 w-3 mr-1" />
-                  서비스부족구간 분석
-                </Button>
-              </div>
-            </div>
-
-            {/* 시간대별 분석 필터 */}
-            {currentMode === "time_based" && (
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">시간대 선택</Label>
-                <div className="grid grid-cols-2 gap-1">
-                  {TIME_PERIODS.map((period) => (
-                    <Button
-                      key={period.key}
-                      variant={
-                        selectedTimePeriod === period.key
-                          ? "default"
-                          : "outline"
-                      }
-                      size="sm"
-                      onClick={() => setSelectedTimePeriod(period.key)}
-                      className="text-xs h-7"
-                      style={{
-                        backgroundColor:
-                          selectedTimePeriod === period.key
-                            ? period.color
-                            : undefined,
-                        borderColor: period.color,
-                      }}
-                    >
-                      {period.label}
-                    </Button>
-                  ))}
-                </div>
-                <div className="flex items-center gap-2 mt-2">
-                  <Label className="text-xs">
-                    최소수요: {filters.minDemand}
-                  </Label>
-                  <input
-                    type="range"
-                    min="10"
-                    max="500"
-                    step="10"
-                    value={filters.minDemand}
-                    onChange={(e) =>
-                      setFilters((prev) => ({
-                        ...prev,
-                        minDemand: parseInt(e.target.value),
-                      }))
-                    }
-                    className="flex-1 h-1"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* 미스매치 분석 필터 */}
-            {currentMode === "mismatch" && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={filters.showHighRiskOnly}
-                    onCheckedChange={(checked) =>
-                      setFilters((prev) => ({
-                        ...prev,
-                        showHighRiskOnly: checked,
-                      }))
-                    }
-                    className="scale-75"
-                  />
-                  <Label className="text-xs">고위험 구간만</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Label className="text-xs">
-                    수요집중도: {filters.minDemandRatio}배
-                  </Label>
-                  <input
-                    type="range"
-                    min="1"
-                    max="30"
-                    step="1"
-                    value={filters.minDemandRatio}
-                    onChange={(e) =>
-                      setFilters((prev) => ({
-                        ...prev,
-                        minDemandRatio: parseFloat(e.target.value),
-                      }))
-                    }
-                    className="flex-1 h-1"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          <Separator className="my-3" />
-
-          <div className="space-y-2">
-            <div className="text-xs font-medium mb-2">지도 레이어</div>
-
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={filters.showMapBackground}
-                onCheckedChange={(checked) =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    showMapBackground: checked,
-                  }))
+                  };
                 }
-                disabled={!seoulCtprvnGeoJson}
-              />
-              <div className="w-3 h-3 bg-gray-300 rounded border" />
-              <Label className="text-xs">서울특별시 배경</Label>
-            </div>
+              }
+              return null;
+            }}
+          />
 
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={filters.showDistrictBoundaries}
-                onCheckedChange={(checked) =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    showDistrictBoundaries: checked,
-                  }))
-                }
-                disabled={!seoulSigGeoJson}
-              />
-              <div className="w-3 h-3 bg-gray-200 border border-gray-400" />
-              <Label className="text-xs">구 경계선</Label>
-              {seoulSigGeoJson && (
-                <span className="text-xs text-gray-500">(25개 구)</span>
+          {/* 현재 분석 정보 */}
+          <div className="absolute top-4 left-4 z-10 text-xs text-gray-600 bg-white/95 p-3 rounded-lg shadow-lg">
+            <div className="font-medium mb-1">
+              {ANALYSIS_MODES.find((mode) => mode.type === currentMode)?.label}
+              {mismatchAnalysis.error && currentMode === "mismatch" && (
+                <span className="ml-2 text-orange-600 text-xs">
+                  ⚠️ 샘플 데이터
+                </span>
               )}
             </div>
-
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={filters.showDetailedBoundaries}
-                onCheckedChange={(checked) =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    showDetailedBoundaries: checked,
-                  }))
-                }
-                disabled={!seoulEmdGeoJson}
-              />
-              <div className="w-3 h-3 border border-gray-400 bg-transparent" />
-              <Label className="text-xs">동 경계선</Label>
-              {seoulEmdGeoJson && (
-                <span className="text-xs text-gray-500">(467개 동)</span>
-              )}
-            </div>
-          </div>
-        </Card>
-
-        {/* 범례 - 컴팩트 */}
-        <Card className="absolute bottom-4 left-4 z-10 p-2 w-48 bg-white/95 backdrop-blur-sm">
-          <div className="space-y-2">
-            <div className="text-xs font-semibold">범례</div>
-
-            {/* 정류장 */}
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 bg-blue-500 rounded-full border border-white" />
-              <span className="text-xs">정류장</span>
-            </div>
-
-            {/* 분석별 범례 */}
             {currentMode === "time_based" && (
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-1.5 bg-red-600 rounded-sm" />
-                  <span className="text-xs">고수요 (1000+)</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-1.5 bg-orange-500 rounded-sm" />
-                  <span className="text-xs">중수요 (500+)</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-1.5 bg-blue-500 rounded-sm" />
-                  <span className="text-xs">일반 (100+)</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-1.5 bg-green-500 rounded-sm" />
-                  <span className="text-xs">저수요 (50+)</span>
-                </div>
+              <div className="text-gray-500">
+                {selectedMonth} •{" "}
+                {TIME_PERIODS.find((p) => p.key === selectedTimePeriod)?.label}
+                <br />총 {timeAnalysis[selectedTimePeriod]?.total_origins || 0}
+                개 출발지
+                <br />총{" "}
+                {(
+                  timeAnalysis[selectedTimePeriod]?.total_demand || 0
+                ).toLocaleString()}
+                명 수요
               </div>
             )}
-
             {currentMode === "mismatch" && (
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-1.5 bg-red-600 rounded-sm" />
-                  <span className="text-xs">긴급검토 (25배+)</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-1.5 bg-orange-500 rounded-sm" />
-                  <span className="text-xs">검토필요 (20배+)</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-1.5 bg-blue-500 rounded-sm" />
-                  <span className="text-xs">관찰대상 (10배+)</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-1.5 bg-green-500 rounded-sm" />
-                  <span className="text-xs">양호 (5배미만)</span>
-                </div>
-              </div>
-            )}
-          </div>
-        </Card>
-      </div>
-
-      {/* 우측 상세 패널 */}
-      <div className="w-96 border-l bg-white p-4 overflow-y-auto">
-        {/* 24시간 상세분석 표시 */}
-        {hourlyAnalysis.data && (
-          <Card className="mb-4">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-sm">
-                  <Clock className="h-4 w-4" />
-                  24시간 상세분석
-                </CardTitle>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setHourlyAnalysis({ data: null, loading: false, error: null })}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </div>
-              <CardDescription className="text-xs">
-                {hourlyAnalysis.data.od_pair.from_station_name} → {hourlyAnalysis.data.od_pair.to_station_name}
+              <div className="text-gray-500">
+                {selectedMonth} 분석 결과
                 <br />
-                {hourlyAnalysis.data.od_pair.distance_km.toFixed(1)}km • 일평균 {Math.round(hourlyAnalysis.data.daily_avg_passengers)}명
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {/* 패턴 배지 */}
-              <div className="mb-4">
-                <Badge className={getPatternTypeConfig(hourlyAnalysis.data.time_summary.pattern_type).bgColor + ' ' + getPatternTypeConfig(hourlyAnalysis.data.time_summary.pattern_type).textColor}>
-                  {getPatternTypeConfig(hourlyAnalysis.data.time_summary.pattern_type).icon} {hourlyAnalysis.data.time_summary.pattern_type}
-                </Badge>
+                {mismatchAnalysis.data.length}개 구간 분석
+                <br />
+                {
+                  mismatchAnalysis.data.filter(
+                    (item) => item.demand_service_ratio > 10
+                  ).length
+                }
+                개 고위험 구간
               </div>
-              
-              {/* 24시간 시계열 그래프 */}
-              <ResponsiveContainer width="100%" height={200}>
-                <LineChart 
-                  data={formatHourlyChartData(hourlyAnalysis.data.hourly_passengers, hourlyAnalysis.data.daily_avg_passengers)}
-                  margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="hour" 
-                    tick={{ fontSize: 10 }}
-                    interval={2}
-                  />
-                  <YAxis 
-                    tick={{ fontSize: 10 }}
-                    width={40}
-                  />
-                  <RechartsTooltip 
-                    formatter={(value: number, name: string) => [
-                      `${Math.round(value)}명`,
-                      name === 'passengers' ? '승객 수' : '평균선'
-                    ]}
-                    labelFormatter={(label) => `시간: ${label}`}
-                  />
-                  
-                  {/* 주요 데이터 라인 */}
-                  <Line
-                    type="monotone"
-                    dataKey="passengers"
-                    stroke={getPatternTypeConfig(hourlyAnalysis.data.time_summary.pattern_type).color}
-                    strokeWidth={2}
-                    name="승객 수"
-                    dot={{ r: 2 }}
-                    activeDot={{ r: 4 }}
-                    isAnimationActive={false}
-                  />
-                  
-                  {/* 평균선 */}
-                  <Line
-                    type="monotone"
-                    dataKey="평균선"
-                    stroke="#94a3b8"
-                    strokeDasharray="5 5"
-                    strokeWidth={1}
-                    name="평균선"
-                    dot={false}
-                    isAnimationActive={false}
-                  />
-                  
-                  {/* 피크 시간 표시 */}
-                  <ReferenceLine 
-                    x={`${hourlyAnalysis.data.time_summary.peak_hour}시`} 
-                    stroke="#ef4444" 
-                    strokeWidth={1}
-                    strokeDasharray="3 3"
-                    label={{ value: '피크', position: 'top', fontSize: 10 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-              
-              {/* 주요 지표 */}
-              <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
-                <div className="text-center p-2 bg-orange-50 rounded">
-                  <div className="font-semibold">피크 시간</div>
-                  <div className="text-orange-600 font-bold">{hourlyAnalysis.data.time_summary.peak_hour}시</div>
-                  <div className="text-gray-500">{Math.round(hourlyAnalysis.data.time_summary.peak_passengers)}명</div>
+            )}
+            <div className="text-gray-400 mt-2 border-t pt-1">
+              3D 지도 표시 • 정류장 클릭으로 상세 정보
+              {mismatchAnalysis.error && currentMode === "mismatch" && (
+                <div className="text-orange-500 mt-1">
+                  API 연결 실패 - 데모 데이터 사용 중
                 </div>
-                <div className="text-center p-2 bg-blue-50 rounded">
-                  <div className="font-semibold">퇴근 집중도</div>
-                  <div className="text-blue-600 font-bold">{hourlyAnalysis.data.time_summary.evening_peak_pct.toFixed(1)}%</div>
-                  <div className="text-gray-500">17-19시</div>
+              )}
+            </div>
+          </div>
+
+          {/* 필터 컨트롤 */}
+          <Card className="absolute top-4 right-4 z-10 p-3 w-64 bg-white/95 backdrop-blur-sm">
+            <CardTitle className="text-xs mb-1 font-semibold flex items-center gap-1">
+              필터
+              <Tooltip>
+                <TooltipTrigger>
+                  <HelpCircle className="h-3 w-3 text-gray-400 hover:text-gray-600" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">
+                    분석 모드와 시간대를 선택하여 원하는 OD 패턴을 확인할 수
+                    있습니다.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </CardTitle>
+            <div className="space-y-0">
+              {/* 분석 모드 선택 */}
+              <div className="space-y-1 mb-3">
+                <div className="flex items-center gap-1">
+                  <Label className="text-xs font-medium">분석 모드</Label>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <HelpCircle className="h-2 w-2 text-gray-400 hover:text-gray-600" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs">
+                        시간대별: 특정 시간대의 승객 이동 패턴 분석
+                        <br />
+                        미스매치: 수요와 공급의 불균형 분석
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-        
-        {selectedStation ? (
-          <div className="space-y-4">
-            {/* 선택된 정류장 정보 */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <MapPin className="h-5 w-5" />
-                      {
-                        stationData.find((s) => s.station_id === selectedStation)
-                          ?.station_name
-                      }
-                    </CardTitle>
-                    <CardDescription>
-                      {currentMode === "time_based"
-                        ? `${selectedStationData.length}개 목적지`
-                        : `${selectedStationData.length}개 연결 경로`}
-                    </CardDescription>
-                  </div>
+                <div className="grid grid-cols-1 gap-1">
                   <Button
-                    variant="outline"
+                    variant={
+                      currentMode === "time_based" ? "default" : "outline"
+                    }
                     size="sm"
-                    onClick={() => setSelectedStation(null)}
-                    className="text-xs"
+                    onClick={() => setCurrentMode("time_based")}
+                    className="text-xs h-7 justify-start"
                   >
-                    전체 보기
+                    <Clock className="h-3 w-3 mr-1" />
+                    수요패턴 분석
+                  </Button>
+                  <Button
+                    variant={currentMode === "mismatch" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentMode("mismatch")}
+                    className="text-xs h-7 justify-start"
+                  >
+                    <AlertTriangle className="h-3 w-3 mr-1" />
+                    서비스부족구간 분석
                   </Button>
                 </div>
+              </div>
+
+              {/* 시간대별 분석 필터 */}
+              {currentMode === "time_based" && (
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium">시간대 선택</Label>
+                  <div className="grid grid-cols-2 gap-1">
+                    {TIME_PERIODS.map((period) => (
+                      <Button
+                        key={period.key}
+                        variant={
+                          selectedTimePeriod === period.key
+                            ? "default"
+                            : "outline"
+                        }
+                        size="sm"
+                        onClick={() => setSelectedTimePeriod(period.key)}
+                        className="text-xs h-7"
+                        style={{
+                          backgroundColor:
+                            selectedTimePeriod === period.key
+                              ? period.color
+                              : undefined,
+                          borderColor: period.color,
+                        }}
+                      >
+                        {period.label}
+                      </Button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Label className="text-xs">
+                      최소수요: {filters.minDemand}
+                    </Label>
+                    <input
+                      type="range"
+                      min="10"
+                      max="500"
+                      step="10"
+                      value={filters.minDemand}
+                      onChange={(e) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          minDemand: parseInt(e.target.value),
+                        }))
+                      }
+                      className="flex-1 h-1"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* 미스매치 분석 필터 */}
+              {currentMode === "mismatch" && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={filters.showHighRiskOnly}
+                      onCheckedChange={(checked) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          showHighRiskOnly: checked,
+                        }))
+                      }
+                      className="scale-75"
+                    />
+                    <Label className="text-xs">고위험 구간만</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs">
+                      수요집중도: {filters.minDemandRatio}배
+                    </Label>
+                    <input
+                      type="range"
+                      min="1"
+                      max="30"
+                      step="1"
+                      value={filters.minDemandRatio}
+                      onChange={(e) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          minDemandRatio: parseFloat(e.target.value),
+                        }))
+                      }
+                      className="flex-1 h-1"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <Separator className="my-3" />
+
+            <div className="space-y-2">
+              <div className="text-xs font-medium mb-2">지도 레이어</div>
+
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={filters.showMapBackground}
+                  onCheckedChange={(checked) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      showMapBackground: checked,
+                    }))
+                  }
+                  disabled={!seoulCtprvnGeoJson}
+                />
+                <div className="w-3 h-3 bg-gray-300 rounded border" />
+                <Label className="text-xs">서울특별시 배경</Label>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={filters.showDistrictBoundaries}
+                  onCheckedChange={(checked) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      showDistrictBoundaries: checked,
+                    }))
+                  }
+                  disabled={!seoulSigGeoJson}
+                />
+                <div className="w-3 h-3 bg-gray-200 border border-gray-400" />
+                <Label className="text-xs">구 경계선</Label>
+                {seoulSigGeoJson && (
+                  <span className="text-xs text-gray-500">(25개 구)</span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={filters.showDetailedBoundaries}
+                  onCheckedChange={(checked) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      showDetailedBoundaries: checked,
+                    }))
+                  }
+                  disabled={!seoulEmdGeoJson}
+                />
+                <div className="w-3 h-3 border border-gray-400 bg-transparent" />
+                <Label className="text-xs">동 경계선</Label>
+                {seoulEmdGeoJson && (
+                  <span className="text-xs text-gray-500">(467개 동)</span>
+                )}
+              </div>
+            </div>
+          </Card>
+
+          {/* 범례 - 컴팩트 */}
+          <Card className="absolute bottom-4 left-4 z-10 p-2 w-48 bg-white/95 backdrop-blur-sm">
+            <div className="space-y-2">
+              <div className="text-xs font-semibold">범례</div>
+
+              {/* 정류장 */}
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 bg-blue-500 rounded-full border border-white" />
+                <span className="text-xs">정류장</span>
+              </div>
+
+              {/* 분석별 범례 */}
+              {currentMode === "time_based" && (
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-1.5 bg-red-600 rounded-sm" />
+                    <span className="text-xs">고수요 (1000+)</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-1.5 bg-orange-500 rounded-sm" />
+                    <span className="text-xs">중수요 (500+)</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-1.5 bg-blue-500 rounded-sm" />
+                    <span className="text-xs">일반 (100+)</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-1.5 bg-green-500 rounded-sm" />
+                    <span className="text-xs">저수요 (50+)</span>
+                  </div>
+                </div>
+              )}
+
+              {currentMode === "mismatch" && (
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-1.5 bg-red-600 rounded-sm" />
+                    <span className="text-xs">긴급검토 (25배+)</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-1.5 bg-orange-500 rounded-sm" />
+                    <span className="text-xs">검토필요 (20배+)</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-1.5 bg-blue-500 rounded-sm" />
+                    <span className="text-xs">관찰대상 (10배+)</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-1.5 bg-green-500 rounded-sm" />
+                    <span className="text-xs">양호 (5배미만)</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+
+        {/* 우측 상세 패널 */}
+        <div className="w-96 border-l bg-white p-4 overflow-y-auto">
+          {/* 24시간 상세분석 표시 */}
+          {hourlyAnalysis.data && (
+            <Card className="mb-4">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <Clock className="h-4 w-4" />
+                    24시간 상세분석
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                      setHourlyAnalysis({
+                        data: null,
+                        loading: false,
+                        error: null,
+                      })
+                    }
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+                <CardDescription className="text-xs">
+                  {hourlyAnalysis.data.od_pair.from_station_name} →{" "}
+                  {hourlyAnalysis.data.od_pair.to_station_name}
+                  <br />
+                  {hourlyAnalysis.data.od_pair.distance_km.toFixed(1)}km •
+                  일평균 {Math.round(hourlyAnalysis.data.daily_avg_passengers)}
+                  명
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                {currentMode === "time_based" && (
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium text-gray-700 mb-3">
-                      {
-                        TIME_PERIODS.find((p) => p.key === selectedTimePeriod)
-                          ?.label
-                      }{" "}
-                      목적지 TOP 5
-                    </div>
-                    {(selectedStationData as DestinationStation[])
-                      .sort((a, b) => b.demand - a.demand)
-                      .slice(0, 5)
-                      .map((dest, idx) => (
-                        <div
-                          key={idx}
-                          className="p-2 bg-gray-50 rounded border-l-2 border-blue-500"
-                        >
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <div className="font-medium text-sm">
-                                {dest.station_name}
-                              </div>
-                              <div className="text-xs text-gray-600 mt-1">
-                                순위: {dest.rank}위 • {dest.district_name}
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="font-bold text-blue-600">
-                                {dest.demand}명
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                시간대 수요
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                )}
+                {/* 패턴 배지 */}
+                <div className="mb-4">
+                  <Badge
+                    className={
+                      getPatternTypeConfig(
+                        hourlyAnalysis.data.time_summary.pattern_type
+                      ).bgColor +
+                      " " +
+                      getPatternTypeConfig(
+                        hourlyAnalysis.data.time_summary.pattern_type
+                      ).textColor
+                    }
+                  >
+                    {
+                      getPatternTypeConfig(
+                        hourlyAnalysis.data.time_summary.pattern_type
+                      ).icon
+                    }{" "}
+                    {hourlyAnalysis.data.time_summary.pattern_type}
+                  </Badge>
+                </div>
 
-                {currentMode === "mismatch" && (
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium text-gray-700 mb-3">
-                      미스매치 구간 정보
+                {/* 24시간 시계열 그래프 */}
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart
+                    data={formatHourlyChartData(
+                      hourlyAnalysis.data.hourly_passengers,
+                      hourlyAnalysis.data.daily_avg_passengers
+                    )}
+                    margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="hour"
+                      tick={{ fontSize: 10 }}
+                      interval={2}
+                    />
+                    <YAxis tick={{ fontSize: 10 }} width={40} />
+                    <RechartsTooltip
+                      formatter={(value: number, name: string) => [
+                        `${Math.round(value)}명`,
+                        name === "passengers" ? "승객 수" : "평균선",
+                      ]}
+                      labelFormatter={(label) => `시간: ${label}`}
+                    />
+
+                    {/* 주요 데이터 라인 */}
+                    <Line
+                      type="monotone"
+                      dataKey="passengers"
+                      stroke={
+                        getPatternTypeConfig(
+                          hourlyAnalysis.data.time_summary.pattern_type
+                        ).color
+                      }
+                      strokeWidth={2}
+                      name="승객 수"
+                      dot={{ r: 2 }}
+                      activeDot={{ r: 4 }}
+                      isAnimationActive={false}
+                    />
+
+                    {/* 평균선 */}
+                    <Line
+                      type="monotone"
+                      dataKey="평균선"
+                      stroke="#94a3b8"
+                      strokeDasharray="5 5"
+                      strokeWidth={1}
+                      name="평균선"
+                      dot={false}
+                      isAnimationActive={false}
+                    />
+
+                    {/* 피크 시간 표시 */}
+                    <ReferenceLine
+                      x={`${hourlyAnalysis.data.time_summary.peak_hour}시`}
+                      stroke="#ef4444"
+                      strokeWidth={1}
+                      strokeDasharray="3 3"
+                      label={{ value: "피크", position: "top", fontSize: 10 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+
+                {/* 주요 지표 */}
+                <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
+                  <div className="text-center p-2 bg-orange-50 rounded">
+                    <div className="font-semibold">피크 시간</div>
+                    <div className="text-orange-600 font-bold">
+                      {hourlyAnalysis.data.time_summary.peak_hour}시
                     </div>
-                    {(selectedStationData as DemandSupplyMismatchData[])
-                      .sort(
-                        (a, b) =>
-                          b.demand_service_ratio - a.demand_service_ratio
-                      )
-                      .slice(0, 5)
-                      .map((item, idx) => (
-                        <div
-                          key={idx}
-                          className="p-2 bg-gray-50 rounded border-l-2 border-orange-500"
-                        >
-                          <div className="flex justify-between items-center">
-                            <div className="flex-1">
-                              <div className="font-medium text-sm">
-                                {item.od_pair.from_station_id ===
-                                selectedStation
-                                  ? item.od_pair.to_station_name
-                                  : item.od_pair.from_station_name}
-                              </div>
-                              <div className="text-xs text-gray-600 mt-1">
-                                거리: {item.distance_km.toFixed(1)}km
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="font-bold text-orange-600">
-                                {item.daily_avg_passengers}명/일
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                서비스점수:{" "}
-                                {Math.round(item.service_quality_score)}점
-                              </div>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={async () => {
-                                  console.log('🔘 Button clicked - loading 24h analysis:', {
-                                    fromId: item.od_pair.from_station_id,
-                                    toId: item.od_pair.to_station_id,
-                                    selectedMonth
-                                  });
-                                  
-                                  setHourlyAnalysis({ data: null, loading: true, error: null });
-                                  try {
-                                    // ✅ 올바른 인수 순서: fromId, toId, month
-                                    const analysis = await odAPI.getODPairHourlyAnalysis(
-                                      item.od_pair.from_station_id,
-                                      item.od_pair.to_station_id,
-                                      selectedMonth
-                                    );
-                                    setHourlyAnalysis({ data: analysis, loading: false, error: null });
-                                    setCurrentMode("mismatch"); // 보여주기 위해
-                                  } catch (error) {
-                                    console.error('Failed to load hourly analysis:', error);
-                                    setHourlyAnalysis({ 
-                                      data: null, 
-                                      loading: false, 
-                                      error: '데이터를 불러올 수 없습니다' 
-                                    });
-                                  }
-                                }}
-                                className="text-xs mt-1"
-                                disabled={hourlyAnalysis.loading}
-                              >
-                                {hourlyAnalysis.loading ? '로딩...' : '24시간 분석'}
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="text-gray-500">
+                      {Math.round(
+                        hourlyAnalysis.data.time_summary.peak_passengers
+                      )}
+                      명
+                    </div>
                   </div>
-                )}
+                  <div className="text-center p-2 bg-blue-50 rounded">
+                    <div className="font-semibold">퇴근 집중도</div>
+                    <div className="text-blue-600 font-bold">
+                      {hourlyAnalysis.data.time_summary.evening_peak_pct.toFixed(
+                        1
+                      )}
+                      %
+                    </div>
+                    <div className="text-gray-500">17-19시</div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
+          )}
 
-            {/* 분석 결과 요약 */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">
-                  {currentMode === "time_based" && "시간대별 분석 결과"}
-                  {currentMode === "mismatch" && "DRT 도입 필요성 분석"}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {currentMode === "time_based" &&
-                  timeAnalysis[selectedTimePeriod] && (
+          {selectedStation ? (
+            <div className="space-y-4">
+              {/* 선택된 정류장 정보 */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <MapPin className="h-5 w-5" />
+                        {
+                          stationData.find(
+                            (s) => s.station_id === selectedStation
+                          )?.station_name
+                        }
+                      </CardTitle>
+                      <CardDescription>
+                        {currentMode === "time_based"
+                          ? `${selectedStationData.length}개 목적지`
+                          : `${selectedStationData.length}개 연결 경로`}
+                      </CardDescription>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedStation(null)}
+                      className="text-xs"
+                    >
+                      전체 보기
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {currentMode === "time_based" && (
+                    <div className="space-y-2">
+                      <div className="text-sm font-medium text-gray-700 mb-3">
+                        {
+                          TIME_PERIODS.find((p) => p.key === selectedTimePeriod)
+                            ?.label
+                        }{" "}
+                        목적지 TOP 5
+                      </div>
+                      {(selectedStationData as DestinationStation[])
+                        .sort((a, b) => b.demand - a.demand)
+                        .slice(0, 5)
+                        .map((dest, idx) => (
+                          <div
+                            key={idx}
+                            className="p-2 bg-gray-50 rounded border-l-2 border-blue-500"
+                          >
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <div className="font-medium text-sm">
+                                  {dest.station_name}
+                                </div>
+                                <div className="text-xs text-gray-600 mt-1">
+                                  순위: {dest.rank}위 • {dest.district_name}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="font-bold text-blue-600">
+                                  {dest.demand}명
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  시간대 수요
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+
+                  {currentMode === "mismatch" && (
+                    <div className="space-y-2">
+                      <div className="text-sm font-medium text-gray-700 mb-3">
+                        미스매치 구간 정보
+                      </div>
+                      {(selectedStationData as DemandSupplyMismatchData[])
+                        .sort(
+                          (a, b) =>
+                            b.demand_service_ratio - a.demand_service_ratio
+                        )
+                        .slice(0, 5)
+                        .map((item, idx) => (
+                          <div
+                            key={idx}
+                            className="p-2 bg-gray-50 rounded border-l-2 border-orange-500"
+                          >
+                            <div className="flex justify-between items-center">
+                              <div className="flex-1">
+                                <div className="font-medium text-sm">
+                                  {item.od_pair.from_station_id ===
+                                  selectedStation
+                                    ? item.od_pair.to_station_name
+                                    : item.od_pair.from_station_name}
+                                </div>
+                                <div className="text-xs text-gray-600 mt-1">
+                                  거리: {item.distance_km.toFixed(1)}km
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="font-bold text-orange-600">
+                                  {item.daily_avg_passengers}명/일
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  서비스점수:{" "}
+                                  {Math.round(item.service_quality_score)}점
+                                </div>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={async () => {
+                                    console.log(
+                                      "🔘 Button clicked - loading 24h analysis:",
+                                      {
+                                        fromId: item.od_pair.from_station_id,
+                                        toId: item.od_pair.to_station_id,
+                                        selectedMonth,
+                                      }
+                                    );
+
+                                    setHourlyAnalysis({
+                                      data: null,
+                                      loading: true,
+                                      error: null,
+                                    });
+                                    try {
+                                      // ✅ 올바른 인수 순서: fromId, toId, month
+                                      const analysis =
+                                        await odAPI.getODPairHourlyAnalysis(
+                                          item.od_pair.from_station_id,
+                                          item.od_pair.to_station_id,
+                                          selectedMonth
+                                        );
+                                      setHourlyAnalysis({
+                                        data: analysis,
+                                        loading: false,
+                                        error: null,
+                                      });
+                                      setCurrentMode("mismatch"); // 보여주기 위해
+                                    } catch (error) {
+                                      console.error(
+                                        "Failed to load hourly analysis:",
+                                        error
+                                      );
+                                      setHourlyAnalysis({
+                                        data: null,
+                                        loading: false,
+                                        error: "데이터를 불러올 수 없습니다",
+                                      });
+                                    }
+                                  }}
+                                  className="text-xs mt-1"
+                                  disabled={hourlyAnalysis.loading}
+                                >
+                                  {hourlyAnalysis.loading
+                                    ? "로딩..."
+                                    : "24시간 분석"}
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* 분석 결과 요약 */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">
+                    {currentMode === "time_based" && "시간대별 분석 결과"}
+                    {currentMode === "mismatch" && "DRT 도입 필요성 분석"}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {currentMode === "time_based" &&
+                    timeAnalysis[selectedTimePeriod] && (
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <div className="flex items-center gap-1">
+                            <span>전체 출발지 수</span>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <HelpCircle className="h-3 w-3 text-gray-400 hover:text-gray-600" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="text-xs">
+                                  해당 시간대에 승객이 출발하는 버스정류장의 총
+                                  개수입니다.
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                          <span className="font-bold">
+                            {timeAnalysis[selectedTimePeriod]?.total_origins}
+                            개소
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <div className="flex items-center gap-1">
+                            <span>총 수요량</span>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <HelpCircle className="h-3 w-3 text-gray-400 hover:text-gray-600" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="text-xs">
+                                  해당 시간대에 이동한 승객의 총 인원수입니다.
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                          <span className="font-bold text-blue-600">
+                            {timeAnalysis[
+                              selectedTimePeriod
+                            ]?.total_demand.toLocaleString()}
+                            명
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <div className="flex items-center gap-1">
+                            <span>평균 목적지 수</span>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <HelpCircle className="h-3 w-3 text-gray-400 hover:text-gray-600" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="text-xs">
+                                  각 출발지에서 연결되는 목적지의 평균
+                                  개수입니다. 높을수록 다양한 목적지로
+                                  분산됩니다.
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                          <span className="font-bold">
+                            {timeAnalysis[
+                              selectedTimePeriod
+                            ]?.avg_destinations_per_origin.toFixed(1)}
+                            개
+                          </span>
+                        </div>
+                        <div className="border-t pt-2 mt-3">
+                          <div className="text-xs text-gray-600">
+                            💡{" "}
+                            {
+                              TIME_PERIODS.find(
+                                (p) => p.key === selectedTimePeriod
+                              )?.label
+                            }{" "}
+                            특성에 맞는 DRT 운영 전략이 필요합니다.
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                  {currentMode === "mismatch" && (
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <div className="flex items-center gap-1">
-                          <span>전체 출발지 수</span>
+                          <span>총 분석 구간</span>
                           <Tooltip>
                             <TooltipTrigger>
                               <HelpCircle className="h-3 w-3 text-gray-400 hover:text-gray-600" />
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p className="text-xs">해당 시간대에 승객이 출발하는 버스정류장의 총 개수입니다.</p>
+                              <p className="text-xs">
+                                수요와 공급을 비교 분석한 OD 구간의 총
+                                개수입니다.
+                              </p>
                             </TooltipContent>
                           </Tooltip>
                         </div>
                         <span className="font-bold">
-                          {timeAnalysis[selectedTimePeriod]?.total_origins}개소
+                          {mismatchAnalysis.data.length}개
                         </span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <div className="flex items-center gap-1">
-                          <span>총 수요량</span>
+                          <span>고위험 구간</span>
                           <Tooltip>
                             <TooltipTrigger>
                               <HelpCircle className="h-3 w-3 text-gray-400 hover:text-gray-600" />
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p className="text-xs">해당 시간대에 이동한 승객의 총 인원수입니다.</p>
+                              <p className="text-xs">
+                                교통 서비스가 부족해 불편을 겪는 구간입니다.
+                                DRT로 개선이 가능합니다.
+                              </p>
                             </TooltipContent>
                           </Tooltip>
                         </div>
-                        <span className="font-bold text-blue-600">
-                          {timeAnalysis[
-                            selectedTimePeriod
-                          ]?.total_demand.toLocaleString()}
-                          명
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <div className="flex items-center gap-1">
-                          <span>평균 목적지 수</span>
-                          <Tooltip>
-                            <TooltipTrigger>
-                              <HelpCircle className="h-3 w-3 text-gray-400 hover:text-gray-600" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="text-xs">각 출발지에서 연결되는 목적지의 평균 개수입니다. 높을수록 다양한 목적지로 분산됩니다.</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
-                        <span className="font-bold">
-                          {timeAnalysis[
-                            selectedTimePeriod
-                          ]?.avg_destinations_per_origin.toFixed(1)}
+                        <span className="font-bold text-red-600">
+                          {
+                            mismatchAnalysis.data.filter(
+                              (item) => item.demand_service_ratio > 10
+                            ).length
+                          }
                           개
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <div className="flex items-center gap-1">
+                          <span>평균 서비스 점수</span>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <HelpCircle className="h-3 w-3 text-gray-400 hover:text-gray-600" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs">
+                                전체 구간의 서비스 품질을 평가한 평균
+                                점수입니다. 낮을수록 개선이 필요합니다.
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                        <span className="font-bold">
+                          {Math.round(
+                            mismatchAnalysis.data.reduce(
+                              (sum, item) => sum + item.service_quality_score,
+                              0
+                            ) / mismatchAnalysis.data.length || 0
+                          )}
+                          점
                         </span>
                       </div>
                       <div className="border-t pt-2 mt-3">
                         <div className="text-xs text-gray-600">
-                          💡{" "}
-                          {
-                            TIME_PERIODS.find(
-                              (p) => p.key === selectedTimePeriod
-                            )?.label
-                          }{" "}
-                          특성에 맞는 DRT 운영 전략이 필요합니다.
+                          🚨 서비스 품질 개선이 시급한 구간들이 식별되었습니다.
                         </div>
                       </div>
                     </div>
                   )}
-
-                {currentMode === "mismatch" && (
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <div className="flex items-center gap-1">
-                        <span>총 분석 구간</span>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <HelpCircle className="h-3 w-3 text-gray-400 hover:text-gray-600" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="text-xs">수요와 공급을 비교 분석한 OD 구간의 총 개수입니다.</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                      <span className="font-bold">
-                        {mismatchAnalysis.data.length}개
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <div className="flex items-center gap-1">
-                        <span>고위험 구간</span>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <HelpCircle className="h-3 w-3 text-gray-400 hover:text-gray-600" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="text-xs">교통 서비스가 부족해 불편을 겪는 구간입니다. DRT로 개선이 가능합니다.</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                      <span className="font-bold text-red-600">
-                        {
-                          mismatchAnalysis.data.filter(
-                            (item) => item.demand_service_ratio > 10
-                          ).length
-                        }
-                        개
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <div className="flex items-center gap-1">
-                        <span>평균 서비스 점수</span>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <HelpCircle className="h-3 w-3 text-gray-400 hover:text-gray-600" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="text-xs">전체 구간의 서비스 품질을 평가한 평균 점수입니다. 낮을수록 개선이 필요합니다.</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                      <span className="font-bold">
-                        {Math.round(
-                          mismatchAnalysis.data.reduce(
-                            (sum, item) => sum + item.service_quality_score,
-                            0
-                          ) / mismatchAnalysis.data.length || 0
-                        )}
-                        점
-                      </span>
-                    </div>
-                    <div className="border-t pt-2 mt-3">
-                      <div className="text-xs text-gray-600">
-                        🚨 서비스 품질 개선이 시급한 구간들이 식별되었습니다.
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm flex items-center gap-2">
-                  {currentMode === "time_based" && (
-                    <Clock className="h-4 w-4" />
-                  )}
-                  {currentMode === "mismatch" && (
-                    <AlertTriangle className="h-4 w-4" />
-                  )}
-
-                  {
-                    ANALYSIS_MODES.find((mode) => mode.type === currentMode)
-                      ?.label
-                  }
-                </CardTitle>
-                <CardDescription>
-                  {
-                    ANALYSIS_MODES.find((mode) => mode.type === currentMode)
-                      ?.description
-                  }
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="text-center text-sm text-gray-500">
-                    데이터 로드 중...
-                  </div>
-                ) : currentMode === "time_based" && timeAnalysis[selectedTimePeriod]?.origins ? (
-                  <div className="text-center text-sm text-gray-500">
-                    출발 정류장을 선택하여 연결 정보를 확인하세요
-                  </div>
-                ) : (
-                  <div className="text-center text-sm text-gray-500">
-                    정류장을 클릭하여 상세 정보를 확인하세요
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* 시간대별 분석 - From Station 랭킹 리스트 */}
-            {currentMode === "time_based" && timeAnalysis[selectedTimePeriod]?.origins && (
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <div className="space-y-4">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    출발 정류장 랭킹
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <HelpCircle className="h-3 w-3 text-gray-400 hover:text-gray-600" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="text-xs">해당 시간대에 승객 수요가 많은 출발 정류장을 순위별로 보여줍니다. 정류장을 클릭하면 해당 출발지의 목적지 분포를 확인할 수 있습니다.</p>
-                      </TooltipContent>
-                    </Tooltip>
+                    {currentMode === "time_based" && (
+                      <Clock className="h-4 w-4" />
+                    )}
+                    {currentMode === "mismatch" && (
+                      <AlertTriangle className="h-4 w-4" />
+                    )}
+
+                    {
+                      ANALYSIS_MODES.find((mode) => mode.type === currentMode)
+                        ?.label
+                    }
                   </CardTitle>
                   <CardDescription>
-                    {TIME_PERIODS.find(p => p.key === selectedTimePeriod)?.label} 기준 • 클릭하여 필터링
+                    {
+                      ANALYSIS_MODES.find((mode) => mode.type === currentMode)
+                        ?.description
+                    }
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2 max-h-80 overflow-y-auto">
-                    {timeAnalysis[selectedTimePeriod]?.origins
-                      .sort((a, b) => b.time_period_demand - a.time_period_demand)
-                      .map((origin, idx) => (
-                        <div
-                          key={origin.from_station.station_id}
-                          className="p-3 bg-gray-50 hover:bg-blue-50 rounded-lg border cursor-pointer transition-colors"
-                          onClick={() => setSelectedStation(origin.from_station.station_id)}
-                        >
-                          <div className="flex justify-between items-center">
-                            <div className="flex-1">
-                              <div className="font-medium text-sm flex items-center gap-2">
-                                <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-bold">
-                                  #{idx + 1}
-                                </span>
-                                {origin.from_station.station_name}
-                              </div>
-                              <div className="text-xs text-gray-600 mt-1">
-                                {origin.from_station.district_name} • {origin.destination_count}개 목적지
-                              </div>
-                              {origin.drt_potential && (
-                                <div className="text-xs mt-1">
-                                  <span className={`px-1.5 py-0.5 rounded text-xs ${
-                                    origin.drt_potential === '높음' 
-                                      ? 'bg-red-100 text-red-700'
-                                      : origin.drt_potential === '보통'
-                                      ? 'bg-yellow-100 text-yellow-700'
-                                      : 'bg-green-100 text-green-700'
-                                  }`}>
-                                    DRT {origin.drt_potential}
-                                  </span>
+                  {loading ? (
+                    <div className="text-center text-sm text-gray-500">
+                      데이터 로드 중...
+                    </div>
+                  ) : currentMode === "time_based" &&
+                    timeAnalysis[selectedTimePeriod]?.origins ? (
+                    <div className="text-center text-sm text-gray-500">
+                      출발 정류장을 선택하여 연결 정보를 확인하세요
+                    </div>
+                  ) : (
+                    <div className="text-center text-sm text-gray-500">
+                      정류장을 클릭하여 상세 정보를 확인하세요
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* 시간대별 분석 - From Station 랭킹 리스트 */}
+              {currentMode === "time_based" &&
+                timeAnalysis[selectedTimePeriod]?.origins && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        출발 정류장 랭킹
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <HelpCircle className="h-3 w-3 text-gray-400 hover:text-gray-600" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs">
+                              해당 시간대에 승객 수요가 많은 출발 정류장을
+                              순위별로 보여줍니다. 정류장을 클릭하면 해당
+                              출발지의 목적지 분포를 확인할 수 있습니다.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </CardTitle>
+                      <CardDescription>
+                        {
+                          TIME_PERIODS.find((p) => p.key === selectedTimePeriod)
+                            ?.label
+                        }{" "}
+                        기준 • 클릭하여 필터링
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2 max-h-80 overflow-y-auto">
+                        {timeAnalysis[selectedTimePeriod]?.origins
+                          .sort(
+                            (a, b) =>
+                              b.time_period_demand - a.time_period_demand
+                          )
+                          .map((origin, idx) => (
+                            <div
+                              key={origin.from_station.station_id}
+                              className="p-3 bg-gray-50 hover:bg-blue-50 rounded-lg border cursor-pointer transition-colors"
+                              onClick={() =>
+                                setSelectedStation(
+                                  origin.from_station.station_id
+                                )
+                              }
+                            >
+                              <div className="flex justify-between items-center">
+                                <div className="flex-1">
+                                  <div className="font-medium text-sm flex items-center gap-2">
+                                    <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-bold">
+                                      #{idx + 1}
+                                    </span>
+                                    {origin.from_station.station_name}
+                                  </div>
+                                  <div className="text-xs text-gray-600 mt-1">
+                                    {origin.from_station.district_name} •{" "}
+                                    {origin.destination_count}개 목적지
+                                  </div>
+                                  {origin.drt_potential && (
+                                    <div className="text-xs mt-1">
+                                      <span
+                                        className={`px-1.5 py-0.5 rounded text-xs ${
+                                          origin.drt_potential === "높음"
+                                            ? "bg-red-100 text-red-700"
+                                            : origin.drt_potential === "보통"
+                                            ? "bg-yellow-100 text-yellow-700"
+                                            : "bg-green-100 text-green-700"
+                                        }`}
+                                      >
+                                        DRT {origin.drt_potential}
+                                      </span>
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                            </div>
-                            <div className="text-right ml-3">
-                              <div className="font-bold text-blue-600">
-                                {origin.time_period_demand.toLocaleString()}명
+                                <div className="text-right ml-3">
+                                  <div className="font-bold text-blue-600">
+                                    {origin.time_period_demand.toLocaleString()}
+                                    명
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    시간대 총 수요
+                                  </div>
+                                </div>
                               </div>
-                              <div className="text-xs text-gray-500">
-                                시간대 총 수요
-                              </div>
                             </div>
-                          </div>
-                        </div>
-                      ))
-                    }
-                  </div>
-                  <div className="mt-3 pt-2 border-t text-xs text-gray-500">
-                    💡 정류장을 클릭하면 해당 출발지에서 퍼져나가는 연결만 지도에 표시됩니다
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                          ))}
+                      </div>
+                      <div className="mt-3 pt-2 border-t text-xs text-gray-500">
+                        💡 정류장을 클릭하면 해당 출발지에서 퍼져나가는 연결만
+                        지도에 표시됩니다
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
-            {mismatchAnalysis.error && (
-              <Card>
-                <CardContent className="pt-4">
-                  <div className="text-sm text-red-600">
-                    ⚠️ {mismatchAnalysis.error}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        )}
-      </div>
-
+              {mismatchAnalysis.error && (
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="text-sm text-red-600">
+                      ⚠️ {mismatchAnalysis.error}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </TooltipProvider>
   );
