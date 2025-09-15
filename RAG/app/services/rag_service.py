@@ -218,21 +218,38 @@ class RAGService:
 
             # Step 2: Handle different question types
             if classification_result.question_type == QuestionType.QUANTITATIVE:
-                # Use Text-to-SQL for quantitative questions
-                sql_result = await self.text_to_sql_service.generate_sql(question)
-                sql_data = await self.text_to_sql_service.execute_sql(sql_result.generated_sql)
+                logger.info("🔢 Processing QUANTITATIVE question with Text-to-SQL")
+                try:
+                    # Use Text-to-SQL for quantitative questions
+                    sql_result = await self.text_to_sql_service.generate_sql(question)
+                    logger.info(f"📝 Generated SQL: {sql_result.generated_sql}")
 
-                # Generate natural language response from SQL results
-                response = await self._generate_sql_response(question, sql_result, sql_data)
+                    sql_data = await self.text_to_sql_service.execute_sql(sql_result.generated_sql)
+                    logger.info(f"🎯 SQL execution result: success={sql_data.get('success', False)}, rows={sql_data.get('row_count', 0)}")
 
-                # Store SQL information for response
-                sql_info = {
-                    "sql_query": sql_result.generated_sql,
-                    "sql_confidence": sql_result.confidence,
-                    "sql_reasoning": sql_result.reasoning,
-                    "execution_success": sql_data.get("success", False),
-                    "row_count": sql_data.get("row_count", 0)
-                }
+                    # Generate natural language response from SQL results
+                    response = await self._generate_sql_response(question, sql_result, sql_data)
+
+                    # Store SQL information for response
+                    sql_info = {
+                        "sql_query": sql_result.generated_sql,
+                        "sql_confidence": sql_result.confidence,
+                        "sql_reasoning": sql_result.reasoning,
+                        "execution_success": sql_data.get("success", False),
+                        "row_count": sql_data.get("row_count", 0)
+                    }
+                except Exception as e:
+                    logger.error(f"❌ Text-to-SQL processing failed: {e}")
+                    # Fallback to RAG for failed SQL queries
+                    logger.info("🔄 Falling back to RAG response")
+                    response = await asyncio.get_event_loop().run_in_executor(
+                        None,
+                        lambda: self.rag_chain.invoke(question)
+                    )
+                    sql_info = {
+                        "error": str(e),
+                        "fallback_to_rag": True
+                    }
 
             elif classification_result.question_type == QuestionType.MIXED:
                 # Use both SQL and RAG for mixed questions
@@ -257,8 +274,23 @@ class RAGService:
                     "hybrid_mode": True
                 }
 
-            else:
+            elif classification_result.question_type == QuestionType.QUALITATIVE:
+                logger.info("📚 Processing QUALITATIVE question with RAG")
                 # Use RAG for qualitative questions
+                response = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    lambda: self.rag_chain.invoke(question)
+                )
+                sql_info = None
+
+            elif classification_result.question_type == QuestionType.IRRELEVANT:
+                logger.info("❌ Processing IRRELEVANT question")
+                response = "죄송합니다. 해당 질문은 DRT(수요응답형 교통) 시스템과 관련이 없어 답변을 제공할 수 없습니다. DRT 운영, 정책, 기술적 내용에 관한 질문을 해주시기 바랍니다."
+                sql_info = None
+
+            else:
+                logger.warning(f"⚠️ Unknown question type: {classification_result.question_type}")
+                # Fallback to RAG
                 response = await asyncio.get_event_loop().run_in_executor(
                     None,
                     lambda: self.rag_chain.invoke(question)
