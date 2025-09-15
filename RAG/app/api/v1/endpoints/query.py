@@ -22,7 +22,6 @@ class RAGQueryRequest(BaseModel):
     query: str = Field(..., description="사용자 질문", example="DRT 시스템이 무엇인가요?")
     max_results: int = Field(default=10, description="검색할 문서 개수", example=10)
     similarity_threshold: float = Field(default=0.5, description="유사도 임계값", example=0.5)
-    use_multi_query: bool = Field(default=True, description="Multi-Query Generation 사용 여부", example=True)
     include_sources: bool = Field(default=True, description="참조 문서 포함 여부", example=True)
     backend_data: bool = Field(default=True, description="백엔드 데이터 포함 여부", example=True)
     summary_only: bool = Field(default=False, description="4단계 종합 답변만 반환", example=False)
@@ -33,7 +32,6 @@ class RAGQueryRequest(BaseModel):
                 "query": "DRT 시스템이 무엇인가요?",
                 "max_results": 10,
                 "similarity_threshold": 0.5,
-                "use_multi_query": True,
                 "include_sources": True,
                 "backend_data": True,
                 "summary_only": False
@@ -50,6 +48,22 @@ class RAGQueryResponse(BaseModel):
     sources: Optional[list] = Field(None, description="참조한 문서들")
     backend_data: Optional[Dict[str, Any]] = Field(None, description="백엔드에서 가져온 데이터")
     confidence: Optional[float] = Field(None, description="평균 유사도 점수", example=0.85)
+    question_classification: Optional[Dict[str, Any]] = Field(None, description="질문 분류 결과", example={
+        "type": "qualitative",
+        "confidence": 0.85,
+        "reasoning": "정성적 키워드 우세",
+        "keywords": ["정의", "무엇"],
+        "needs_sql": False,
+        "needs_rag": True
+    })
+    sql_info: Optional[Dict[str, Any]] = Field(None, description="SQL 쿼리 정보 (정량적/혼합 질문인 경우)", example={
+        "sql_query": "SELECT COUNT(*) FROM bus_stops WHERE is_active = true",
+        "sql_confidence": 0.92,
+        "sql_reasoning": "활성화된 정류장 개수 조회",
+        "execution_success": True,
+        "row_count": 1,
+        "hybrid_mode": False
+    })
 
 
 @router.post(
@@ -57,17 +71,23 @@ class RAGQueryResponse(BaseModel):
     response_model=RAGQueryResponse,
     summary="CoT 강화 RAG 기반 질의응답",
     description="""
-    **CoT(Chain of Thought) RAG를 사용하여 질문에 답변합니다.**
-    
-    ## 작동 방식
-    1. 벡터 데이터베이스에서 관련 문서 검색
-    2. Watson AI LLM의 CoT 추론으로 단계별 분석
-    3. 투명하고 해석 가능한 답변 생성
-    
+    **지능형 RAG + Text-to-SQL 하이브리드 질의응답 시스템**
+
+    ## 자동 적응형 작동 방식
+    1. **질문 분류**: 정성적/정량적/무관/혼합 유형 자동 분류
+    2. **최적화된 처리**:
+       - **정성적 질문** → RAG (문서 검색 및 분석)
+       - **정량적 질문** → Text-to-SQL (데이터베이스 조회)
+       - **혼합 질문** → SQL + RAG 결합 처리
+       - **무관 질문** → 적절한 거부 응답
+    3. **자동 최적화**: 질문 유형에 따라 최적의 처리 방식 자동 선택
+    4. **CoT 추론**: 단계별 논리적 답변 생성
+    5. **투명성**: 처리 과정과 근거 제공
+
     ## 예시 질문
-    - "DRT 시스템이 무엇인가요?"
-    - "수요응답형 교통의 장점은?"
-    - "ASTGCN 모델에 대해 설명해주세요"
+    **정성적 (RAG)**: "DRT 시스템이 무엇인가요?", "수요응답형 교통의 장점은?"
+    **정량적 (SQL)**: "강남구 정류장 개수는?", "시간대별 승차 인원 통계"
+    **혼합형**: "DRT 도입 효과를 데이터와 함께 분석해주세요"
     """,
     response_description="CoT 추론 과정이 포함된 RAG 답변"
 )
@@ -75,61 +95,49 @@ async def process_rag_query(
     request: RAGQueryRequest,
     rag_service: RAGService = Depends(get_rag_service)
 ):
-    
+
     try:
-        logger.info(f"Processing {'Multi-Query' if request.use_multi_query else 'Standard'} RAG query: {request.query}")
-        
-        # Multi-Query 또는 기본 쿼리 선택
-        if request.use_multi_query:
-            result = await rag_service.multi_query(request.query, request.max_results)
-            message = "Multi-Query RAG processed successfully"
-        else:
-            result = await rag_service.query(request.query)
-            message = "CoT RAG query processed successfully"
+        logger.info(f"Processing RAG query: {request.query}")
+
+        # Step 1: 질문 분류를 먼저 수행하여 최적의 처리 방식 결정
+        from app.services.question_classifier_service import QuestionType
+        classification_result = await rag_service.question_classifier.classify_question(request.query)
+
+        logger.info(f"🏷️ Question classified as: {classification_result.question_type.value} (confidence: {classification_result.confidence:.2f})")
+
+        # Step 2: 표준 RAG 처리
+        result = await rag_service.query(request.query)
+        message = "CoT RAG query processed successfully"
         
         # 4단계 종합 답변만 추출하는 옵션
-        final_answer = result["answer"]
+        # AIMessage 객체를 문자열로 변환
+        raw_answer = result["answer"]
+        if hasattr(raw_answer, 'content'):
+            final_answer = raw_answer.content
+        else:
+            final_answer = str(raw_answer)
+
         if request.summary_only:
-            final_answer = extract_summary_answer(result["answer"])
+            final_answer = extract_summary_answer(final_answer)
         
         # 소스 정보 준비
         sources_data = []
         if request.include_sources:
             sources_data.append({"reasoning_steps": result["reasoning_steps"]})
-            
-            # Multi-Query 추가 정보 포함
-            if request.use_multi_query and "generated_queries" in result:
-                reranking_info = {
-                    "generated_queries": result["generated_queries"],
-                    "documents_retrieved": result.get("documents_retrieved", 0),
-                    "documents_reranked": result.get("documents_reranked", 0),
-                    "unique_sources": result.get("unique_sources", 0),
-                    "reranking_enabled": result.get("reranking_enabled", False)
-                }
-                
-                # Re-ranking 점수 추가 (상위 5개)
-                if result.get("top_rerank_scores"):
-                    reranking_info["top_rerank_scores"] = result["top_rerank_scores"]
-                
-                sources_data.append(reranking_info)
         
         # 백엔드 데이터 준비
         backend_info = {"cot_enabled": result["cot_enabled"]}
-        if request.use_multi_query:
-            backend_info.update({
-                "multi_query_enabled": True,
-                "query_mode": result.get("mode", "multi_query"),
-                "reranking_enabled": result.get("reranking_enabled", False)
-            })
         
         return RAGQueryResponse(
             status="success",
-            message=message, 
+            message=message,
             query=result["question"],
             answer=final_answer,
             sources=sources_data if request.include_sources else None,
             backend_data=backend_info if request.backend_data else None,
-            confidence=result["confidence"]
+            confidence=result["confidence"],
+            question_classification=result.get("question_classification"),
+            sql_info=result.get("sql_info")
         )
         
     except Exception as e:
@@ -140,12 +148,18 @@ async def process_rag_query(
         )
 
 
-def extract_summary_answer(cot_response: str) -> str:
+def extract_summary_answer(cot_response) -> str:
     """Extract only the summary answer from 4th step of CoT response"""
-    
+
+    # AIMessage 객체를 문자열로 변환
+    if hasattr(cot_response, 'content'):
+        response_text = cot_response.content
+    else:
+        response_text = str(cot_response)
+
     # "✅ 4단계: 종합 답변" 이후의 내용만 정확히 추출
-    if "✅ 4단계: 종합 답변" in cot_response:
-        parts = cot_response.split("✅ 4단계: 종합 답변")
+    if "✅ 4단계: 종합 답변" in response_text:
+        parts = response_text.split("✅ 4단계: 종합 답변")
         if len(parts) > 1:
             summary_part = parts[-1].strip()
             # 줄바꿈 이후의 실제 답변 내용만 반환 (첫 번째 줄은 보통 비어있음)
@@ -155,7 +169,7 @@ def extract_summary_answer(cot_response: str) -> str:
             return '\n'.join(content_lines).strip()
     
     # 4단계가 없으면 전체 응답 반환
-    return cot_response.strip()
+    return response_text.strip()
 
 
 async def fetch_backend_data(query: str) -> Optional[Dict[str, Any]]:

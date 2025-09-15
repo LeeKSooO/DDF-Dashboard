@@ -18,8 +18,6 @@ from app.core.config import settings
 from app.core.exceptions import RAGServiceException
 from app.services.embedding_service import EmbeddingService
 from app.services.llm_service import LLMService
-from app.services.multi_query_service import MultiQueryService
-from app.services.reranking_service import RerankingService
 from app.services.question_classifier_service import QuestionClassifierService, QuestionType, ClassificationResult
 from app.services.text_to_sql_service import TextToSQLService, SQLGenerationResult
 
@@ -36,8 +34,6 @@ class RAGService:
     def __init__(self):
         self.embedding_service = EmbeddingService()
         self.llm_service = LLMService()
-        self.multi_query_service = None  # Initialize later after llm_service
-        self.reranking_service = None    # Initialize later after llm_service
         self.question_classifier = None  # Initialize later after llm_service
         self.text_to_sql_service = None  # Initialize later after llm_service
         self.vectorstore: Optional[Chroma] = None
@@ -56,17 +52,15 @@ class RAGService:
             await self.embedding_service.initialize()
             await self.llm_service.initialize()
             
-            # Initialize multi-query service
-            self.multi_query_service = MultiQueryService(self.llm_service)
 
-            # Initialize re-ranking service
-            self.reranking_service = RerankingService(self.llm_service)
 
             # Initialize question classifier
             self.question_classifier = QuestionClassifierService(self.llm_service)
 
             # Initialize Text-to-SQL service
+            logger.info("🔧 Initializing Text-to-SQL service...")
             self.text_to_sql_service = TextToSQLService(self.llm_service)
+            logger.info("✅ Text-to-SQL service initialized successfully")
             
             # Initialize vector store (read-only)
             await self._initialize_vectorstore_readonly()
@@ -215,6 +209,10 @@ class RAGService:
 
             # Step 1: Classify question
             classification_result = await self.question_classifier.classify_question(question_with_time)
+            logger.info(f"🏷️ Question classified as: {classification_result.question_type.value} (confidence: {classification_result.confidence:.2f})")
+            logger.info(f"📋 Classification reasoning: {classification_result.reasoning}")
+            logger.info(f"🔍 Keywords detected: {classification_result.keywords}")
+            logger.info(f"🔢 Needs SQL: {classification_result.needs_sql}, Needs RAG: {classification_result.needs_rag}")
 
             # Step 2: Handle different question types
             if classification_result.question_type == QuestionType.QUANTITATIVE:
@@ -224,7 +222,14 @@ class RAGService:
                     sql_result = await self.text_to_sql_service.generate_sql(question)
                     logger.info(f"📝 Generated SQL: {sql_result.generated_sql}")
 
-                    sql_data = await self.text_to_sql_service.execute_sql(sql_result.generated_sql)
+                    # 추가 세미콜론 제거 및 첫 번째 쿼리만 추출 (백엔드 호환성)
+                    raw_sql = sql_result.generated_sql.strip()
+                    # 여러 SELECT 문이 있는 경우 첫 번째만 사용
+                    sql_parts = raw_sql.split(';')
+                    clean_sql = sql_parts[0].strip()
+                    logger.info(f"🧹 Cleaned SQL (first query only): {clean_sql}")
+
+                    sql_data = await self.text_to_sql_service.execute_sql(clean_sql)
                     logger.info(f"🎯 SQL execution result: success={sql_data.get('success', False)}, rows={sql_data.get('row_count', 0)}")
 
                     # Generate natural language response from SQL results
@@ -254,7 +259,11 @@ class RAGService:
             elif classification_result.question_type == QuestionType.MIXED:
                 # Use both SQL and RAG for mixed questions
                 sql_result = await self.text_to_sql_service.generate_sql(question)
-                sql_data = await self.text_to_sql_service.execute_sql(sql_result.generated_sql)
+                # 추가 세미콜론 제거 및 첫 번째 쿼리만 추출 (백엔드 호환성)
+                raw_sql = sql_result.generated_sql.strip()
+                sql_parts = raw_sql.split(';')
+                clean_sql = sql_parts[0].strip()
+                sql_data = await self.text_to_sql_service.execute_sql(clean_sql)
 
                 # Also get RAG response
                 rag_response = await asyncio.get_event_loop().run_in_executor(
@@ -336,6 +345,53 @@ class RAGService:
 
             data = sql_data.get("data", [])
             row_count = sql_data.get("row_count", 0)
+
+            logger.info(f"📊 SQL 실행 결과 상세 로깅:")
+            logger.info(f"  ✅ 실행 상태: {'성공' if sql_data.get('success', False) else '실패'}")
+            logger.info(f"  📈 조회된 행 수: {row_count}개")
+            logger.info(f"  💾 데이터 크기: {len(data) if data else 0}개 레코드")
+
+            # 실행 시간이 있다면 로깅
+            execution_time = sql_data.get('execution_time')
+            if execution_time:
+                logger.info(f"  ⏱️ 실행 시간: {execution_time:.3f}초")
+
+            # 컬럼 정보가 있다면 로깅
+            columns = sql_data.get('columns', [])
+            if columns:
+                logger.info(f"  📋 컬럼 목록: {', '.join(columns)}")
+
+            # 데이터 샘플 로깅 (처음 3개 행만)
+            if data and len(data) > 0:
+                logger.info(f"  📊 데이터 샘플 (상위 {min(3, len(data))}개 행):")
+                for i, row in enumerate(data[:3], 1):
+                    if isinstance(row, dict):
+                        # 딕셔너리 형태의 행 데이터
+                        formatted_row = []
+                        for key, value in row.items():
+                            # 긴 문자열은 잘라서 표시
+                            if isinstance(value, str) and len(value) > 50:
+                                value = value[:50] + "..."
+                            formatted_row.append(f"{key}: {value}")
+                        logger.info(f"    {i}행: {{{', '.join(formatted_row)}}}")
+                    else:
+                        # 리스트나 튜플 형태의 행 데이터
+                        logger.info(f"    {i}행: {row}")
+
+                # 총 데이터 개수가 많으면 추가 정보
+                if len(data) > 3:
+                    logger.info(f"  ⋯ 추가 {len(data) - 3}개 행 생략")
+
+                # 데이터 타입 분석
+                if isinstance(data[0], dict):
+                    sample_row = data[0]
+                    type_info = []
+                    for key, value in sample_row.items():
+                        value_type = type(value).__name__
+                        type_info.append(f"{key}({value_type})")
+                    logger.info(f"  🏷️ 데이터 타입: {', '.join(type_info)}")
+            else:
+                logger.info("  📊 조회된 데이터: 없음")
 
             if row_count == 0:
                 return "조회 조건에 맞는 데이터가 없습니다."
@@ -490,110 +546,6 @@ class RAGService:
             logger.error(f"Failed to format SQL results: {e}")
             return f"결과 포맷팅 오류: {str(e)}"
     
-    async def multi_query(self, question: str, max_results: int = 10) -> Dict[str, Any]:
-        """Enhanced query with multi-query generation and question classification"""
-        if not self._initialized:
-            raise RAGServiceException("RAG service not initialized")
-
-        if not self.vectorstore:
-            raise RAGServiceException("No vector store available - run DocumentETL job first")
-
-        if not self.multi_query_service:
-            raise RAGServiceException("Multi-query service not initialized")
-
-        try:
-            logger.info(f"🔍 Processing multi-query: {question[:50]}...")
-
-            # Step 1: Classify question
-            classification_result = await self.question_classifier.classify_question(question)
-
-            # Step 2: Generate multiple diverse queries
-            queries = await self.multi_query_service.generate_multiple_queries(question)
-            
-            # Validate queries is a list and not empty
-            if not isinstance(queries, list) or len(queries) == 0:
-                logger.warning("⚠️ Invalid queries result, using fallback")
-                queries = [question]  # Fallback to original query
-            
-            logger.info(f"📝 Generated {len(queries)} diverse queries")
-            
-            # Step 2: Retrieve documents for each query
-            all_documents = []
-            unique_docs = set()
-            
-            for i, query in enumerate(queries, 1):
-                logger.debug(f"🔍 Retrieving for query {i}: {query[:50]}...")
-                
-                # Safe division with minimum value
-                k_value = max(5, max_results // max(len(queries), 1))
-                
-                # Retrieve documents for this query
-                docs = self.vectorstore.similarity_search(
-                    query, 
-                    k=k_value
-                )
-                
-                # Filter duplicates by content hash
-                for doc in docs:
-                    doc_hash = hash(doc.page_content)
-                    if doc_hash not in unique_docs:
-                        unique_docs.add(doc_hash)
-                        all_documents.append(doc)
-            
-            logger.info(f"📊 Retrieved {len(all_documents)} unique documents from {len(queries)} queries")
-            
-            # Step 3: Re-rank documents using multiple criteria
-            if self.reranking_service:
-                logger.info("🎯 Re-ranking documents with multiple criteria...")
-                reranked_documents = await self.reranking_service.rerank_documents(
-                    question, all_documents, top_k=max_results
-                )
-                top_documents = reranked_documents
-            else:
-                logger.warning("⚠️ Re-ranking service not available, using similarity order")
-                top_documents = all_documents[:max_results]
-            
-            # Step 4: Generate context from selected documents
-            context = self._format_context_from_documents(top_documents)
-            
-            # Step 5: Generate enhanced answer using combined context
-            enhanced_response = await self._generate_enhanced_response(question, context, queries)
-            
-            # Get reasoning steps
-            reasoning_steps = self.llm_service.get_reasoning_steps()
-            
-            # Calculate enhanced confidence
-            confidence = self._calculate_enhanced_confidence(enhanced_response, reasoning_steps, len(all_documents))
-            
-            result = {
-                "question": question,
-                "answer": enhanced_response,
-                "reasoning_steps": reasoning_steps,
-                "confidence": confidence,
-                "cot_enabled": self.llm_service.enable_cot,
-                "mode": "multi_query_with_reranking",
-                "generated_queries": queries,
-                "documents_retrieved": len(all_documents),
-                "documents_reranked": len(top_documents),
-                "unique_sources": len(set(doc.metadata.get('source', '') for doc in top_documents)),
-                "reranking_enabled": self.reranking_service is not None,
-                "top_rerank_scores": [doc.metadata.get('rerank_score', 0.0) for doc in top_documents[:5]],
-                "question_classification": {
-                    "type": classification_result.question_type.value,
-                    "confidence": classification_result.confidence,
-                    "reasoning": classification_result.reasoning,
-                    "keywords": classification_result.keywords,
-                    "needs_sql": classification_result.needs_sql,
-                    "needs_rag": classification_result.needs_rag
-                }
-            }
-            
-            logger.info(f"✅ Multi-query processed successfully (confidence: {confidence:.0%})")
-            return result
-            
-        except Exception as e:
-            logger.error(f"❌ Multi-query processing failed: {e}")
-            raise RAGServiceException(f"Multi-query processing error: {e}")
     
     def _calculate_confidence(self, response: str, reasoning_steps: List[str]) -> float:
         """Calculate response confidence"""

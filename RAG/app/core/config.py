@@ -62,6 +62,11 @@ class Settings(BaseSettings):
     SIMILARITY_THRESHOLD: float = 0.7
     MAX_CONTEXT_LENGTH: int = 16000
 
+
+    # Database constraints for SQL generation
+    DATABASE_DATE_START: str = "2025-07-15"
+    DATABASE_DATE_END: str = "2025-07-31"
+
     # Response generation settings
     MAX_RESPONSE_TOKENS: int = 8000
     MIN_RESPONSE_LENGTH: int = 500
