@@ -4,7 +4,7 @@ API v1 라우터 통합
 """
 
 from fastapi import APIRouter
-from app.api.v1.endpoints import traffic, heatmap, anomaly_pattern, drt_score
+from app.api.v1.endpoints import traffic, heatmap, anomaly_pattern, drt_score, sql
 
 api_router = APIRouter()
 
@@ -34,4 +34,11 @@ api_router.include_router(
     drt_score.router,
     prefix="/drt-score",
     tags=["drt-score"]
+)
+
+# SQL 실행 API 라우트 등록
+api_router.include_router(
+    sql.router,
+    prefix="/sql",
+    tags=["sql"]
 )
