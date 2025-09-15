@@ -30,11 +30,16 @@ class Settings(BaseSettings):
     # CORS settings
     ALLOWED_HOSTS: str = "*"
     
-    # Watson AI settings
-    WATSON_API_KEY: Optional[str] = os.getenv('WATSON_API_KEY')
-    WATSON_URL: Optional[str] = os.getenv('WATSON_URL')
-    WATSON_PROJECT_ID: Optional[str] = os.getenv('WATSON_PROJECT_ID')
-    WATSON_MODEL_ID: str = os.getenv('WATSON_MODEL_ID', "ibm/granite-3-8b-instruct")
+    # LLM API settings - Fallback structure for top performing models
+    # Primary: GPT-3.5-Turbo (0.938 score)
+    # Fallback 1: GPT-4 (0.895 score)
+    # Fallback 2: Claude-3-Sonnet (0.842 score)
+    
+    # OpenAI settings
+    OPENAI_API_KEY: Optional[str] = os.getenv('OPENAI_API_KEY')
+    
+    # Anthropic settings
+    ANTHROPIC_API_KEY: Optional[str] = os.getenv('ANTHROPIC_API_KEY')
     
     # Database settings
     DATABASE_URL: Optional[str] = None
@@ -53,9 +58,15 @@ class Settings(BaseSettings):
     
     # RAG settings
     DEFAULT_CONFIDENCE_THRESHOLD: float = 0.5
-    MAX_RESULTS: int = 10
+    MAX_RESULTS: int = 15
     SIMILARITY_THRESHOLD: float = 0.7
-    MAX_CONTEXT_LENGTH: int = 8000
+    MAX_CONTEXT_LENGTH: int = 16000
+
+    # Response generation settings
+    MAX_RESPONSE_TOKENS: int = 8000
+    MIN_RESPONSE_LENGTH: int = 500
+    PREFERRED_RESPONSE_LENGTH: int = 2000
+    REQUEST_TIMEOUT_SECONDS: int = 120
     
     # Enhanced Chunking settings
     USE_ENHANCED_CHUNKING: bool = os.getenv('USE_ENHANCED_CHUNKING', 'false').lower() == 'true'
