@@ -65,9 +65,11 @@ class RedisClient:
             data = await redis_client.get(key)
             
             if data:
+                print(f"[REDIS] Cache HIT: {key}")
                 logger.info(f"Cache HIT: {key}")
                 return json.loads(data)
             else:
+                print(f"[REDIS] Cache MISS: {key}")
                 logger.info(f"Cache MISS: {key}")
                 return None
                 
@@ -101,9 +103,11 @@ class RedisClient:
             success = await redis_client.setex(key, ttl, serialized_data)
             
             if success:
+                print(f"[REDIS] Cache SET: {key} (TTL: {ttl}s)")
                 logger.info(f"Cache SET: {key} (TTL: {ttl}s)")
                 return True
             else:
+                print(f"[REDIS] Cache SET failed: {key}")
                 logger.warning(f"Cache SET failed: {key}")
                 return False
                 

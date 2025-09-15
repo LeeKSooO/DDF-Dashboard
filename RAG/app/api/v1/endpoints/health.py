@@ -10,7 +10,6 @@ from sqlalchemy.orm import Session
 
 from app.core.dependencies import (
     get_database, 
-    get_redis, 
     get_llm_service,
     get_embedding_service,
     get_rag_service
@@ -40,8 +39,7 @@ async def health_check():
 
 @router.get("/detailed", response_model=HealthResponse)
 async def detailed_health_check(
-    db: Session = Depends(get_database),
-    redis = Depends(get_redis)
+    db: Session = Depends(get_database)
 ):
     """Detailed health check with all services"""
     
@@ -62,25 +60,6 @@ async def detailed_health_check(
         }
         overall_status = ResponseStatus.PARTIAL
     
-    # Check Redis
-    if redis:
-        try:
-            await redis.ping()
-            services_status["redis"] = {
-                "status": "healthy",
-                "message": "Redis connection successful"
-            }
-        except Exception as e:
-            services_status["redis"] = {
-                "status": "unhealthy",
-                "message": f"Redis connection failed: {str(e)}"
-            }
-            overall_status = ResponseStatus.PARTIAL
-    else:
-        services_status["redis"] = {
-            "status": "disabled",
-            "message": "Redis not configured"
-        }
     
     # Check LLM service
     try:

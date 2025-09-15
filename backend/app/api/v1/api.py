@@ -2,9 +2,8 @@
 API v1 라우터 통합
 모든 v1 엔드포인트를 하나로 통합하는 메인 라우터
 """
-
 from fastapi import APIRouter
-from app.api.v1.endpoints import traffic, heatmap, anomaly_pattern, drt_score, sql
+from app.api.v1.endpoints import traffic, heatmap, anomaly_pattern, drt_score, sql, od
 
 api_router = APIRouter()
 
@@ -41,4 +40,11 @@ api_router.include_router(
     sql.router,
     prefix="/sql",
     tags=["sql"]
+)
+
+# OD Analysis API 라우트 등록
+api_router.include_router(
+    od.router,
+    prefix="/od",
+    tags=["od-analysis"]
 )

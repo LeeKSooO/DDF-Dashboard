@@ -1,7 +1,41 @@
 // API 서비스 레이어
 // DRT Dashboard API 통신을 위한 함수들
 
-import { API_BASE_URL } from './constants';
+import { API_BASE_URL, RAG_API_URL } from './constants';
+
+// RAG API 타입 정의
+export interface RAGQueryRequest {
+  query: string;
+  max_results?: number;
+  similarity_threshold?: number;
+  use_multi_query?: boolean;
+  include_sources?: boolean;
+  backend_data?: boolean;
+  summary_only?: boolean;
+}
+
+export interface RAGQueryResponse {
+  status: string;
+  message: string;
+  query: string;
+  answer: string;
+  sources?: Array<{
+    reasoning_steps?: unknown[];
+    generated_queries?: string[];
+    documents_retrieved?: number;
+    documents_reranked?: number;
+    unique_sources?: number;
+    reranking_enabled?: boolean;
+    top_rerank_scores?: number[];
+  }>;
+  backend_data?: {
+    cot_enabled: boolean;
+    multi_query_enabled?: boolean;
+    query_mode?: string;
+    reranking_enabled?: boolean;
+  };
+  confidence?: number;
+}
 
 // Traffic API 타입 정의
 export interface HourlyPattern {
@@ -111,7 +145,7 @@ export interface DRTStationDetailResponse {
   peak_score: number;
   peak_hour: number;
   monthly_average: number;
-  feature_scores: any; // 모델별로 다른 구조: vulnerable(var_t_score, sed_t_score, mdi_t_score, avs_score), commuter(tc_score, pdr_score, ru_score, pcw_score), tourism(tc_t_score, tdr_t_score, ru_t_score, pcw_score)
+  feature_scores: FeatureScores;
   hourly_scores: Array<{
     hour: number;
     score: number;
@@ -138,6 +172,37 @@ export interface DRTScoreResponse {
 }
 
 export type DRTModelType = "commuter" | "tourism" | "vulnerable";
+
+// Feature scores 타입 정의 (모델별로 다른 구조)
+export interface VulnerableFeatureScores {
+  var_t_score: number;
+  sed_t_score: number;
+  mdi_t_score: number;
+  avs_score: number;
+}
+
+export interface CommuterFeatureScores {
+  tc_score: number;
+  pdr_score: number;
+  ru_score: number;
+  pcw_score: number;
+}
+
+export interface TourismFeatureScores {
+  tc_t_score: number;
+  tdr_t_score: number;
+  ru_t_score: number;
+  pcw_score: number;
+}
+
+export type FeatureScores = VulnerableFeatureScores | CommuterFeatureScores | TourismFeatureScores;
+
+// Health check 응답 타입
+export interface HealthResponse {
+  status: string;
+  timestamp?: string;
+  message?: string;
+}
 
 // API 함수들
 class ApiService {
@@ -215,14 +280,14 @@ class ApiService {
   }
 
   // API 상태 확인
-  async getTrafficHealth(): Promise<any> {
+  async getTrafficHealth(): Promise<HealthResponse> {
     const url = `${API_BASE_URL}/traffic/hourly/health`;
-    return this.fetchWithErrorHandling(url);
+    return this.fetchWithErrorHandling<HealthResponse>(url);
   }
 
-  async getHeatmapHealth(): Promise<any> {
+  async getHeatmapHealth(): Promise<HealthResponse> {
     const url = `${API_BASE_URL}/heatmap/health`;
-    return this.fetchWithErrorHandling(url);
+    return this.fetchWithErrorHandling<HealthResponse>(url);
   }
 
   // DRT Score 관련 API 함수들
@@ -231,7 +296,7 @@ class ApiService {
   async getDRTScores(
     districtName: string = "강남구",  // Default 지역
     modelType: DRTModelType = "vulnerable",  // Default 모델
-    analysisMonth: string = "2025-07-01"
+analysisMonth: string
   ): Promise<DRTScoreResponse> {
     const params = new URLSearchParams({
       model_type: modelType,
@@ -254,14 +319,14 @@ class ApiService {
   async getStationDetail(
     stationId: string,
     modelType: DRTModelType = "vulnerable",
-    analysisMonth: string = "2025-07-01"
+analysisMonth: string
   ): Promise<DRTStationDetailResponse> {
     const params = new URLSearchParams({
       model_type: modelType,
       analysis_month: analysisMonth,
     });
 
-    const url = `${API_BASE_URL}/drt-score/stations/${stationId}?${params.toString()}`;
+    const url = `${API_BASE_URL}/drt-score/stations/${encodeURIComponent(stationId)}?${params.toString()}`;
     
     console.log('🌐 Station Detail API Request:', { url, stationId, modelType, analysisMonth });
     
@@ -275,7 +340,7 @@ class ApiService {
   async getMultipleDRTScores(
     districtNames: string[],
     modelType: DRTModelType,
-    analysisMonth: string = "2025-07-01"
+analysisMonth: string
   ): Promise<DRTScoreResponse[]> {
     const promises = districtNames.map((districtName) =>
       this.getDRTScores(districtName, modelType, analysisMonth)
@@ -287,7 +352,7 @@ class ApiService {
   // 서울시 전체 DRT Top 정류장 조회 (여러 구 통합)
   async getSeoulTopDRTStations(
     modelType: DRTModelType,
-    analysisMonth: string = "2025-07-01",
+analysisMonth: string,
     topN: number = 10
   ): Promise<DRTTopStation[]> {
     // 주요 구들을 조회해서 Top 정류장들을 수집
@@ -329,83 +394,130 @@ class ApiService {
   // 구별 anomaly 패턴 데이터 조회 (통합)
   async getAnomalyPatterns(
     districtName: string,
-    analysisMonth: string = "2025-07-01"
-  ): Promise<any> {
+analysisMonth: string
+  ): Promise<any> { // eslint-disable-line @typescript-eslint/no-explicit-any
     const url = `${API_BASE_URL}/anomaly-pattern/integration?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}`;
     
-    console.log('🌐 Anomaly Pattern API Request:', { url, districtName, analysisMonth });
-    
     const result = await this.fetchWithErrorHandling(url);
-    console.log('🌐 Anomaly Pattern API Response:', result);
     
     return result;
   }
 
-  // 주말 우세 정류장 조회
-  async getWeekendDominantStations(
-    districtName: string,
-    analysisMonth: string = "2025-07-01",
+  // 📝 개별 패턴 API들은 getIntegratedPatterns()로 통합됨
+
+  // 통합 패턴 분석 (서울 전체 또는 구별 - 6개 패턴 종합)
+  async getIntegratedPatterns(
+    analysisMonth: string,
+    districtName?: string,
     topN: number = 5
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> {
-    const url = `${API_BASE_URL}/anomaly-pattern/weekend-dominant?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}&top_n=${topN}`;
-    return this.fetchWithErrorHandling(url);
+    try {
+      const params = new URLSearchParams({
+        analysis_month: analysisMonth,
+        top_n: String(topN)
+      });
+      
+      if (districtName) {
+        params.append('district_name', districtName);
+      }
+      
+      const url = `${API_BASE_URL}/anomaly-pattern/integration?${params.toString()}`;
+      const response = await this.fetchWithErrorHandling(url);
+      
+      // 통합 응답을 기존 state 형태에 맞게 정리
+      return {
+        success: (response as Record<string, unknown>)?.success || false,
+        data: (response as Record<string, unknown>)?.data || {},
+        message: (response as Record<string, unknown>)?.message || '',
+        timestamp: (response as Record<string, unknown>)?.timestamp || new Date().toISOString()
+      };
+    } catch {
+      // 실패해도 UI가 자연스럽게 동작하도록 안전한 형태 반환
+      return {
+        success: false,
+        data: {},
+        message: `Pattern data not available for ${districtName || '서울시 전체'}`
+      };
+    }
   }
 
-  // 야간 수요 정류장 조회
-  async getNightDemandStations(
-    districtName: string,
-    analysisMonth: string = "2025-07-01",
-    topN: number = 5
-  ): Promise<any> {
-    const url = `${API_BASE_URL}/anomaly-pattern/night-demand?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}&top_n=${topN}`;
-    return this.fetchWithErrorHandling(url);
+  // RAG API 함수들
+  async queryRAG(request: RAGQueryRequest): Promise<RAGQueryResponse> {
+    try {
+      const response = await fetch(`${RAG_API_URL}/api/v1/query/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: request.query,
+          max_results: request.max_results || 10,
+          similarity_threshold: request.similarity_threshold || 0.5,
+          use_multi_query: request.use_multi_query || true,
+          include_sources: request.include_sources || true,
+          backend_data: request.backend_data || true,
+          summary_only: request.summary_only || false,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`RAG API error! status: ${response.status}`);
+      }
+
+      const data: RAGQueryResponse = await response.json();
+      
+      
+      return data;
+    } catch (error) {
+      console.error('RAG API request failed:', error);
+      throw error;
+    }
   }
 
-  // 러시아워 분석
-  async getRushHourAnalysis(
-    districtName: string,
-    analysisMonth: string = "2025-07-01"
-  ): Promise<any> {
-    const url = `${API_BASE_URL}/anomaly-pattern/rush-hour?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}`;
-    return this.fetchWithErrorHandling(url);
+  // RAG 시스템 상태 확인
+  async getRAGHealth(): Promise<{ status: string; message?: string }> {
+    try {
+      const response = await fetch(`${RAG_API_URL}/api/v1/query/examples`);
+      
+      if (!response.ok) {
+        throw new Error(`RAG Health check failed! status: ${response.status}`);
+      }
+
+      return {
+        status: 'healthy',
+        message: 'RAG system is operational'
+      };
+    } catch (error) {
+      console.error('RAG Health check failed:', error);
+      return {
+        status: 'error',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
   }
 
-  // 점심시간 특화 정류장 조회
-  async getLunchTimeStations(
-    districtName: string,
-    analysisMonth: string = "2025-07-01",
-    topN: number = 5
-  ): Promise<any> {
-    const url = `${API_BASE_URL}/anomaly-pattern/lunch-time?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}&top_n=${topN}`;
-    return this.fetchWithErrorHandling(url);
-  }
+  // RAG 예시 질문 가져오기
+  async getRAGExamples(): Promise<{ examples: string[] }> {
+    try {
+      const response = await fetch(`${RAG_API_URL}/api/v1/query/examples`);
+      
+      if (!response.ok) {
+        throw new Error(`RAG Examples API error! status: ${response.status}`);
+      }
 
-  // 지역 특성별 정류장 분석
-  async getAreaTypeAnalysis(
-    districtName: string,
-    analysisMonth: string = "2025-07-01"
-  ): Promise<any> {
-    const url = `${API_BASE_URL}/anomaly-pattern/area-type?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}`;
-    return this.fetchWithErrorHandling(url);
-  }
-
-  // 저활용 정류장 분석
-  async getUnderutilizedStations(
-    districtName: string,
-    analysisMonth: string = "2025-07-01",
-    topN: number = 5
-  ): Promise<any> {
-    const url = `${API_BASE_URL}/anomaly-pattern/underutilized?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}&top_n=${topN}`;
-    return this.fetchWithErrorHandling(url);
-  }
-
-  // 통합 이상 패턴 분석 (6개 패턴 종합)
-  async getIntegratedAnomalyAnalysis(
-    districtName: string,
-    analysisMonth: string = "2025-07-01"
-  ): Promise<any> {
-    const url = `${API_BASE_URL}/anomaly-pattern/integration?district_name=${encodeURIComponent(districtName)}&analysis_month=${analysisMonth}`;
-    return this.fetchWithErrorHandling(url);
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('RAG Examples API request failed:', error);
+      return {
+        examples: [
+          "DRT 시스템이 무엇인가요?",
+          "수요응답형 교통의 장점은 무엇인가요?",
+          "교통 데이터 분석 방법론에 대해 설명해주세요"
+        ]
+      };
+    }
   }
 }
 
@@ -439,6 +551,13 @@ export const utils = {
     return `${(ratio * 100).toFixed(1)}%`;
   },
 
+  // 선택된 월을 API 형식으로 변환 ("7" -> "2025-07-01")
+  // 데이터가 2025년 기준이므로 2025년으로 고정하되, 향후 확장 가능하도록 구조화
+  formatSelectedMonth: (selectedMonth: string, year: number = 2025): string => {
+    const month = String(selectedMonth).padStart(2, "0");
+    return `${year}-${month}-01`;
+  },
+
   // 서울시 25개 구 목록
   seoulDistricts: [
     "강남구",
@@ -467,4 +586,37 @@ export const utils = {
     "중구",
     "중랑구",
   ],
+
+  // 중복된 정류장명에만 ID를 붙이는 함수
+  getStationDisplayNames: <T extends { station_name: string; station_id: string }>(
+    stations: T[]
+  ): Map<string, string> => {
+    const nameCount = new Map<string, number>();
+    const stationIdsByName = new Map<string, string[]>();
+    
+    // 정류장 이름별로 카운트 및 ID 수집
+    stations.forEach(station => {
+      const count = nameCount.get(station.station_name) || 0;
+      nameCount.set(station.station_name, count + 1);
+      
+      const ids = stationIdsByName.get(station.station_name) || [];
+      ids.push(station.station_id);
+      stationIdsByName.set(station.station_name, ids);
+    });
+    
+    // 표시할 이름 생성
+    const displayNames = new Map<string, string>();
+    stations.forEach(station => {
+      if (nameCount.get(station.station_name)! > 1) {
+        // 중복된 이름인 경우 ID의 마지막 6자리 추가
+        const shortId = station.station_id.slice(-6);
+        displayNames.set(station.station_id, `${station.station_name} (${shortId})`);
+      } else {
+        // 유일한 이름인 경우 그대로 사용
+        displayNames.set(station.station_id, station.station_name);
+      }
+    });
+    
+    return displayNames;
+  },
 };

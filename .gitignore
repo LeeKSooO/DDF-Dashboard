@@ -50,6 +50,13 @@ infrastructure/.DS_Store
 infrastructure/database/.DS_Store
 
 # ===========================================
+# Kubernetes Secrets
+# ===========================================
+k8s/**/secret.yaml
+k8s/**/secrets.yaml
+k8s/**/secret-*.yaml
+
+# ===========================================
 # RAG Service
 # ===========================================
 RAG/.env
@@ -66,6 +73,9 @@ RAG/app/__pycache__/
 __pycache__/
 *.py[cod]
 *$py.class
+
+# Root level Python cache
+/__pycache__/
 .Python
 build/
 dist/
@@ -104,8 +114,9 @@ package-lock.json
 *.sqlite3
 
 # PostgreSQL data volume (contains database files)
-postgres/
-postgres_backup/
+# Note: Only ignoring root-level postgres directories, not k8s/postgres
+/postgres/
+/postgres_backup/
 
 # ===========================================
 # Logs
@@ -146,10 +157,12 @@ tmp/
 # ===========================================
 # Test Files
 # ===========================================
+test/
 test_*.py
 *_test.py
 tests/
 scripts/test_*.py
+
 
 # ===========================================
 # Cache
@@ -255,3 +268,11 @@ kubeconfig
 # regacy
 rag-legacy
 legacy
+
+# Reference files (API docs, swagger files, etc.)
+frontend/reference/frontend_bak/
+
+
+data/raw/0715-0731
+data/processed/od/
+data/OD_process

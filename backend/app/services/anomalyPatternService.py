@@ -26,6 +26,7 @@ from app.schemas.anomalyPattern import (
     UnderutilizedStationSchema,
     AnomalyPatternFilterSchema
 )
+from app.core.redis_client import cache_result
 
 logger = logging.getLogger(__name__)
 
@@ -63,8 +64,8 @@ class AnomalyPatternService:
             night_stations = await self.get_night_demand_stations(db, district_name, analysis_month, filters.top_n)  
             rush_stations = await self.get_rush_hour_stations(db, district_name, analysis_month, filters.top_n)
             lunch_stations = await self.get_lunch_time_stations(db, district_name, analysis_month, filters.top_n)
-            area_stations = await self.get_area_type_stations(db, district_name, analysis_month, filters.top_n)
-            volatility_stations = await self.get_high_volatility_stations(db, district_name, analysis_month, filters.top_n)
+            area_stations = await self.get_area_type_analysis(db, district_name, analysis_month, filters.top_n)
+            volatility_stations = await self.get_underutilized_stations(db, district_name, analysis_month, filters.top_n)
             
             analysis_period = analysis_month.strftime("%Y-%m")
             
@@ -80,8 +81,8 @@ class AnomalyPatternService:
                 night_demand_stations=night_stations,
                 rush_hour_stations=rush_stations,
                 lunch_time_stations=lunch_stations,
-                area_type_stations=area_stations,
-                high_volatility_stations=volatility_stations
+                area_type_analysis=area_stations,
+                underutilized_stations=volatility_stations
             )
             
         except Exception as e:
@@ -174,10 +175,11 @@ class AnomalyPatternService:
             analysis_period_days=int(row.analysis_period_days or 0)
         )
 
+    @cache_result(key_prefix="anomaly:weekend", use_month_ttl=True)
     async def get_weekend_dominant_stations(
         self,
         db: AsyncSession,
-        district_name: str,
+        district_name: Optional[str],
         analysis_month: date,
         top_n: int = 5
     ) -> List[WeekendDominantStationSchema]:
@@ -190,7 +192,13 @@ class AnomalyPatternService:
         """
         
         # 1단계: MV에서 주말 교통량 TOP N 정류장 조회
-        stations_query = text("""
+        # district_name이 없으면 서울시 전체, 있으면 해당 구만
+        if district_name:
+            district_condition = "AND district_name = :district_name"
+        else:
+            district_condition = ""
+            
+        stations_query = text(f"""
             WITH weekend_traffic AS (
                 SELECT 
                     station_id,
@@ -203,7 +211,7 @@ class AnomalyPatternService:
                     SUM(total_traffic) as hour_traffic
                 FROM mv_station_hourly_patterns
                 WHERE month_date = :analysis_month
-                  AND district_name = :district_name
+                  {district_condition}
                   AND day_type = 'weekend'
                 GROUP BY station_id, station_name, longitude, latitude, district_name, administrative_dong, hour
             ),
@@ -232,27 +240,33 @@ class AnomalyPatternService:
             FROM station_totals st
         """)
         
-        result = await db.execute(stations_query, {
-            "district_name": district_name,
+        # 파라미터 준비
+        query_params = {
             "analysis_month": analysis_month,
             "top_n": top_n
-        })
+        }
+        if district_name:
+            query_params["district_name"] = district_name
+            
+        result = await db.execute(stations_query, query_params)
         
-        # 2단계: 구 전체 주말 통계 조회 (vs_district_avg용)
-        district_stats_query = text("""
+        # 2단계: 주말 통계 조회 (vs_district_avg용)
+        # 구별 또는 서울시 전체
+        district_stats_query = text(f"""
             SELECT 
                 SUM(total_traffic) as district_weekend_total,
                 COUNT(DISTINCT station_id) as total_stations
             FROM mv_station_hourly_patterns
             WHERE month_date = :analysis_month
-              AND district_name = :district_name
+              {district_condition}
               AND day_type = 'weekend'
         """)
         
-        district_stats_result = await db.execute(district_stats_query, {
-            "district_name": district_name,
-            "analysis_month": analysis_month
-        })
+        stats_params = {"analysis_month": analysis_month}
+        if district_name:
+            stats_params["district_name"] = district_name
+            
+        district_stats_result = await db.execute(district_stats_query, stats_params)
         
         district_stats = district_stats_result.fetchone()
         district_weekend_total = district_stats.district_weekend_total or 1
@@ -350,10 +364,11 @@ class AnomalyPatternService:
             
         return final_stations
 
+    @cache_result(key_prefix="anomaly:night", use_month_ttl=True)
     async def get_night_demand_stations(
         self,
         db: AsyncSession,
-        district_name: str,
+        district_name: Optional[str],
         analysis_month: date,
         top_n: int = 5
     ) -> List[NightDemandStationSchema]:
@@ -365,8 +380,14 @@ class AnomalyPatternService:
         3단계: vs_district_avg 계산
         """
         
+        # district_name이 없으면 서울시 전체, 있으면 해당 구만
+        if district_name:
+            district_condition = "AND district_name = :district_name"
+        else:
+            district_condition = ""
+            
         # 1단계: MV에서 심야시간 TOP N 정류장 + 시간대별 데이터 한번에 조회
-        stations_query = text("""
+        stations_query = text(f"""
             WITH night_stations AS (
                 SELECT 
                     station_id,
@@ -385,7 +406,7 @@ class AnomalyPatternService:
                     SUM(CASE WHEN hour = 3 THEN total_ride ELSE 0 END) as hour_3
                 FROM mv_station_hourly_patterns
                 WHERE month_date = :analysis_month
-                  AND district_name = :district_name
+                  {district_condition}
                   AND hour IN (23, 0, 1, 2, 3)
                 GROUP BY station_id, station_name, longitude, latitude, district_name, administrative_dong
                 HAVING SUM(CASE WHEN hour IN (23, 0, 1, 2, 3) THEN total_ride ELSE 0 END) > 0
@@ -404,27 +425,31 @@ class AnomalyPatternService:
             FROM night_stations
         """)
         
-        stations_result = await db.execute(stations_query, {
-            "district_name": district_name,
+        query_params = {
             "analysis_month": analysis_month,
             "top_n": top_n
-        })
+        }
+        if district_name:
+            query_params["district_name"] = district_name
+            
+        stations_result = await db.execute(stations_query, query_params)
         
-        # 2단계: MV에서 구 전체 심야시간 통계 조회 (훨씬 빠름)
-        district_stats_query = text("""
+        # 2단계: 심야시간 통계 조회 (구별 또는 서울시 전체)
+        district_stats_query = text(f"""
             SELECT 
                 SUM(total_ride) as district_night_total,
                 COUNT(DISTINCT station_id) as total_stations
             FROM mv_station_hourly_patterns
             WHERE month_date = :analysis_month
-              AND district_name = :district_name
+              {district_condition}
               AND hour IN (23, 0, 1, 2, 3)
         """)
         
-        district_stats_result = await db.execute(district_stats_query, {
-            "district_name": district_name,
-            "analysis_month": analysis_month
-        })
+        stats_params = {"analysis_month": analysis_month}
+        if district_name:
+            stats_params["district_name"] = district_name
+            
+        district_stats_result = await db.execute(district_stats_query, stats_params)
         
         district_stats = district_stats_result.fetchone()
         district_night_total = district_stats.district_night_total or 1
@@ -470,10 +495,11 @@ class AnomalyPatternService:
             
         return final_stations
 
+    @cache_result(key_prefix="anomaly:rush", use_month_ttl=True)
     async def get_rush_hour_stations(
         self,
         db: AsyncSession,
-        district_name: str,
+        district_name: Optional[str],
         analysis_month: date,
         top_n: int = 5
     ) -> RushHourStationSchema:
@@ -486,8 +512,14 @@ class AnomalyPatternService:
         4단계: vs_district_avg 계산
         """
         
+        # district_name이 없으면 서울시 전체, 있으면 해당 구만
+        if district_name:
+            district_condition = "AND district_name = :district_name"
+        else:
+            district_condition = ""
+            
         # 1단계: 오전 러시아워 TOP N 정류장 (MV 활용)
-        morning_query = text("""
+        morning_query = text(f"""
             WITH morning_rush AS (
                 SELECT 
                     station_id,
@@ -504,7 +536,7 @@ class AnomalyPatternService:
                     SUM(CASE WHEN hour = 8 THEN total_ride ELSE 0 END) as hour_8
                 FROM mv_station_hourly_patterns
                 WHERE month_date = :analysis_month
-                  AND district_name = :district_name
+                  {district_condition}
                   AND day_type = 'weekday'  -- 평일만
                   AND hour IN (6, 7, 8)
                 GROUP BY station_id, station_name, longitude, latitude, district_name, administrative_dong
@@ -524,14 +556,17 @@ class AnomalyPatternService:
             FROM morning_rush
         """)
         
-        morning_result = await db.execute(morning_query, {
-            "district_name": district_name,
+        query_params = {
             "analysis_month": analysis_month,
             "top_n": top_n
-        })
+        }
+        if district_name:
+            query_params["district_name"] = district_name
+            
+        morning_result = await db.execute(morning_query, query_params)
         
         # 2단계: 오후 러시아워 TOP N 정류장 (MV 활용)
-        evening_query = text("""
+        evening_query = text(f"""
             WITH evening_rush AS (
                 SELECT 
                     station_id,
@@ -548,7 +583,7 @@ class AnomalyPatternService:
                     SUM(CASE WHEN hour = 19 THEN total_ride ELSE 0 END) as hour_19
                 FROM mv_station_hourly_patterns
                 WHERE month_date = :analysis_month
-                  AND district_name = :district_name
+                  {district_condition}
                   AND day_type = 'weekday'  -- 평일만
                   AND hour IN (17, 18, 19)
                 GROUP BY station_id, station_name, longitude, latitude, district_name, administrative_dong
@@ -568,14 +603,10 @@ class AnomalyPatternService:
             FROM evening_rush
         """)
         
-        evening_result = await db.execute(evening_query, {
-            "district_name": district_name,
-            "analysis_month": analysis_month,
-            "top_n": top_n
-        })
+        evening_result = await db.execute(evening_query, query_params)
         
-        # 3단계: 구 전체 러시아워 통계 (vs_district_avg 계산용)
-        district_stats_query = text("""
+        # 3단계: 러시아워 통계 (vs_district_avg 계산용, 구별 또는 서울시 전체)
+        district_stats_query = text(f"""
             SELECT 
                 -- 오전 러시아워
                 SUM(CASE WHEN hour IN (6, 7, 8) THEN total_ride ELSE 0 END) as district_morning_total,
@@ -585,15 +616,16 @@ class AnomalyPatternService:
                 COUNT(DISTINCT CASE WHEN hour IN (17, 18, 19) THEN station_id END) as evening_stations
             FROM mv_station_hourly_patterns
             WHERE month_date = :analysis_month
-              AND district_name = :district_name
+              {district_condition}
               AND day_type = 'weekday'
               AND hour IN (6, 7, 8, 17, 18, 19)
         """)
         
-        district_stats_result = await db.execute(district_stats_query, {
-            "district_name": district_name,
-            "analysis_month": analysis_month
-        })
+        stats_params = {"analysis_month": analysis_month}
+        if district_name:
+            stats_params["district_name"] = district_name
+            
+        district_stats_result = await db.execute(district_stats_query, stats_params)
         
         district_stats = district_stats_result.fetchone()
         
@@ -665,10 +697,11 @@ class AnomalyPatternService:
             evening_rush=evening_stations
         )
 
+    @cache_result(key_prefix="anomaly:lunch", use_month_ttl=True)
     async def get_lunch_time_stations(
         self,
         db: AsyncSession,
-        district_name: str,
+        district_name: Optional[str],
         analysis_month: date,
         top_n: int = 5
     ) -> List[LunchTimeStationSchema]:
@@ -680,8 +713,14 @@ class AnomalyPatternService:
         3단계: vs_district_avg 계산
         """
         
+        # district_name이 없으면 서울시 전체, 있으면 해당 구만
+        if district_name:
+            district_condition = "AND district_name = :district_name"
+        else:
+            district_condition = ""
+            
         # 1단계: MV에서 점심시간 TOP N 정류장 + 시간대별 데이터 한번에 조회
-        stations_query = text("""
+        stations_query = text(f"""
             WITH lunch_stations AS (
                 SELECT 
                     station_id,
@@ -698,7 +737,7 @@ class AnomalyPatternService:
                     SUM(CASE WHEN hour = 13 THEN total_alight ELSE 0 END) as hour_13
                 FROM mv_station_hourly_patterns
                 WHERE month_date = :analysis_month
-                  AND district_name = :district_name
+                  {district_condition}
                   AND day_type = 'weekday'  -- 평일만
                   AND hour IN (11, 12, 13)
                 GROUP BY station_id, station_name, longitude, latitude, district_name, administrative_dong
@@ -718,28 +757,32 @@ class AnomalyPatternService:
             FROM lunch_stations
         """)
         
-        stations_result = await db.execute(stations_query, {
-            "district_name": district_name,
+        query_params = {
             "analysis_month": analysis_month,
             "top_n": top_n
-        })
+        }
+        if district_name:
+            query_params["district_name"] = district_name
+            
+        stations_result = await db.execute(stations_query, query_params)
         
-        # 2단계: MV에서 구 전체 점심시간 통계 조회 (vs_district_avg 계산용)
-        district_stats_query = text("""
+        # 2단계: 점심시간 통계 조회 (vs_district_avg 계산용, 구별 또는 서울시 전체)
+        district_stats_query = text(f"""
             SELECT 
                 SUM(total_alight) as district_lunch_total,
                 COUNT(DISTINCT station_id) as total_stations
             FROM mv_station_hourly_patterns
             WHERE month_date = :analysis_month
-              AND district_name = :district_name
+              {district_condition}
               AND day_type = 'weekday'
               AND hour IN (11, 12, 13)
         """)
         
-        district_stats_result = await db.execute(district_stats_query, {
-            "district_name": district_name,
-            "analysis_month": analysis_month
-        })
+        stats_params = {"analysis_month": analysis_month}
+        if district_name:
+            stats_params["district_name"] = district_name
+            
+        district_stats_result = await db.execute(district_stats_query, stats_params)
         
         district_stats = district_stats_result.fetchone()
         district_lunch_total = district_stats.district_lunch_total or 1
@@ -784,102 +827,188 @@ class AnomalyPatternService:
 
 
 
+    @cache_result(key_prefix="anomaly:area", use_month_ttl=True)
     async def get_area_type_analysis(
         self,
         db: AsyncSession,
-        district_name: str,
+        district_name: Optional[str],
         analysis_month: date,
         top_n: int = 5
     ) -> AreaTypeAnalysisSchema:
         """5. 지역 특성별 정류장 분석 (주거지역/업무지역 불균형 분석)"""
         
-        # MV를 활용한 통합 쿼리로 주거지역/업무지역 동시 분석 (서브쿼리로 ORDER BY + LIMIT 적용)
-        combined_query = text("""
+        # district_name이 없으면 서울시 전체, 있으면 해당 구만
+        if district_name:
+            district_condition = "AND district_name = :district_name"
+        else:
+            district_condition = ""
+            
+        # 주거지역 분석 쿼리 (다른 패턴들과 동일한 구조로 간소화)
+        residential_query = text(f"""
             WITH rush_hour_stats AS (
                 SELECT 
-                    shp.station_id,
-                    shp.station_name,
-                    shp.latitude,
-                    shp.longitude,
-                    shp.district_name,
-                    shp.administrative_dong,
-                    -- 출근시간대 (6-9시) 승차/하차 (평일만)
-                    SUM(CASE WHEN shp.hour IN (6,7,8,9) AND shp.day_type = 'weekday' THEN shp.total_ride ELSE 0 END) as morning_ride,
-                    SUM(CASE WHEN shp.hour IN (6,7,8,9) AND shp.day_type = 'weekday' THEN shp.total_alight ELSE 0 END) as morning_alight,
+                    station_id,
+                    station_name,
+                    latitude,
+                    longitude,
+                    district_name,
+                    administrative_dong,
+                    -- 출근시간대 (6-8시) 승차/하차 (평일만)
+                    SUM(CASE WHEN hour IN (6,7,8) AND day_type = 'weekday' THEN total_ride ELSE 0 END) as morning_ride,
+                    SUM(CASE WHEN hour IN (6,7,8) AND day_type = 'weekday' THEN total_alight ELSE 0 END) as morning_alight,
                     -- 퇴근시간대 (17-19시) 승차/하차 (평일만)
-                    SUM(CASE WHEN shp.hour IN (17,18,19) AND shp.day_type = 'weekday' THEN shp.total_ride ELSE 0 END) as evening_ride,
-                    SUM(CASE WHEN shp.hour IN (17,18,19) AND shp.day_type = 'weekday' THEN shp.total_alight ELSE 0 END) as evening_alight,
+                    SUM(CASE WHEN hour IN (17,18,19) AND day_type = 'weekday' THEN total_ride ELSE 0 END) as evening_ride,
+                    SUM(CASE WHEN hour IN (17,18,19) AND day_type = 'weekday' THEN total_alight ELSE 0 END) as evening_alight,
                     -- 총 교통량 (러시아워 평일만)
-                    SUM(CASE WHEN shp.hour IN (6,7,8,9,17,18,19) AND shp.day_type = 'weekday' THEN shp.total_traffic ELSE 0 END) as total_traffic
-                FROM mv_station_hourly_patterns shp
-                WHERE shp.month_date = :analysis_month
-                  AND shp.district_name = :district_name
-                  AND shp.hour IN (6,7,8,9,17,18,19)  -- 러시아워만
-                  AND shp.day_type = 'weekday'  -- 평일만
-                GROUP BY shp.station_id, shp.station_name, shp.latitude, shp.longitude, 
-                         shp.district_name, shp.administrative_dong
-                HAVING SUM(CASE WHEN shp.hour IN (6,7,8,9,17,18,19) AND shp.day_type = 'weekday' THEN shp.total_traffic ELSE 0 END) >= 1000  -- 1000명 이상 필터링
+                    SUM(CASE WHEN hour IN (6,7,8,17,18,19) AND day_type = 'weekday' THEN total_traffic ELSE 0 END) as total_traffic
+                FROM mv_station_hourly_patterns
+                WHERE month_date = :analysis_month
+                  {district_condition}
+                  AND hour IN (6,7,8,17,18,19)
+                  AND day_type = 'weekday'
+                GROUP BY station_id, station_name, latitude, longitude, district_name, administrative_dong
+                HAVING SUM(CASE WHEN hour IN (6,7,8,17,18,19) AND day_type = 'weekday' THEN total_traffic ELSE 0 END) >= 1000
             ),
-            area_classification AS (
-                SELECT *,
-                    -- 주거지역 불균형 비율: (출근승차/출근하차) × (퇴근하차/퇴근승차)
+            residential_scores AS (
+                SELECT 
+                    *,
+                    -- 출근시간: 승차 비중 (0~1)
+                    morning_ride::float / NULLIF(morning_ride + morning_alight, 0) as morning_residential_ratio,
+                    -- 퇴근시간: 하차 비중 (0~1)
+                    evening_alight::float / NULLIF(evening_ride + evening_alight, 0) as evening_residential_ratio,
+                    -- 교통량별 신뢰도 가중치
                     CASE 
-                        WHEN morning_alight > 0 AND evening_ride > 0 THEN 
-                            (morning_ride::numeric / morning_alight::numeric) * (evening_alight::numeric / evening_ride::numeric)
-                        ELSE 0 
-                    END as residential_imbalance,
-                    -- 업무지역 불균형 비율: (출근하차/출근승차) × (퇴근승차/퇴근하차)
-                    CASE 
-                        WHEN morning_ride > 0 AND evening_alight > 0 THEN 
-                            (morning_alight::numeric / morning_ride::numeric) * (evening_ride::numeric / evening_alight::numeric)
-                        ELSE 0 
-                    END as business_imbalance
+                        WHEN total_traffic >= 10000 THEN 1.0
+                        WHEN total_traffic >= 5000 THEN 0.8
+                        WHEN total_traffic >= 2000 THEN 0.7
+                        ELSE 0.5
+                    END as confidence_weight
                 FROM rush_hour_stats
+                WHERE morning_ride > morning_alight      -- 출근시간 승차 > 하차
+                  AND evening_alight > evening_ride      -- 퇴근시간 하차 > 승차
+                  AND total_traffic >= 2000             -- 최소 교통량 2000명
             ),
-            -- 서브쿼리로 각각 ORDER BY + LIMIT 적용
-            residential_top AS (
-                SELECT 'residential' as area_type, 
-                       station_id, station_name, latitude, longitude, district_name, administrative_dong,
-                       morning_ride, morning_alight, evening_ride, evening_alight, total_traffic,
-                       ROUND(residential_imbalance, 3) as imbalance_ratio
-                FROM area_classification
-                WHERE residential_imbalance > 1.0
-                ORDER BY residential_imbalance DESC
-                LIMIT :top_n
-            ),
-            business_top AS (
-                SELECT 'business' as area_type,
-                       station_id, station_name, latitude, longitude, district_name, administrative_dong,
-                       morning_ride, morning_alight, evening_ride, evening_alight, total_traffic,
-                       ROUND(business_imbalance, 3) as imbalance_ratio
-                FROM area_classification
-                WHERE business_imbalance > 1.0
-                ORDER BY business_imbalance DESC
-                LIMIT :top_n
+            residential_final AS (
+                SELECT 
+                    *,
+                    -- 0~100점 주거지역 특성 점수
+                    ROUND(((morning_residential_ratio + evening_residential_ratio) / 2.0 * confidence_weight * 100)::numeric, 1) as residential_score
+                FROM residential_scores
+                WHERE morning_residential_ratio > 0.5 AND evening_residential_ratio > 0.5  -- 각 시간대 50% 이상
             )
-            -- 주거지역과 업무지역 결과 UNION
-            SELECT * FROM residential_top
-            UNION ALL
-            SELECT * FROM business_top
+            SELECT 
+                station_id,
+                station_name,
+                latitude,
+                longitude,
+                district_name,
+                administrative_dong,
+                morning_ride,
+                morning_alight,
+                evening_ride,
+                evening_alight,
+                total_traffic,
+                residential_score as imbalance_ratio
+            FROM residential_final
+            ORDER BY residential_score DESC
+            LIMIT :top_n
+        """)
+        
+        # 업무지역 분석 쿼리
+        business_query = text(f"""
+            WITH rush_hour_stats AS (
+                SELECT 
+                    station_id,
+                    station_name,
+                    latitude,
+                    longitude,
+                    district_name,
+                    administrative_dong,
+                    -- 출근시간대 (6-8시) 승차/하차 (평일만)
+                    SUM(CASE WHEN hour IN (6,7,8) AND day_type = 'weekday' THEN total_ride ELSE 0 END) as morning_ride,
+                    SUM(CASE WHEN hour IN (6,7,8) AND day_type = 'weekday' THEN total_alight ELSE 0 END) as morning_alight,
+                    -- 퇴근시간대 (17-19시) 승차/하차 (평일만)
+                    SUM(CASE WHEN hour IN (17,18,19) AND day_type = 'weekday' THEN total_ride ELSE 0 END) as evening_ride,
+                    SUM(CASE WHEN hour IN (17,18,19) AND day_type = 'weekday' THEN total_alight ELSE 0 END) as evening_alight,
+                    -- 총 교통량 (러시아워 평일만)
+                    SUM(CASE WHEN hour IN (6,7,8,17,18,19) AND day_type = 'weekday' THEN total_traffic ELSE 0 END) as total_traffic
+                FROM mv_station_hourly_patterns
+                WHERE month_date = :analysis_month
+                  {district_condition}
+                  AND hour IN (6,7,8,17,18,19)
+                  AND day_type = 'weekday'
+                GROUP BY station_id, station_name, latitude, longitude, district_name, administrative_dong
+                HAVING SUM(CASE WHEN hour IN (6,7,8,17,18,19) AND day_type = 'weekday' THEN total_traffic ELSE 0 END) >= 1000
+            ),
+            business_scores AS (
+                SELECT 
+                    *,
+                    -- 출근시간: 하차 비중 (0~1)
+                    morning_alight::float / NULLIF(morning_ride + morning_alight, 0) as morning_business_ratio,
+                    -- 퇴근시간: 승차 비중 (0~1)
+                    evening_ride::float / NULLIF(evening_ride + evening_alight, 0) as evening_business_ratio,
+                    -- 교통량별 신뢰도 가중치
+                    CASE 
+                        WHEN total_traffic >= 10000 THEN 1.0
+                        WHEN total_traffic >= 5000 THEN 0.8
+                        WHEN total_traffic >= 2000 THEN 0.7
+                        ELSE 0.5
+                    END as confidence_weight
+                FROM rush_hour_stats
+                WHERE morning_alight > morning_ride       -- 출근시간 하차 > 승차
+                  AND evening_ride > evening_alight       -- 퇴근시간 승차 > 하차
+                  AND total_traffic >= 2000              -- 최소 교통량 2000명
+            ),
+            business_final AS (
+                SELECT 
+                    *,
+                    -- 0~100점 업무지역 특성 점수
+                    ROUND(((morning_business_ratio + evening_business_ratio) / 2.0 * confidence_weight * 100)::numeric, 1) as business_score
+                FROM business_scores
+                WHERE morning_business_ratio > 0.5 AND evening_business_ratio > 0.5  -- 각 시간대 50% 이상
+            )
+            SELECT 
+                station_id,
+                station_name,
+                latitude,
+                longitude,
+                district_name,
+                administrative_dong,
+                morning_ride,
+                morning_alight,
+                evening_ride,
+                evening_alight,
+                total_traffic,
+                business_score as imbalance_ratio
+            FROM business_final
+            ORDER BY business_score DESC
+            LIMIT :top_n
         """)
         
         try:
-            # 통합 쿼리 실행
-            result = await db.execute(
-                combined_query, 
-                {
-                    "analysis_month": analysis_month,
-                    "district_name": district_name,
-                    "top_n": top_n
-                }
-            )
-            all_rows = result.fetchall()
+            self.logger.info(f"Executing area type analysis query with params: analysis_month={analysis_month}, district_name={district_name}, top_n={top_n}")
             
-            # 결과를 주거지역/업무지역으로 분리
+            # 파라미터 준비
+            query_params = {
+                "analysis_month": analysis_month,
+                "top_n": top_n
+            }
+            if district_name:
+                query_params["district_name"] = district_name
+            
+            # 주거지역 쿼리 실행
+            residential_result = await db.execute(residential_query, query_params)
+            residential_rows = residential_result.fetchall()
+            
+            # 업무지역 쿼리 실행  
+            business_result = await db.execute(business_query, query_params)
+            business_rows = business_result.fetchall()
+            
+            self.logger.info(f"Query returned {len(residential_rows)} residential and {len(business_rows)} business stations")
+            
+            # 주거지역 정류장 처리
             residential_stations = []
-            business_stations = []
-            
-            for row in all_rows:
+            for row in residential_rows:
                 station_info = StationInfoSchema(
                     station_id=row.station_id,
                     station_name=row.station_name,
@@ -889,29 +1018,39 @@ class AnomalyPatternService:
                     administrative_dong=row.administrative_dong or "정보없음"
                 )
                 
-                if row.area_type == 'residential':
-                    residential_station = ResidentialAreaStationSchema(
-                        station=station_info,
-                        morning_ride=int(row.morning_ride),
-                        morning_alight=int(row.morning_alight),
-                        evening_ride=int(row.evening_ride),
-                        evening_alight=int(row.evening_alight),
-                        total_traffic=int(row.total_traffic),
-                        imbalance_ratio=float(row.imbalance_ratio)
-                    )
-                    residential_stations.append(residential_station)
-                    
-                elif row.area_type == 'business':
-                    business_station = BusinessAreaStationSchema(
-                        station=station_info,
-                        morning_ride=int(row.morning_ride),
-                        morning_alight=int(row.morning_alight),
-                        evening_ride=int(row.evening_ride),
-                        evening_alight=int(row.evening_alight),
-                        total_traffic=int(row.total_traffic),
-                        imbalance_ratio=float(row.imbalance_ratio)
-                    )
-                    business_stations.append(business_station)
+                residential_station = ResidentialAreaStationSchema(
+                    station=station_info,
+                    morning_ride=int(row.morning_ride),
+                    morning_alight=int(row.morning_alight),
+                    evening_ride=int(row.evening_ride),
+                    evening_alight=int(row.evening_alight),
+                    total_traffic=int(row.total_traffic),
+                    imbalance_ratio=float(row.imbalance_ratio)
+                )
+                residential_stations.append(residential_station)
+            
+            # 업무지역 정류장 처리
+            business_stations = []
+            for row in business_rows:
+                station_info = StationInfoSchema(
+                    station_id=row.station_id,
+                    station_name=row.station_name,
+                    latitude=float(row.latitude),
+                    longitude=float(row.longitude),
+                    district_name=row.district_name,
+                    administrative_dong=row.administrative_dong or "정보없음"
+                )
+                
+                business_station = BusinessAreaStationSchema(
+                    station=station_info,
+                    morning_ride=int(row.morning_ride),
+                    morning_alight=int(row.morning_alight),
+                    evening_ride=int(row.evening_ride),
+                    evening_alight=int(row.evening_alight),
+                    total_traffic=int(row.total_traffic),
+                    imbalance_ratio=float(row.imbalance_ratio)
+                )
+                business_stations.append(business_station)
             
             self.logger.info(
                 f"Area type analysis completed: {len(residential_stations)} residential, "
@@ -932,23 +1071,30 @@ class AnomalyPatternService:
             )
 
 
+    @cache_result(key_prefix="anomaly:underutil", use_month_ttl=True)
     async def get_underutilized_stations(
         self,
         db: AsyncSession,
-        district_name: str,
+        district_name: Optional[str],
         analysis_month: date,
         top_n: int = 10
     ) -> List[UnderutilizedStationSchema]:
         """6. 저활용 정류장 분석 (운영 최적화 대상)
         
         비즈니스 로직:
-        - 구별 하위 25% 교통량 기준 선별
+        - 구별 또는 서울시 전체 하위 25% 교통량 기준 선별
         - 연결 노선수와 교통량 효율성 분석
         - 운영비용 대비 효과 측정 및 최적화 전략 제시
         """
         
+        # district_name이 없으면 서울시 전체, 있으면 해당 구만
+        if district_name:
+            district_condition = "AND shp.district_name = :district_name"
+        else:
+            district_condition = ""
+            
         # MV를 활용한 저활용 정류장 분석 쿼리 (간소화)
-        underutilized_query = text("""
+        underutilized_query = text(f"""
             WITH station_stats AS (
                 SELECT 
                     shp.station_id,
@@ -963,7 +1109,7 @@ class AnomalyPatternService:
                     SUM(shp.total_traffic) as total_monthly_traffic
                 FROM mv_station_hourly_patterns shp
                 WHERE shp.month_date = :analysis_month
-                  AND shp.district_name = :district_name
+                  {district_condition}
                 GROUP BY shp.station_id, shp.station_name, shp.latitude, shp.longitude, 
                          shp.district_name, shp.administrative_dong
             ),
@@ -994,15 +1140,16 @@ class AnomalyPatternService:
         """)
         
         try:
+            # 파라미터 준비
+            query_params = {
+                "analysis_month": analysis_month,
+                "top_n": top_n
+            }
+            if district_name:
+                query_params["district_name"] = district_name
+            
             # 쿼리 실행
-            result = await db.execute(
-                underutilized_query,
-                {
-                    "analysis_month": analysis_month,
-                    "district_name": district_name,
-                    "top_n": top_n
-                }
-            )
+            result = await db.execute(underutilized_query, query_params)
             all_rows = result.fetchall()
             
             # 결과 변환
@@ -1038,19 +1185,23 @@ class AnomalyPatternService:
             return []
 
 
+    @cache_result(key_prefix="anomaly:integration", use_month_ttl=True)
     async def get_integrated_anomaly_patterns(
         self,
         db: AsyncSession,
-        district_name: str,
+        district_name: Optional[str],
         analysis_month: date,
         top_n: int = 5
     ) -> IntegratedAnomalyPatternResponse:
-        """통합 교통 특이패턴 분석 (6개 패턴 모두 호출)"""
+        """통합 교통 특이패턴 분석 (6개 패턴 모두 호출)
+        district_name이 None이면 서울시 전체, 있으면 해당 구 분석
+        """
         
         from datetime import datetime
         
         try:
-            self.logger.info(f"Starting integrated analysis for {district_name} - {analysis_month}")
+            area_name = district_name if district_name else "서울시 전체"
+            self.logger.info(f"Starting integrated analysis for {area_name} - {analysis_month}")
             
             # 6개 개별 패턴 분석 순차 호출 (DB 세션 동시성 문제 해결)
             weekend_stations = await self.get_weekend_dominant_stations(db, district_name, analysis_month, top_n)
@@ -1062,7 +1213,7 @@ class AnomalyPatternService:
             
             # 통합 응답 생성
             integrated_response = IntegratedAnomalyPatternResponse(
-                district_name=district_name,
+                district_name=area_name,
                 analysis_month=analysis_month.strftime("%Y-%m"),
                 generated_at=datetime.now().isoformat(),
                 weekend_dominant_stations=weekend_stations,
@@ -1074,7 +1225,7 @@ class AnomalyPatternService:
             )
             
             self.logger.info(
-                f"Integrated analysis completed for {district_name}: "
+                f"Integrated analysis completed for {area_name}: "
                 f"weekend({len(weekend_stations)}), night({len(night_stations)}), "
                 f"rush_hour(morning:{len(rush_stations.morning_rush)}, evening:{len(rush_stations.evening_rush)}), "
                 f"lunch({len(lunch_stations)}), "
