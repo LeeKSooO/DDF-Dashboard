@@ -1,6 +1,5 @@
 # ===============================================
 # 운영 환경 Docker Compose
-# ETL 제외한 모든 운영 서비스
 # ===============================================
 
 services:
@@ -9,11 +8,14 @@ services:
     build:
       context: ./database
       dockerfile: Dockerfile
+    image: ddf-postgres:v1
     container_name: ddf-postgres
+    env_file:
+      - ../.env
     environment:
-      POSTGRES_USER: ddf_user
-      POSTGRES_PASSWORD: ddf_password
-      POSTGRES_DB: ddf_db
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
       PGDATA: /home/postgres/pgdata/data
     volumes:
       - ../postgres:/home/postgres/pgdata
@@ -29,12 +31,17 @@ services:
       timeout: 5s
       retries: 5
 
+
   # FastAPI Backend Server
   backend:
     build: ../backend
+    image: ddf-backend:v2
     container_name: ddf-backend
+    env_file:
+      - ../.env
     environment:
-      DATABASE_URL: postgresql://ddf_user:ddf_password@postgres:5432/ddf_db
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      REDIS_URL: redis://redis:6379
       TZ: Asia/Seoul
     ports:
       - "8000:8000"
@@ -48,15 +55,14 @@ services:
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 
-
   # Infrastructure Nginx (API Gateway)
   nginx:
     build:
       context: ./nginx
       dockerfile: Dockerfile
       args:
-        BUILD_ENV: dev
-    image: ddf-nginx:v1
+        BUILD_ENV: prod
+    image: ddf-nginx:v2
     container_name: ddf-nginx
     environment:
       TZ: Asia/Seoul
@@ -74,12 +80,15 @@ services:
       retries: 3
       start_period: 10s
 
-  # Frontend Next.js SSR (Stateful Application Server)
+
+  # Frontend Next.js
   frontend:
     build:
       context: ../frontend
-      dockerfile: Dockerfile.ssr
-    image: ddf-frontend:v4
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: production
+    image: ddf-frontend:v8
     container_name: ddf-frontend
     environment:
       TZ: Asia/Seoul
@@ -97,21 +106,24 @@ services:
     networks:
       - ddf-network
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 30s
 
+
   # RAG API Server
   rag:
     build: ../RAG
+    image: ddf-rag:v1
     container_name: ddf-rag
     env_file:
+      - ../RAG/.env
       - ../.env
     environment:
       BACKEND_API_URL: http://backend:8000
-      DATABASE_URL: postgresql://ddf_user:ddf_password@postgres:5432/ddf_db
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
       TZ: Asia/Seoul
       # RAG 문서 로딩 제어 환경 변수
       SKIP_INITIAL_DOCUMENT_LOAD: "true"   # 기본값: 초기 문서 로딩 건너뛰기
@@ -119,8 +131,7 @@ services:
     ports:
       - "8001:8001"
     volumes:
-      - ../RAG:/rag
-      - ../RAG/data:/rag/data  # Host 디렉토리 직접 마운트
+      - ../RAG/app:/rag/app  # App 코드만 마운트 (for hot reload)
     depends_on:
       backend:
         condition: service_started
@@ -130,24 +141,6 @@ services:
       - ddf-network
     command: uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 
-  # ChromaDB Vector Database  
-  chromadb:
-    image: chromadb/chroma:latest
-    container_name: ddf-chromadb
-    environment:
-      PERSIST_DIRECTORY: /data
-    ports:
-      - "8003:8000"  # External access (내부 8000 → 외부 8003)
-    volumes:
-      - ../RAG/chroma:/data  # ChromaDB 데이터 연결
-    networks:
-      - ddf-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
 
   # Redis for caching (optional but recommended)
   redis:

@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
 "use client"
 
 import { useEffect, useRef, useState, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 
-// Dynamically import Leaflet to avoid SSR issues
-const L = typeof window !== 'undefined' ? require('leaflet') : null
+// Import leaflet
+import L from 'leaflet';
 
 // Fix for default markers in Leaflet - only on client side
 if (typeof window !== 'undefined' && L) {
@@ -133,14 +134,14 @@ function SeoulMapComponent({ onDistrictClick, selectedDistrict, trafficData = []
         const geoJsonData = await response.json()
         
         // Add all district features to map (already simplified)
-        const layer = L.geoJSON(geoJsonData, {
+        L.geoJSON(geoJsonData, {
           style: getFeatureStyle,
-          onEachFeature: (feature, layer) => {
+          onEachFeature: (feature: any, layer: any) => {
             const districtName = feature.properties.sggnm
 
             // Mouse events
             layer.on({
-              mouseover: (e) => {
+              mouseover: (e: any) => {
                 const layer = e.target
                 layer.setStyle({
                   weight: 3,
@@ -149,11 +150,11 @@ function SeoulMapComponent({ onDistrictClick, selectedDistrict, trafficData = []
                 })
                 layer.bringToFront()
               },
-              mouseout: (e) => {
+              mouseout: (e: any) => {
                 const layer = e.target
                 layer.setStyle(getFeatureStyle(feature))
               },
-              click: (e) => {
+              click: () => {
                 const districtName = feature.properties.sggnm
                 const districtCode = feature.properties.sgg
                 
@@ -211,7 +212,7 @@ function SeoulMapComponent({ onDistrictClick, selectedDistrict, trafficData = []
       if (layer instanceof L.GeoJSON) {
         layer.eachLayer((featureLayer: any) => {
           if (featureLayer instanceof L.Path) {
-            const feature = featureLayer.feature
+            const feature = (featureLayer as any).feature
             if (feature) {
               // Update style
               featureLayer.setStyle(getFeatureStyle(feature))

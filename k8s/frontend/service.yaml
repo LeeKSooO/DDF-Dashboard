@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: ddf-system
+  labels:
+    app: frontend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3000
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  selector:
+    app: frontend
+# Note: LoadBalancer는 이제 nginx-loadbalancer를 사용합니다
+# frontend는 내부 서비스로만 운영됩니다

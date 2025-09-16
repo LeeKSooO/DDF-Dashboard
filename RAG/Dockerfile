@@ -23,8 +23,9 @@ RUN grep -v "torch==" requirements.txt | pip install --no-cache-dir -r /dev/stdi
 # Copy application code
 COPY . .
 
-# Create data directory for ChromaDB and documents
-RUN mkdir -p /rag/chroma /rag/data/documents
+# Copy vector database and data from local directories
+COPY ./chroma /rag/chroma
+COPY ./data /rag/data
 
 # Expose port
 EXPOSE 8001

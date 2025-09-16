@@ -31,7 +31,7 @@ async def get_district_drt_scores(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    🎯 **1. 히트맵용 구별 DRT 점수 조회**
+    === 1. 히트맵용 구별 DRT 점수 조회 === 
     
     **주요 기능**:
     - 히트맵 렌더링용 정류장별 DRT 점수 및 좌표 (stations 배열)
@@ -69,7 +69,7 @@ async def get_district_drt_scores(
     }
     ```
     
-    **🚀 성능 최적화**:
+    === 성능 최적화 === 
     - 히트맵용 최고점수만 표시 (drt_score, peak_hour)
     - Top 5 미리 계산하여 제공 (top_stations)
     - 모델 전환시 빠른 업데이트 보장
@@ -128,7 +128,7 @@ async def get_station_drt_detail(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    🔍 **2. 정류장 상세 DRT 분석**
+    === 2. 정류장 상세 DRT 분석 === 
     
     **주요 기능**:
     - 정류장 클릭시 피처 패널 업데이트용
@@ -226,7 +226,7 @@ async def get_model_specific_district_scores(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    🎯 **3. 모델별 특화 점수 조회 (옵션)**
+    === 3. 모델별 특화 점수 조회 (옵션) === 
     
     **모델별 feature_scores 차이**:
     
@@ -272,7 +272,7 @@ async def get_model_specific_district_scores(
 @router.get("/models")
 async def get_available_models():
     """
-    📊 사용 가능한 DRT 모델 정보 조회
+    사용 가능한 DRT 모델 정보 조회
     """
     return success_response(
         data={
@@ -325,7 +325,7 @@ async def get_available_models():
 @router.get("/health")
 async def health_check():
     """
-    🔍 DRT Score API 상태 확인
+    DRT Score API 상태 확인
     """
     print("[DRT SCORE API] ===== HEALTH CHECK CALLED =====")
     return success_response(
@@ -349,7 +349,7 @@ async def health_check():
 @router.get("/info")
 async def api_info():
     """
-    📋 DRT Score API 상세 정보
+    DRT Score API 상세 정보
     """
     return success_response(
         data={
