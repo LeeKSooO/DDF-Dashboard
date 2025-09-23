@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
       - name: backend
-        image: 204572980322.dkr.ecr.ap-northeast-2.amazonaws.com/ddf-backend:v2
+        image: 204572980322.dkr.ecr.ap-northeast-2.amazonaws.com/ddf-backend:v5
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000

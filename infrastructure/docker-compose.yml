@@ -40,7 +40,10 @@ services:
     env_file:
       - ../.env
     environment:
-      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      DATABASE_URL: postgresql://ddf_user:ddf_password@postgres:5432/ddf_db
+      ## 운영환경 ##
+      #DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+
       REDIS_URL: redis://redis:6379
       TZ: Asia/Seoul
     ports:
@@ -61,7 +64,7 @@ services:
       context: ./nginx
       dockerfile: Dockerfile
       args:
-        BUILD_ENV: prod
+        BUILD_ENV: dev
     image: ddf-nginx:v2
     container_name: ddf-nginx
     environment:
@@ -106,7 +109,7 @@ services:
     networks:
       - ddf-network
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
       interval: 30s
       timeout: 10s
       retries: 3

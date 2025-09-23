@@ -92,6 +92,8 @@ class RedisClient:
             if serialize:
                 if hasattr(data, 'dict'):  # Pydantic model
                     serialized_data = json.dumps(data.dict())
+                elif isinstance(data, list) and data and hasattr(data[0], 'dict'):  # List of Pydantic models
+                    serialized_data = json.dumps([item.dict() for item in data])
                 elif isinstance(data, dict):
                     serialized_data = json.dumps(data)
                 else:

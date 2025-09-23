@@ -315,7 +315,7 @@ class ODService:
         
         return routes
 
-    # @cache_result(key_prefix="od:time_based_origin_v2", use_month_ttl=True)  # 스키마 변경으로 임시 비활성화
+    @cache_result(key_prefix="od:time_based_origin_v3", use_month_ttl=True)
     async def get_time_based_origin_analysis(
         self,
         db: AsyncSession,
@@ -478,7 +478,7 @@ class ODService:
             origins=analysis_results
         )
 
-    # @cache_result(key_prefix="od:demand_supply_mismatch", use_month_ttl=True)  # 캐싱 임시 비활성화
+    @cache_result(key_prefix="od:demand_supply_mismatch_v2", use_month_ttl=True)
     async def get_demand_supply_mismatch_analysis(
         self,
         db: AsyncSession,
