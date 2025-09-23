@@ -1,106 +1,28 @@
-# DDF-MSTGCN Project
-DRT(Demand Responsive Transport) 수요 예측 및 운영 분석 시스템
+# DDF-Dashbaord
 
-## 🏗️ 프로젝트 구조
+서울시 버스 교통 데이터 기반 DRT(Demand Responsive Transport)도입 우선순위 및 버스교통수요 분석 시스템
 
-```
-DDF-MSTGCN/
-├── 🖥️ frontend/          # React 대시보드
-├── ⚙️ backend/           # FastAPI 서버
-├── 🤖 ai/               # AI/ML 모델 및 추론
-├── 📊 data/             # 데이터 처리 및 ETL
-├── 🚀 infrastructure/   # Docker, DB, 배포 설정
-└── 📚 docs/             # 문서
-```
+## 프로젝트 개요
 
-## 🚀 빠른 시작
+서울시 버스 OD(Origin-Destination) 데이터를 분석하여 DRT 도입 우선순위를 산정하고, 실시간 대시보드를 통해 교통 패턴을 시각화하는 시스템입니다. TimescaleDB를 활용한 시계열 데이터 처리와 Redis 캐싱을 통해 대용량 데이터의 실시간 분석을 지원합니다.
 
-### 전체 시스템 실행
-```bash
-# Docker Compose로 전체 시스템 실행
-docker-compose up -d
-```
-
-### 개발 환경 실행
-```bash
-# Frontend 개발 서버
-cd frontend && npm start
-
-# Backend 개발 서버  
-cd backend && uvicorn main:app --reload
-
-# Database
-docker-compose up database -d
-```
-
-## 📁 각 디렉토리 설명
-
-### Frontend
-- **기술스택**: React, TypeScript, Ant Design, Leaflet
-- **포트**: 3000
-- **역할**: DRT 운영 대시보드, 지도 시각화, 분석 차트
-
-### Backend
-- **기술스택**: FastAPI, SQLAlchemy, PostgreSQL
-- **포트**: 8000
-- **역할**: API 서버, 데이터 분석, 예측 서비스
-
-### AI
-- **기술스택**: PyTorch, TorchServe, MSTGCN
-- **역할**: 모델 훈련, 추론 서비스, 예측 알고리즘
-
-### Data
-- **기술스택**: Pandas, NumPy, PostgreSQL
-- **역할**: ETL 파이프라인, 데이터 전처리, 피처 생성
-
-### Infrastructure
-- **기술스택**: Docker, PostgreSQL, PostGIS
-- **역할**: 컨테이너 오케스트레이션, DB 관리, 배포 설정
-
-## 🔧 개발 가이드
-
-### 브랜치 전략
-```
-main                   # 배포용 안정 버전
-├── develop            # 통합 개발 브랜치  
-├── feature/frontend-* # Frontend 기능
-├── feature/backend-*  # Backend 기능
-├── feature/ai-*       # AI/ML 기능
-└── feature/data-*     # Data 처리 기능
-```
-
-### 코드 컨벤션
-- **Python**: Black, isort, flake8
-- **TypeScript**: ESLint, Prettier
-- **Git**: Conventional Commits
-
-## 📊 시스템 아키텍처
+## 시스템 구조
 
 ```
-Frontend (React) → Backend (FastAPI) → Database (PostgreSQL)
-                ↘     ↓
-                  AI Models (PyTorch)
-                     ↓
-                Data Pipeline (ETL)
+DDF-ASTGCN/
+├── frontend/         # Next.js 14 대시보드
+├── backend/          # FastAPI 서버
+├── ai/               # MSTGCN 모델(프로젝트 범위에서 제외, 추후 개선 예정)
+├── RAG/              # RAG 기반 챗봇 서비스
+├── data/             # ETL 파이프라인
+├── infrastructure/   # Docker, Kubernetes 설정
+├── k8s/              # Kubernetes 배포 매니페스트
 ```
 
-## 🤝 협업 가이드
+## 주요 기능
 
-1. **이슈 생성**: 작업 시작 전 GitHub Issues 생성
-2. **브랜치 생성**: `feature/[팀]-[기능명]` 형식
-3. **PR 생성**: 개발 완료 후 Pull Request
-4. **코드 리뷰**: 최소 1명 이상 리뷰 후 머지
-5. **배포**: `main` 브랜치 머지 시 자동 배포
-
-## 📚 추가 문서
-
-- [설치 가이드](docs/DOCKER_SETUP.md)
-- [개발 가이드](docs/CLAUDE.md)
-- [API 문서](http://localhost:8000/docs)
-
-## 🏷️ 버전
-
-- **현재 버전**: v2.0.0
-- **Node.js**: v18+
-- **Python**: 3.9+
-- **PostgreSQL**: 15+
+- **OD 분석**: 61만 건의 월별 OD 데이터 분석
+- **DRT 우선순위**: 4단계 우선순위 점수 산정 알고리즘
+- **실시간 히트맵**: 시간대별 수요 패턴 시각화
+- **시계열 분석**: 일별/월별 교통량 추이 분석
+- **대화형 분석**: RAG 기반 자연어 질의 응답
